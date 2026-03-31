@@ -166,8 +166,8 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-2">
             {respondeuAguardando.length > 0 && (
-              <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3">
-                <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-1">
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+                <p className="text-sm font-medium text-amber-800 mb-1">
                   {respondeuAguardando.length} prospect(s) responderam — aguardando ação
                 </p>
                 <div className="flex flex-wrap gap-2">
