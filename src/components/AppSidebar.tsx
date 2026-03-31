@@ -11,6 +11,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { useTheme } from "@/hooks/useTheme";
 
 const navItems = [
   { title: "Dashboard",       url: "/",               icon: LayoutDashboard },
