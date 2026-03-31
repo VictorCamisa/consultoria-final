@@ -1,1 +1,0 @@
-INSERT INTO public.vs_users (id, email, name, role) VALUES ('ae308443-ced4-4590-824a-daabbf217c8c', 'victorcamisa@vs.com', 'Victor', 'victor');

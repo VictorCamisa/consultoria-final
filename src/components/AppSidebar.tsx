@@ -48,17 +48,29 @@ export function AppSidebar() {
           className="flex items-center gap-3 cursor-pointer"
           onClick={() => navigate("/")}
         >
-          {/* VS monogram */}
-          <div className="gradient-vs rounded-lg w-8 h-8 flex-shrink-0 flex items-center justify-center shadow-md">
-            <span className="text-white text-[13px] font-bold tracking-tight">VS</span>
+          {/* VS monogram — V prata #D4D8E4 · S azul #4A8DE0 (Brand Bible v1.0) */}
+          <div
+            className="rounded-lg w-8 h-8 flex-shrink-0 flex items-center justify-center"
+            style={{ background: "#111216", border: "1px solid rgba(255,255,255,0.07)" }}
+          >
+            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 15, letterSpacing: "-0.03em", lineHeight: 1 }}>
+              <span style={{ color: "#D4D8E4" }}>V</span>
+              <span style={{ color: "#4A8DE0" }}>S</span>
+            </span>
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-white leading-none tracking-tight">
+              <p
+                className="leading-none"
+                style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, color: "#D4D8E4", letterSpacing: "0.01em" }}
+              >
                 VS Growth Hub
               </p>
-              <p className="text-[11px] text-sidebar-foreground/60 mt-0.5 leading-none">
-                Consultoria
+              <p
+                className="mt-0.5 leading-none"
+                style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 600, fontSize: 9, color: "#9097AB", letterSpacing: "0.18em", textTransform: "uppercase" }}
+              >
+                Ecossistemas Digitais
               </p>
             </div>
           )}
