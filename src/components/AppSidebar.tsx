@@ -45,7 +45,7 @@ export function AppSidebar() {
       {/* ── Brand header ── */}
       <SidebarHeader className={cn("py-5 border-b border-sidebar-border", collapsed ? "px-2" : "px-4")}>
         <div
-          className="flex items-center gap-3 cursor-pointer"
+          className={cn("flex items-center cursor-pointer", collapsed ? "justify-center" : "gap-3")}
           onClick={() => navigate("/")}
         >
           {/* VS monogram — V prata · S azul (Brand Bible v1.0) */}
