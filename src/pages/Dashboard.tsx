@@ -129,9 +129,12 @@ export default function Dashboard() {
   const totalAlertas = respondeuAguardando.length + quentesParados.length + cadenciaVencida.length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <div>
+          <h1 className="vs-h1">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">Visão geral do pipeline e operação</p>
+        </div>
         {totalAlertas > 0 && (
           <Badge variant="destructive" className="text-sm px-3 py-1">
             <AlertTriangle className="h-3 w-3 mr-1" />

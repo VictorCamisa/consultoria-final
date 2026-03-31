@@ -41,34 +41,28 @@ export function AppSidebar() {
     url === "/" ? location.pathname === "/" : location.pathname.startsWith(url);
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
-      {/* ── Brand header ── */}
-      <SidebarHeader className={cn("py-5 border-b border-sidebar-border", collapsed ? "px-2" : "px-4")}>
+    <Sidebar collapsible="icon" className="border-r border-border">
+      {/* ── Brand ── */}
+      <SidebarHeader className={cn("py-6 border-b border-border", collapsed ? "px-2" : "px-5")}>
         <div
           className={cn("flex items-center cursor-pointer", collapsed ? "justify-center" : "gap-3")}
           onClick={() => navigate("/")}
         >
-          {/* VS monogram — V prata · S azul (Brand Bible v1.0) */}
-          <div
-            className="rounded-lg w-8 h-8 flex-shrink-0 flex items-center justify-center bg-foreground"
-          >
-            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 15, letterSpacing: "-0.03em", lineHeight: 1 }}>
-              <span style={{ color: "#D4D8E4" }}>V</span>
-              <span style={{ color: "#4A8DE0" }}>S</span>
+          <div className="rounded-lg w-9 h-9 flex-shrink-0 flex items-center justify-center bg-primary">
+            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 16, letterSpacing: "-0.03em", lineHeight: 1 }}>
+              <span className="text-white/80">V</span>
+              <span className="text-white">S</span>
             </span>
           </div>
           {!collapsed && (
             <div className="min-w-0">
               <p
                 className="leading-none text-foreground"
-                style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: "0.01em" }}
+                style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: "0.01em" }}
               >
                 VS Growth Hub
               </p>
-              <p
-                className="mt-0.5 leading-none text-muted-foreground"
-                style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 600, fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase" }}
-              >
+              <p className="vs-overline mt-1 text-[9px]">
                 Ecossistemas Digitais
               </p>
             </div>
@@ -77,7 +71,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       {/* ── Navigation ── */}
-      <SidebarContent className={cn("py-3", collapsed ? "px-1" : "px-2")}>
+      <SidebarContent className={cn("py-4", collapsed ? "px-1.5" : "px-3")}>
         <SidebarMenu className="space-y-0.5">
           {navItems.map((item) => {
             const active = isActive(item.url);
@@ -86,20 +80,23 @@ export function AppSidebar() {
                 <button
                   onClick={() => navigate(item.url)}
                   className={cn(
-                    collapsed ? "flex items-center justify-center w-full p-2 rounded-md transition-colors" : "nav-item w-full",
+                    collapsed
+                      ? "flex items-center justify-center w-full p-2.5 rounded-lg transition-all"
+                      : "nav-item w-full",
                     active && !collapsed && "active",
-                    active && collapsed && "bg-primary/10 text-primary"
+                    active && collapsed && "bg-primary/10 text-primary",
+                    !active && collapsed && "text-muted-foreground hover:text-foreground hover:bg-secondary"
                   )}
                   title={collapsed ? item.title : undefined}
                 >
                   <item.icon
                     className={cn(
-                      "h-4 w-4 flex-shrink-0",
-                      active ? "text-primary" : "text-sidebar-foreground"
+                      "h-[18px] w-[18px] flex-shrink-0 nav-icon",
+                      active ? "text-primary" : "text-muted-foreground"
                     )}
                   />
                   {!collapsed && (
-                    <span className={active ? "text-primary" : ""}>{item.title}</span>
+                    <span className={cn("text-[13px]", active ? "text-primary" : "")}>{item.title}</span>
                   )}
                 </button>
               </SidebarMenuItem>
@@ -109,34 +106,33 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* ── User footer ── */}
-      <SidebarFooter className={cn("border-t border-sidebar-border", collapsed ? "p-2" : "p-3")}>
+      <SidebarFooter className={cn("border-t border-border", collapsed ? "p-2" : "p-4")}>
         {collapsed ? (
           <button
             onClick={signOut}
             title="Sair"
-            className="nav-item justify-center px-2 hover:text-destructive"
+            className="flex items-center justify-center w-full p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
           >
             <LogOut className="h-4 w-4" />
           </button>
         ) : (
-          <div className="flex items-center gap-2.5">
-            {/* Avatar */}
-            <div className="w-7 h-7 rounded-full bg-sidebar-accent flex-shrink-0 flex items-center justify-center">
-              <span className="text-[11px] font-semibold text-sidebar-accent-foreground">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex-shrink-0 flex items-center justify-center">
+              <span className="text-xs font-semibold text-primary">
                 {getInitials(userName)}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[12px] font-medium text-sidebar-accent-foreground truncate leading-tight">
+              <p className="text-[13px] font-medium text-foreground truncate leading-tight">
                 {userName ?? "Usuário"}
               </p>
             </div>
             <button
               onClick={signOut}
               title="Sair"
-              className="p-1.5 rounded-md text-sidebar-foreground/60 hover:text-destructive hover:bg-sidebar-accent transition-colors"
+              className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
             >
-              <LogOut className="h-3.5 w-3.5" />
+              <LogOut className="h-4 w-4" />
             </button>
           </div>
         )}
