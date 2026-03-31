@@ -126,8 +126,8 @@ export default function Comercial() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Pipeline Comercial</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Pipeline Comercial</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             {prospects?.length ?? 0} prospects no pipeline
           </p>
         </div>
@@ -144,25 +144,25 @@ export default function Comercial() {
       <PipelineStats prospects={prospects} />
 
       {/* Filters */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 bg-card rounded-lg border border-border p-2">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Buscar prospect..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="h-9 pl-8 text-sm"
+            className="h-9 pl-8 text-sm bg-background"
           />
         </div>
         <Select value={filterNicho} onValueChange={setFilterNicho}>
-          <SelectTrigger className="w-32 h-9 text-xs"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-32 h-9 text-xs bg-background"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todos nichos</SelectItem>
             {NICHOS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={filterClassificacao} onValueChange={setFilterClassificacao}>
-          <SelectTrigger className="w-36 h-9 text-xs"><SelectValue /></SelectTrigger>
+          <SelectTrigger className="w-36 h-9 text-xs bg-background"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="todos">Todas class.</SelectItem>
             <SelectItem value="quente">🔥 Quente</SelectItem>
@@ -184,14 +184,18 @@ export default function Comercial() {
             return (
               <div key={col.key} className="kanban-col">
                 {/* Column header */}
-                <div className="flex items-center gap-2 mb-2.5 px-0.5">
-                  <div className={`w-2 h-2 rounded-full ${col.color}`} />
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{col.label}</h3>
-                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5 ml-auto">{items.length}</Badge>
+                <div className="flex items-center gap-2 mb-3 px-1">
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${col.color}`} />
+                  <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider truncate">
+                    {col.label}
+                  </h3>
+                  <Badge variant="secondary" className="text-[10px] h-[18px] px-1.5 ml-auto shrink-0">
+                    {items.length}
+                  </Badge>
                 </div>
 
-                {/* Cards */}
-                <div className="space-y-2">
+                {/* Cards container */}
+                <div className="space-y-2 rounded-lg bg-card/50 border border-border/50 p-2 min-h-[120px]">
                   {items.map(p => (
                     <ProspectCard
                       key={p.id}
@@ -207,8 +211,8 @@ export default function Comercial() {
                     />
                   ))}
                   {items.length === 0 && (
-                    <div className="rounded-lg border border-dashed p-6 text-center">
-                      <p className="text-[11px] text-muted-foreground">Vazio</p>
+                    <div className="flex items-center justify-center h-20">
+                      <p className="text-[11px] text-muted-foreground/50">Vazio</p>
                     </div>
                   )}
                 </div>

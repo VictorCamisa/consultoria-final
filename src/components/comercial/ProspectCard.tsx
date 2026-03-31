@@ -25,93 +25,96 @@ export function ProspectCard({
 
   return (
     <div
-      className="group bg-card rounded-lg border p-3 space-y-2.5 card-interactive"
+      className="group bg-background rounded-lg border border-border hover:border-primary/30 p-3.5 space-y-3 cursor-pointer transition-all duration-150 hover:shadow-sm"
       onClick={onSelect}
     >
-      {/* Header */}
+      {/* Row 1: Name + Score */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold truncate">{p.nome_negocio}</p>
-          <p className="text-[11px] text-muted-foreground">{p.cidade}</p>
+          <p className="text-[13px] font-semibold text-foreground leading-tight truncate">
+            {p.nome_negocio}
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">
+            {p.cidade}
+          </p>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           {p.classificacao_ia && (
-            <span className={`text-xs font-medium ${classif.color}`}>
-              {classif.icon}
-            </span>
+            <span className="text-sm leading-none">{classif.icon}</span>
           )}
           {p.score_qualificacao !== null && (
-            <span className={`text-xs font-bold tabular ${scoreColor(p.score_qualificacao)}`}>
+            <span className={`text-xs font-bold tabular leading-none ${scoreColor(p.score_qualificacao)}`}>
               {p.score_qualificacao}
             </span>
           )}
         </div>
       </div>
 
-      {/* Meta line */}
-      <div className="flex items-center gap-1.5 flex-wrap">
-        <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-medium">
+      {/* Row 2: Badges */}
+      <div className="flex items-center gap-1.5">
+        <Badge variant="outline" className="text-[10px] h-[18px] px-1.5 font-medium border-border">
           {p.nicho}
         </Badge>
         {p.status === "em_cadencia" && p.dia_cadencia !== null && (
-          <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+          <Badge variant="secondary" className="text-[10px] h-[18px] px-1.5">
             D{p.dia_cadencia}
           </Badge>
         )}
-        <span className="text-[10px] text-muted-foreground ml-auto tabular">
+        <span className="text-[10px] text-muted-foreground ml-auto tabular leading-none">
           {timeAgo(p.data_ultima_interacao)}
         </span>
       </div>
 
-      {/* WhatsApp link */}
+      {/* Row 3: WhatsApp */}
       <a
         href={`https://wa.me/${p.whatsapp.replace(/\D/g, "")}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-[11px] text-primary/80 flex items-center gap-1 hover:text-primary transition-colors"
+        className="flex items-center gap-1.5 text-[11px] text-primary/70 hover:text-primary transition-colors"
         onClick={e => e.stopPropagation()}
       >
-        <Phone className="h-3 w-3" />{p.whatsapp}
+        <Phone className="h-3 w-3 shrink-0" />
+        <span className="truncate">{p.whatsapp}</span>
       </a>
 
-      {/* Resumo */}
+      {/* Row 4: Resumo (if exists) */}
       {p.resumo_conversa && (
-        <p className="text-[11px] text-muted-foreground italic line-clamp-2 leading-relaxed">
-          "{p.resumo_conversa}"
+        <p className="text-[11px] text-muted-foreground/80 italic line-clamp-2 leading-relaxed border-l-2 border-border pl-2">
+          {p.resumo_conversa}
         </p>
       )}
 
-      {/* Actions */}
+      {/* Row 5: Actions */}
       <div className="flex gap-1.5 pt-0.5" onClick={e => e.stopPropagation()}>
         <Button
           size="sm"
-          variant={unread > 0 ? "default" : "ghost"}
-          className="text-[11px] h-7 px-2 flex-1"
+          variant={unread > 0 ? "default" : "outline"}
+          className="text-[11px] h-7 px-2.5 flex-1"
           onClick={onSelect}
         >
           <MessageSquare className="h-3 w-3 mr-1" />
           Chat
           {unread > 0 && (
-            <span className="ml-1 bg-destructive text-destructive-foreground rounded-full text-[9px] w-4 h-4 flex items-center justify-center font-bold">
+            <span className="ml-1 bg-destructive text-destructive-foreground rounded-full text-[9px] min-w-[16px] h-4 px-1 flex items-center justify-center font-bold">
               {unread > 9 ? "9+" : unread}
             </span>
           )}
         </Button>
 
         {p.status === "novo" && (
-          <Button size="sm" variant="ghost" className="text-[11px] h-7 px-2" onClick={onAbordar} disabled={loadingAbordar}>
+          <Button size="sm" variant="outline" className="text-[11px] h-7 px-2.5" onClick={onAbordar} disabled={loadingAbordar}>
             {loadingAbordar ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Megaphone className="h-3 w-3 mr-1" />Abordar</>}
           </Button>
         )}
 
         {["abordado", "respondeu"].includes(p.status) && (
-          <Button size="sm" variant="ghost" className="text-[11px] h-7 px-2" onClick={onCadencia} disabled={loadingCadencia}>
+          <Button size="sm" variant="outline" className="text-[11px] h-7 px-2.5" onClick={onCadencia} disabled={loadingCadencia}>
             {loadingCadencia ? <Loader2 className="h-3 w-3 animate-spin" /> : <><PlayCircle className="h-3 w-3 mr-1" />Cadência</>}
           </Button>
         )}
 
         {p.status === "frio" && (
-          <Button size="sm" variant="ghost" className="text-[11px] h-7 px-2" onClick={onReativar} disabled={loadingReativar}>
+          <Button size="sm" variant="outline" className="text-[11px] h-7 px-2.5" onClick={onReativar} disabled={loadingReativar}>
             {loadingReativar ? <Loader2 className="h-3 w-3 animate-spin" /> : <><RotateCcw className="h-3 w-3 mr-1" />Reativar</>}
           </Button>
         )}
