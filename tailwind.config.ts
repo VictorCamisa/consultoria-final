@@ -17,18 +17,13 @@ export default {
         sans:    ["Barlow", "sans-serif"],
         display: ["Barlow Condensed", "sans-serif"],
       },
+      fontSize: {
+        "2xs": ["0.6875rem", { lineHeight: "1rem" }],
+      },
       colors: {
-        /* ── VS Brand — tokens diretos (Brand Bible v1.0) ── */
-        "vs-black":    "#0A0A0A",
-        "vs-dark":     "#111216",
-        "vs-surface":  "#1A1C22",
-        "vs-card":     "#20232B",
-        "silver-light":"#D4D8E4",
-        "silver":      "#B8BCC8",
-        "silver-dim":  "#9097AB",
-        "blue-light":  "#4A8DE0",
         "vs-blue":     "#2E6FCC",
-        "blue-deep":   "#1A3F78",
+        "blue-light":  "#4A8DE0",
+        "silver-light":"#D4D8E4",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
@@ -87,11 +82,11 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       boxShadow: {
-        xs:  "0 1px 2px 0 rgba(0,0,0,0.04)",
-        sm:  "0 1px 3px 0 rgba(0,0,0,0.08), 0 1px 2px -1px rgba(0,0,0,0.06)",
-        md:  "0 4px 8px -2px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.06)",
-        lg:  "0 8px 24px -4px rgba(0,0,0,0.10), 0 4px 8px -4px rgba(0,0,0,0.06)",
-        xl:  "0 20px 40px -8px rgba(0,0,0,0.14)",
+        xs:  "0 1px 2px 0 rgba(0,0,0,0.03)",
+        sm:  "0 1px 3px 0 rgba(0,0,0,0.06), 0 1px 2px -1px rgba(0,0,0,0.04)",
+        md:  "0 4px 12px -2px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04)",
+        lg:  "0 8px 24px -4px rgba(0,0,0,0.10), 0 4px 8px -4px rgba(0,0,0,0.05)",
+        xl:  "0 20px 40px -8px rgba(0,0,0,0.12)",
       },
       keyframes: {
         "accordion-down": {
