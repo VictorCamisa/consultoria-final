@@ -120,8 +120,8 @@ export default function Dashboard() {
   const kpis = [
     { title: "Abordados esta semana", value: prospectsThisWeek, icon: Phone, color: "text-primary" },
     { title: "Taxa de resposta", value: `${taxaResposta}%`, icon: BarChart3, color: "text-primary" },
-    { title: "Fechados este mês", value: fechadosMes, icon: Target, color: "text-green-600" },
-    { title: "Fee total (mês)", value: `R$ ${feeTotalMes.toLocaleString("pt-BR")}`, icon: DollarSign, color: "text-green-600" },
+    { title: "Fechados este mês", value: fechadosMes, icon: Target, color: "text-success" },
+    { title: "Fee total (mês)", value: `R$ ${feeTotalMes.toLocaleString("pt-BR")}`, icon: DollarSign, color: "text-success" },
     { title: "Convertidos recorrente", value: convertidos, icon: TrendingUp, color: "text-primary" },
     { title: "Taxa conversão", value: `${taxaConversao}%`, icon: Users, color: "text-primary" },
   ];
@@ -147,12 +147,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {kpis.map((kpi) => (
           <Card key={kpi.title}>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-2 mb-1">
-                <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
-                <span className="text-xs text-muted-foreground">{kpi.title}</span>
+            <CardContent className="pt-5 pb-5 px-5">
+              <div className="flex items-center gap-2 mb-2">
+                <kpi.icon className={`h-4.5 w-4.5 ${kpi.color}`} />
+                <span className="text-sm text-muted-foreground font-medium">{kpi.title}</span>
               </div>
-              <p className="text-2xl font-bold">{kpi.value}</p>
+              <p className="text-3xl font-bold tracking-tight">{kpi.value}</p>
             </CardContent>
           </Card>
         ))}
@@ -321,7 +321,7 @@ export default function Dashboard() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Flame className="h-4 w-4 text-red-500" />
+                <Flame className="h-4 w-4 text-destructive" />
                 Top Prospects por Score IA
               </CardTitle>
               <Button size="sm" variant="ghost" className="text-xs" onClick={() => navigate("/comercial")}>
