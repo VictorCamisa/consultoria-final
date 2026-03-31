@@ -108,7 +108,40 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* ── User footer ── */}
-      <SidebarFooter className={cn("border-t border-border", collapsed ? "p-2" : "p-4")}>
+      <SidebarFooter className={cn("border-t border-border", collapsed ? "p-2 space-y-1" : "p-4 space-y-3")}>
+        {/* Theme toggle */}
+        {collapsed ? (
+          <button
+            onClick={toggleTheme}
+            title={theme === "light" ? "Modo escuro" : "Modo claro"}
+            className="flex items-center justify-center w-full p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+          >
+            {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          </button>
+        ) : (
+          <div className="flex items-center gap-1 p-1 bg-secondary rounded-lg">
+            <button
+              onClick={() => toggleTheme()}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all",
+                theme === "light" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Sun className="h-3.5 w-3.5" /> Light
+            </button>
+            <button
+              onClick={() => toggleTheme()}
+              className={cn(
+                "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all",
+                theme === "dark" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Moon className="h-3.5 w-3.5" /> Dark
+            </button>
+          </div>
+        )}
+
+        {/* User */}
         {collapsed ? (
           <button
             onClick={signOut}
