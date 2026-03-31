@@ -14,9 +14,21 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
+        sans:    ["Barlow", "sans-serif"],
+        display: ["Barlow Condensed", "sans-serif"],
       },
       colors: {
+        /* ── VS Brand — tokens diretos (Brand Bible v1.0) ── */
+        "vs-black":    "#0A0A0A",
+        "vs-dark":     "#111216",
+        "vs-surface":  "#1A1C22",
+        "vs-card":     "#20232B",
+        "silver-light":"#D4D8E4",
+        "silver":      "#B8BCC8",
+        "silver-dim":  "#9097AB",
+        "blue-light":  "#4A8DE0",
+        "vs-blue":     "#2E6FCC",
+        "blue-deep":   "#1A3F78",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",
