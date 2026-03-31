@@ -51,16 +51,16 @@ export function ProspectCard({
       </div>
 
       {/* Row 2: Badges */}
-      <div className="flex items-center gap-1.5">
-        <Badge variant="outline" className="text-[10px] h-[18px] px-1.5 font-medium border-border">
+      <div className="flex items-center gap-1.5 min-w-0">
+        <Badge variant="outline" className="text-[10px] h-[18px] px-1.5 font-medium border-border max-w-[140px] truncate shrink-0">
           {p.nicho}
         </Badge>
         {p.status === "em_cadencia" && p.dia_cadencia !== null && (
-          <Badge variant="secondary" className="text-[10px] h-[18px] px-1.5">
+          <Badge variant="secondary" className="text-[10px] h-[18px] px-1.5 shrink-0">
             D{p.dia_cadencia}
           </Badge>
         )}
-        <span className="text-[10px] text-muted-foreground ml-auto tabular leading-none">
+        <span className="text-[10px] text-muted-foreground ml-auto tabular leading-none shrink-0">
           {timeAgo(p.data_ultima_interacao)}
         </span>
       </div>
