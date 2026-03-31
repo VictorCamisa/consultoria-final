@@ -202,8 +202,8 @@
     color: hsl(var(--sidebar-accent-foreground));
   }
   .nav-item.active {
-    background: rgba(255, 255, 255, 0.07);
-    color: #ffffff;
+    background: rgba(37, 99, 235, 0.08);
+    color: hsl(217 91% 60%);
     border-left: 2px solid hsl(var(--sidebar-primary));
     padding-left: 10px;
   }
