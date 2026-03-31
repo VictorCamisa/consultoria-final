@@ -109,7 +109,7 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* ── User footer ── */}
-      <SidebarFooter className="border-t border-sidebar-border p-3">
+      <SidebarFooter className={cn("border-t border-sidebar-border", collapsed ? "p-2" : "p-3")}>
         {collapsed ? (
           <button
             onClick={signOut}
