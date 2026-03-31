@@ -1,4 +1,4 @@
-import { Prospect, PIPELINE_STAGES } from "./types";
+import { Prospect } from "./types";
 import { Users, Flame, RefreshCw, MessageSquare, CalendarCheck, Trophy } from "lucide-react";
 
 interface Props {
@@ -15,22 +15,24 @@ export function PipelineStats({ prospects }: Props) {
   const fechados = prospects?.filter(p => p.status === "fechado").length ?? 0;
 
   const stats = [
-    { label: "Total", value: total, icon: Users, color: "text-foreground" },
-    { label: "Novos", value: novos, icon: Users, color: "text-primary" },
-    { label: "Quentes", value: quentes, icon: Flame, color: "text-red-500" },
-    { label: "Em Cadência", value: emCadencia, icon: RefreshCw, color: "text-indigo-500" },
-    { label: "Responderam", value: responderam, icon: MessageSquare, color: "text-amber-500" },
-    { label: "Calls", value: callsAgendadas, icon: CalendarCheck, color: "text-purple-500" },
-    { label: "Fechados", value: fechados, icon: Trophy, color: "text-green-600" },
+    { label: "Total", value: total, icon: Users, accent: "bg-foreground/5 text-foreground" },
+    { label: "Novos", value: novos, icon: Users, accent: "bg-primary/8 text-primary" },
+    { label: "Quentes", value: quentes, icon: Flame, accent: "bg-red-50 text-red-600" },
+    { label: "Cadência", value: emCadencia, icon: RefreshCw, accent: "bg-violet-50 text-violet-600" },
+    { label: "Responderam", value: responderam, icon: MessageSquare, accent: "bg-amber-50 text-amber-600" },
+    { label: "Calls", value: callsAgendadas, icon: CalendarCheck, accent: "bg-purple-50 text-purple-600" },
+    { label: "Fechados", value: fechados, icon: Trophy, accent: "bg-emerald-50 text-emerald-600" },
   ];
 
   return (
     <div className="grid grid-cols-7 gap-2">
       {stats.map(s => (
-        <div key={s.label} className="bg-card rounded-lg border p-3 text-center">
-          <s.icon className={`h-4 w-4 mx-auto mb-1 ${s.color}`} />
-          <p className="text-xl font-bold tabular">{s.value}</p>
-          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{s.label}</p>
+        <div key={s.label} className="bg-background rounded-lg border border-border p-3 text-center">
+          <div className={`w-7 h-7 rounded-md flex items-center justify-center mx-auto mb-2 ${s.accent}`}>
+            <s.icon className="h-3.5 w-3.5" />
+          </div>
+          <p className="text-xl font-bold tabular text-foreground">{s.value}</p>
+          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">{s.label}</p>
         </div>
       ))}
     </div>
