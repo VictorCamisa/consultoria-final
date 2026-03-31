@@ -99,7 +99,7 @@ export function AppSidebar() {
                     )}
                   />
                   {!collapsed && (
-                    <span className={active ? "text-white" : ""}>{item.title}</span>
+                    <span className={active ? "text-primary" : ""}>{item.title}</span>
                   )}
                 </button>
               </SidebarMenuItem>
