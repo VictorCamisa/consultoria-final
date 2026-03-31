@@ -2,57 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── VS Growth Hub — Design System v2.0 ─────────────────────────────────
+/* ─── VS Growth Hub — Design System v2.1 ─────────────────────────────────
    Brand:     VS Blue #2E6FCC · Blue Light #4A8DE0 · Silver #D4D8E4
    Type:      Barlow Condensed (headings) · Barlow (body)
-   Mode:      Light only — high contrast, clear hierarchy
+   Modes:     Light (high-contrast canvas) · Dark (minimal, muted, layered)
    ────────────────────────────────────────────────────────────────────── */
 
 @layer base {
+  /* ═══════════════════ LIGHT MODE ═══════════════════ */
   :root {
-    /* ── Background hierarchy ── */
-    --background:           220 20% 97%;       /* #F4F5F8 — page canvas        */
-    --foreground:           225 15% 14%;       /* #1E2028 — primary text       */
+    --background:           220 20% 97%;
+    --foreground:           225 15% 14%;
 
-    --card:                 0 0% 100%;         /* #FFFFFF — elevated card      */
+    --card:                 0 0% 100%;
     --card-foreground:      225 15% 14%;
 
     --popover:              0 0% 100%;
     --popover-foreground:   225 15% 14%;
 
-    /* ── Primary = VS Blue ── */
-    --primary:              215 63% 49%;       /* #2E6FCC                      */
+    --primary:              215 63% 49%;
     --primary-foreground:   0 0% 100%;
 
-    /* ── Secondary — subtle fill ── */
-    --secondary:            220 16% 93%;       /* #ECEEF2                      */
-    --secondary-foreground: 225 12% 30%;       /* #3D4155                      */
+    --secondary:            220 16% 93%;
+    --secondary-foreground: 225 12% 30%;
 
-    /* ── Muted ── */
-    --muted:                220 16% 93%;       /* #ECEEF2                      */
-    --muted-foreground:     220 8% 50%;        /* #747A88                      */
+    --muted:                220 16% 93%;
+    --muted-foreground:     220 8% 50%;
 
-    /* ── Accent = Blue Light ── */
-    --accent:               213 71% 58%;       /* #4A8DE0                      */
+    --accent:               213 71% 58%;
     --accent-foreground:    0 0% 100%;
 
-    /* ── Semantic ── */
-    --destructive:          0 84% 60%;         /* #EF4444                      */
+    --destructive:          0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --success:              160 84% 39%;       /* #10B981                      */
+    --success:              160 84% 39%;
     --success-foreground:   0 0% 100%;
-    --warning:              38 92% 50%;        /* #F59E0B                      */
+    --warning:              38 92% 50%;
     --warning-foreground:   0 0% 100%;
 
-    /* ── Borders — more visible ── */
-    --border:               220 14% 87%;       /* #DADDE5                      */
+    --border:               220 14% 87%;
     --input:                220 14% 87%;
-    --ring:                 215 63% 49%;       /* VS Blue                      */
+    --ring:                 215 63% 49%;
 
-    /* ── Radius ── */
     --radius: 0.5rem;
 
-    /* ── Sidebar — solid white, clear separation ── */
     --sidebar-background:         0 0% 100%;
     --sidebar-foreground:         220 8% 50%;
     --sidebar-primary:            215 63% 49%;
@@ -61,49 +53,73 @@
     --sidebar-accent-foreground:  225 15% 14%;
     --sidebar-border:             220 14% 90%;
     --sidebar-ring:               215 63% 49%;
+
+    /* Semantic surface helpers (light) */
+    --surface-danger:       0 80% 96%;
+    --surface-danger-fg:    0 72% 42%;
+    --surface-warning:      38 90% 95%;
+    --surface-warning-fg:   30 80% 35%;
+    --surface-success:      152 60% 94%;
+    --surface-success-fg:   160 72% 32%;
+    --surface-info:         213 70% 95%;
+    --surface-info-fg:      215 63% 42%;
   }
 
+  /* ═══════════════════ DARK MODE ═══════════════════
+     Philosophy: near-black base (#09090B), single card elevation,
+     muted colors, thin 1px borders, no glow, no gradients.
+     ═══════════════════════════════════════════════════ */
   .dark {
-    --background:           222 20% 8%;        /* #0F1117                      */
-    --foreground:           210 20% 92%;       /* #E4E8EF                      */
+    --background:           240 6% 4%;           /* #09090B — true dark          */
+    --foreground:           210 10% 88%;         /* #D9DCE2 — soft white text    */
 
-    --card:                 222 18% 12%;       /* #171B24                      */
-    --card-foreground:      210 20% 92%;
+    --card:                 240 5% 8%;           /* #121215 — single elevation   */
+    --card-foreground:      210 10% 88%;
 
-    --popover:              222 18% 12%;
-    --popover-foreground:   210 20% 92%;
+    --popover:              240 5% 8%;
+    --popover-foreground:   210 10% 88%;
 
-    --primary:              213 71% 58%;       /* #4A8DE0 — lighter for dark   */
-    --primary-foreground:   222 20% 8%;
+    --primary:              213 68% 62%;         /* #5A9AE6 — accessible on dark */
+    --primary-foreground:   240 6% 4%;
 
-    --secondary:            222 14% 18%;       /* #252A35                      */
-    --secondary-foreground: 210 16% 72%;       /* #A8B2C0                      */
+    --secondary:            240 4% 12%;          /* #1C1C20 — subtle fill        */
+    --secondary-foreground: 210 8% 62%;          /* #969BA6                      */
 
-    --muted:                222 14% 18%;
-    --muted-foreground:     215 12% 55%;       /* #7E8A9C                      */
+    --muted:                240 4% 12%;
+    --muted-foreground:     215 6% 48%;          /* #737780 — deliberate low-key */
 
-    --accent:               213 71% 58%;
-    --accent-foreground:    222 20% 8%;
+    --accent:               213 68% 62%;
+    --accent-foreground:    240 6% 4%;
 
-    --destructive:          0 72% 54%;
+    --destructive:          0 62% 55%;           /* muted red                    */
     --destructive-foreground: 0 0% 100%;
-    --success:              160 72% 42%;
+    --success:              160 60% 44%;
     --success-foreground:   0 0% 100%;
-    --warning:              38 80% 50%;
+    --warning:              38 70% 52%;
     --warning-foreground:   0 0% 100%;
 
-    --border:               222 12% 22%;       /* #2E3340                      */
-    --input:                222 12% 22%;
-    --ring:                 213 71% 58%;
+    --border:               240 4% 15%;          /* #232328 — subtle separation  */
+    --input:                240 4% 15%;
+    --ring:                 213 68% 62%;
 
-    --sidebar-background:         222 18% 10%;
-    --sidebar-foreground:         215 12% 55%;
-    --sidebar-primary:            213 71% 58%;
-    --sidebar-primary-foreground: 222 20% 8%;
-    --sidebar-accent:             222 14% 16%;
-    --sidebar-accent-foreground:  210 20% 92%;
-    --sidebar-border:             222 12% 20%;
-    --sidebar-ring:               213 71% 58%;
+    --sidebar-background:         240 5% 6%;     /* #0E0E11                      */
+    --sidebar-foreground:         215 6% 48%;
+    --sidebar-primary:            213 68% 62%;
+    --sidebar-primary-foreground: 240 6% 4%;
+    --sidebar-accent:             240 4% 11%;
+    --sidebar-accent-foreground:  210 10% 88%;
+    --sidebar-border:             240 4% 13%;
+    --sidebar-ring:               213 68% 62%;
+
+    /* Semantic surface helpers (dark) — muted, no neon */
+    --surface-danger:       0 40% 12%;
+    --surface-danger-fg:    0 55% 65%;
+    --surface-warning:      38 40% 12%;
+    --surface-warning-fg:   38 55% 65%;
+    --surface-success:      152 30% 12%;
+    --surface-success-fg:   160 50% 58%;
+    --surface-info:         213 30% 14%;
+    --surface-info-fg:      213 60% 68%;
   }
 }
 
@@ -124,9 +140,9 @@
     font-weight: 400;
     line-height: 1.6;
     letter-spacing: 0.005em;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
-  /* ── Headings — Barlow Condensed, strong hierarchy ── */
   h1 {
     font-family: 'Barlow Condensed', sans-serif;
     font-weight: 700;
@@ -151,14 +167,14 @@
     color: hsl(var(--foreground));
   }
 
-  /* ── Scrollbar ── */
+  /* Scrollbar — adapts to theme */
   ::-webkit-scrollbar        { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track  { background: transparent; }
   ::-webkit-scrollbar-thumb  {
     @apply rounded-full;
-    background: hsl(220 12% 82%);
+    background: hsl(var(--border));
   }
-  ::-webkit-scrollbar-thumb:hover { background: hsl(220 10% 68%); }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }
 }
 
 /* ─── VS Utilities ───────────────────────────────────────────────────── */
@@ -222,11 +238,16 @@
     from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
   }
+
+  /* Semantic surfaces — use instead of hardcoded bg-red-50, bg-amber-50 etc */
+  .surface-danger  { background: hsl(var(--surface-danger));  color: hsl(var(--surface-danger-fg));  }
+  .surface-warning { background: hsl(var(--surface-warning)); color: hsl(var(--surface-warning-fg)); }
+  .surface-success { background: hsl(var(--surface-success)); color: hsl(var(--surface-success-fg)); }
+  .surface-info    { background: hsl(var(--surface-info));    color: hsl(var(--surface-info-fg));    }
 }
 
 /* ─── Components ─────────────────────────────────────────────────────── */
 @layer components {
-  /* ── Nav item ── */
   .nav-item {
     @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
            transition-all duration-150 cursor-pointer select-none w-full;
@@ -239,15 +260,14 @@
     color: hsl(var(--sidebar-accent-foreground));
   }
   .nav-item.active {
-    background: hsl(215 63% 49% / 0.08);
-    color: hsl(215 63% 49%);
+    background: hsl(var(--primary) / 0.1);
+    color: hsl(var(--primary));
     font-weight: 600;
   }
   .nav-item.active .nav-icon {
-    color: hsl(215 63% 49%);
+    color: hsl(var(--primary));
   }
 
-  /* ── VS Card — white, bordered, shadowed ── */
   .vs-card {
     @apply bg-card border border-border rounded-lg shadow-sm;
   }
@@ -255,7 +275,6 @@
     @apply vs-card transition-all duration-150 hover:shadow-md hover:border-primary/30 cursor-pointer;
   }
 
-  /* ── Kanban ── */
   .kanban-col {
     @apply min-w-[280px] max-w-[280px] flex-shrink-0;
   }
