@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -8,7 +8,8 @@ import {
   Contact, Smartphone, QrCode, RefreshCw, Trash2, Wifi, WifiOff,
   CheckCircle2, Tag, X, Zap, Eye,
   Sparkles, Upload, FileSpreadsheet, AlertCircle, MapPin, ArrowRight,
-  ExternalLink, Compass, Target, Building2, Check, Circle, Database, Send, Filter
+  ExternalLink, Compass, Target, Building2, Check, Circle, Database, Send, Filter,
+  TrendingUp, BarChart3, Flame, ChevronDown, ChevronRight
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useEvolutionInstances } from "@/hooks/useEvolutionInstances";
 
 type ScrapeResult = {
@@ -161,6 +163,16 @@ export default function Prospeccao() {
   const [leadsSourceFilter, setLeadsSourceFilter] = useState<string>("all");
   const [promotingIds, setPromotingIds] = useState<Set<string>>(new Set());
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  
+  // Promote dialog
+  const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
+  const [promoteTargetIds, setPromoteTargetIds] = useState<string[]>([]);
+
+  // Secondary sections
+  const [showOtherSegments, setShowOtherSegments] = useState(false);
+
+  // Active tab for capture methods
+  const [captureTab, setCaptureTab] = useState<"web" | "whatsapp">("web");
 
   const { data: savedLeads = [], isLoading: leadsLoading, refetch: refetchLeads } = useQuery({
     queryKey: ["leads_raw"],
@@ -175,6 +187,18 @@ export default function Prospeccao() {
     },
   });
 
+  // Prospects count for conversion rate
+  const { data: prospectsCount = 0 } = useQuery({
+    queryKey: ["prospects_count_metrics"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("consultoria_prospects")
+        .select("*", { count: "exact", head: true });
+      if (error) throw error;
+      return count || 0;
+    },
+  });
+
   const formatPhone = (phone: string) => {
     const digits = phone.replace(/\D/g, "");
     if (digits.startsWith("55") && digits.length >= 12) return `+${digits}`;
@@ -186,6 +210,41 @@ export default function Prospeccao() {
   const activeNiche = customNiche || selectedNiche;
   const activeLocation = [selectedCity, selectedBairro, selectedState].filter(Boolean).join(", ");
   const resetWizard = () => { setSelectedNiche(""); setCustomNiche(""); setSelectedState(""); setSelectedCity(""); setSelectedBairro(""); setLeadCount(20); setProspectingIntent(""); };
+
+  // === KPI Metrics ===
+  const kpiMetrics = useMemo(() => {
+    const now = Date.now();
+    const weekAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const leadsThisWeek = savedLeads.filter(l => new Date(l.created_at || "").getTime() > weekAgo).length;
+    const totalLeads = savedLeads.length;
+    const promotedLeads = savedLeads.filter(l => l.status === "promoted").length;
+    const conversionRate = totalLeads > 0 ? Math.round((promotedLeads / totalLeads) * 100) : 0;
+    
+    const scores = savedLeads.map(l => ((l.enrichment_data as any)?.icp_score ?? 0)).filter(s => s > 0);
+    const avgIcp = scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+
+    const sourceCounts: Record<string, number> = {};
+    savedLeads.forEach(l => { sourceCounts[l.source] = (sourceCounts[l.source] || 0) + 1; });
+    const bestSource = Object.entries(sourceCounts).sort(([,a], [,b]) => b - a)[0]?.[0] || "—";
+    const sourceLabels: Record<string, string> = { web: "Web", whatsapp: "WhatsApp", manual: "Manual", import: "Importação" };
+
+    return { leadsThisWeek, conversionRate, avgIcp, bestSource: sourceLabels[bestSource] || bestSource, totalLeads, promotedLeads };
+  }, [savedLeads]);
+
+  // === Smart Queue ===
+  const smartQueue = useMemo(() => {
+    return savedLeads
+      .filter(l => {
+        const score = ((l.enrichment_data as any)?.icp_score ?? 0);
+        return score >= 60 && l.status !== "promoted";
+      })
+      .sort((a, b) => {
+        const sa = ((a.enrichment_data as any)?.icp_score ?? 0);
+        const sb = ((b.enrichment_data as any)?.icp_score ?? 0);
+        return sb - sa;
+      })
+      .slice(0, 20);
+  }, [savedLeads]);
 
   // Promote lead to consultoria_prospects
   const handlePromoteToProspect = async (leadIds: string[]) => {
@@ -219,17 +278,24 @@ export default function Prospeccao() {
       const { error } = await supabase.from("consultoria_prospects").insert(prospects);
       if (error) throw error;
 
-      // Mark leads as promoted
       await supabase.from("leads_raw").update({ status: "promoted" } as any).in("id", leadIds);
 
       toast({ title: `${prospects.length} lead(s) enviados ao pipeline! 🎯`, description: "Veja na aba Comercial." });
       setSelectedLeadIds(new Set());
+      setPromoteDialogOpen(false);
+      setPromoteTargetIds([]);
       queryClient.invalidateQueries({ queryKey: ["leads_raw"] });
+      queryClient.invalidateQueries({ queryKey: ["prospects_count_metrics"] });
     } catch (error: any) {
       toast({ title: "Erro ao enviar", description: error.message, variant: "destructive" });
     } finally {
       setPromotingIds(prev => { const n = new Set(prev); leadIds.forEach(id => n.delete(id)); return n; });
     }
+  };
+
+  const openPromoteDialog = (ids: string[]) => {
+    setPromoteTargetIds(ids);
+    setPromoteDialogOpen(true);
   };
 
   const filteredLeads = savedLeads.filter(l => {
@@ -249,6 +315,16 @@ export default function Prospeccao() {
     return "text-muted-foreground bg-secondary border-border";
   };
 
+  // Promote dialog data
+  const promotePreviewLeads = useMemo(() => {
+    return savedLeads.filter(l => promoteTargetIds.includes(l.id));
+  }, [savedLeads, promoteTargetIds]);
+
+  const promoteAvgIcp = useMemo(() => {
+    const scores = promotePreviewLeads.map(l => ((l.enrichment_data as any)?.icp_score ?? 0)).filter(s => s > 0);
+    return scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
+  }, [promotePreviewLeads]);
+
   // === Web Scraping ===
   const handleScrape = async () => {
     if (!user || !activeNiche) return;
@@ -265,7 +341,6 @@ export default function Prospeccao() {
       const { data, error } = await supabase.functions.invoke("scrape-leads", {
         body: { niche: activeNiche, city: selectedCity || undefined, state: selectedState || undefined, bairro: selectedBairro || undefined, limit: leadCount, prospecting_intent: prospectingIntent || undefined },
       });
-      // Handle structured errors from the edge function
       if (error || data?.error) {
         const errMsg = data?.error || error?.message || "Erro desconhecido";
         if (errMsg.includes("Créditos de IA esgotados") || errMsg.includes("402")) {
@@ -403,296 +478,149 @@ export default function Prospeccao() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Prospecção</h1>
-        <p className="text-sm text-muted-foreground">Encontre leads por nicho, WhatsApp ou importação</p>
+    <div className="space-y-6 max-w-6xl">
+      {/* HEADER */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">Prospecção</h1>
+          <p className="text-sm text-muted-foreground">Funil de captação e qualificação de leads</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Select value="actions" onValueChange={(v) => {
+            if (v === "manual") {
+              setManualName(""); setManualPhone(""); setManualEmail("");
+              // Open manual dialog — we'll use a simple approach
+            }
+          }}>
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue placeholder="Importar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="actions" disabled>Importar...</SelectItem>
+              <SelectItem value="manual">
+                <span className="flex items-center gap-1.5"><Plus className="h-3 w-3" />Manual</span>
+              </SelectItem>
+              <SelectItem value="file">
+                <span className="flex items-center gap-1.5"><Upload className="h-3 w-3" />Arquivo CSV</span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <Button size="sm" className="gap-1.5 text-xs" onClick={() => { resetWizard(); setWizardOpen(true); }}>
+            <Sparkles className="h-3.5 w-3.5" /> Nova Pesquisa
+          </Button>
+        </div>
       </div>
 
-      <Tabs defaultValue="leads" className="space-y-5">
-        <TabsList className="bg-secondary h-9 p-0.5 rounded-lg gap-0.5">
-          {[
-            { id: "leads", label: `Leads (${savedLeads.length})`, icon: Database },
-            { id: "web", label: "Por Nicho", icon: Globe },
-            { id: "whatsapp", label: "WhatsApp", icon: MessageCircle },
-            { id: "manual", label: "Manual", icon: Plus },
-            { id: "file", label: "Arquivo", icon: Upload },
-          ].map(tab => (
-            <TabsTrigger key={tab.id} value={tab.id} className="gap-1.5 text-xs rounded-md px-3 data-[state=active]:bg-card data-[state=active]:shadow-sm">
-              <tab.icon className="h-3.5 w-3.5" />{tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        {/* NICHE TAB */}
-        <TabsContent value="web" className="space-y-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-medium">Gerador de Demanda</h3>
-              <p className="text-xs text-muted-foreground">Busca real em sites com qualificação de leads</p>
+      {/* KPI BAR */}
+      <div className="grid grid-cols-4 gap-3">
+        <div className="border rounded-lg p-4 bg-card">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
+              <TrendingUp className="h-3.5 w-3.5 text-primary" />
             </div>
-            <Button size="sm" className="gap-1.5 text-xs" onClick={() => { resetWizard(); setWizardOpen(true); }}>
-              <Plus className="h-3.5 w-3.5" /> Nova Pesquisa
+            <span className="text-xs text-muted-foreground">Leads na semana</span>
+          </div>
+          <p className="text-2xl font-bold tracking-tight">{kpiMetrics.leadsThisWeek}</p>
+          <p className="text-[10px] text-muted-foreground">{kpiMetrics.totalLeads} total</p>
+        </div>
+        <div className="border rounded-lg p-4 bg-card">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="h-7 w-7 rounded-md bg-green-500/10 flex items-center justify-center">
+              <BarChart3 className="h-3.5 w-3.5 text-green-600" />
+            </div>
+            <span className="text-xs text-muted-foreground">Taxa de promoção</span>
+          </div>
+          <p className="text-2xl font-bold tracking-tight">{kpiMetrics.conversionRate}%</p>
+          <p className="text-[10px] text-muted-foreground">{kpiMetrics.promotedLeads} → pipeline</p>
+        </div>
+        <div className="border rounded-lg p-4 bg-card">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="h-7 w-7 rounded-md bg-yellow-500/10 flex items-center justify-center">
+              <Target className="h-3.5 w-3.5 text-yellow-600" />
+            </div>
+            <span className="text-xs text-muted-foreground">ICP médio</span>
+          </div>
+          <p className="text-2xl font-bold tracking-tight">{kpiMetrics.avgIcp}</p>
+          <p className="text-[10px] text-muted-foreground">Score de aderência</p>
+        </div>
+        <div className="border rounded-lg p-4 bg-card">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="h-7 w-7 rounded-md bg-purple-500/10 flex items-center justify-center">
+              <Zap className="h-3.5 w-3.5 text-purple-600" />
+            </div>
+            <span className="text-xs text-muted-foreground">Melhor fonte</span>
+          </div>
+          <p className="text-2xl font-bold tracking-tight">{kpiMetrics.bestSource}</p>
+          <p className="text-[10px] text-muted-foreground">Mais leads captados</p>
+        </div>
+      </div>
+
+      {/* SMART QUEUE */}
+      {smartQueue.length > 0 && (
+        <div className="border rounded-lg p-4 bg-primary/[0.02] border-primary/20">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Flame className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold">Fila Inteligente</h3>
+              <Badge className="bg-primary/10 text-primary border-primary/30 text-[10px]" variant="outline">
+                {smartQueue.length} leads quentes
+              </Badge>
+            </div>
+            <Button
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={() => openPromoteDialog(smartQueue.slice(0, 10).map(l => l.id))}
+            >
+              <Send className="h-3.5 w-3.5" /> Enviar Top {Math.min(10, smartQueue.length)} ao Pipeline
             </Button>
           </div>
-          {scrapeJobs.length === 0 ? (
-            <div className="border border-dashed rounded-lg p-10 text-center">
-              <Search className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="text-sm font-medium">Nenhuma pesquisa realizada</p>
-              <p className="text-xs text-muted-foreground mt-1 mb-4">Escolha um nicho para encontrar leads</p>
-              <Button size="sm" onClick={() => { resetWizard(); setWizardOpen(true); }} className="gap-1.5 text-xs">
-                <Sparkles className="h-3.5 w-3.5" /> Iniciar Pesquisa
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {scrapeJobs.map(job => {
-                const cfg = statusConfig[job.status];
-                return (
-                  <div key={job.id} className="border rounded-lg p-4 hover:bg-secondary/30 transition-colors">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <p className="text-sm font-medium truncate">{job.niche}</p>
-                          <Badge variant="secondary" className={`text-[10px] ${cfg.color}`}>{cfg.label}</Badge>
-                          {job.results_count > 0 && <Badge variant="outline" className="text-[10px] gap-1"><Users2 className="h-3 w-3" />{job.results_count} salvos</Badge>}
-                          {job.avg_icp_score > 0 && <Badge variant="outline" className={`text-[10px] gap-1 ${icpScoreColor(job.avg_icp_score)}`}><Target className="h-3 w-3" /> ICP {job.avg_icp_score}/100</Badge>}
-                        </div>
-                        {job.city && <p className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" />{job.city}</p>}
-                        {job.status === "running" && <ProspectingThinkingFeed isRunning={true} />}
-                        {job.error_message && <p className="text-xs text-destructive mt-1">{job.error_message}</p>}
-                      </div>
-                      {job.status === "completed" && job.results.length > 0 && (
-                        <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => setViewResults(job)}>
-                          <Eye className="h-3 w-3" /> Ver
-                        </Button>
-                      )}
-                    </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {smartQueue.slice(0, 6).map(lead => {
+              const enrichment = (lead.enrichment_data as any) || {};
+              const score = enrichment.icp_score ?? 0;
+              return (
+                <div key={lead.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+                  <div className={`h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border ${icpScoreColor(score)}`}>
+                    {score}
                   </div>
-                );
-              })}
-            </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{lead.name || "Sem nome"}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {enrichment.segment && <span>{enrichment.segment}</span>}
+                      {enrichment.city && <span> · {enrichment.city}</span>}
+                    </p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => openPromoteDialog([lead.id])}>
+                    <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+          {smartQueue.length > 6 && (
+            <p className="text-[10px] text-muted-foreground mt-2 text-center">+ {smartQueue.length - 6} leads com ICP ≥ 60 aguardando ação</p>
           )}
-        </TabsContent>
+        </div>
+      )}
 
-        {/* WHATSAPP TAB */}
-        <TabsContent value="whatsapp" className="space-y-4">
-          {/* Group Search */}
-          <div className="border rounded-lg p-5 space-y-4">
-            <div>
-              <h3 className="text-sm font-medium flex items-center gap-2"><Compass className="h-4 w-4 text-primary" />Buscar Grupos Abertos</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Encontre links de grupos públicos do WhatsApp por nicho</p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="space-y-1 sm:col-span-1">
-                <Label className="text-xs">Nicho *</Label>
-                <Input placeholder="Ex: fitness, vendas..." value={groupSearchNiche} onChange={e => setGroupSearchNiche(e.target.value)} className="text-sm" onKeyDown={e => e.key === "Enter" && handleSearchGroups()} />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Região (opcional)</Label>
-                <Input placeholder="Ex: São Paulo..." value={groupSearchRegion} onChange={e => setGroupSearchRegion(e.target.value)} className="text-sm" onKeyDown={e => e.key === "Enter" && handleSearchGroups()} />
-              </div>
-              <div className="flex items-end">
-                <Button onClick={handleSearchGroups} size="sm" disabled={groupSearchLoading || !groupSearchNiche.trim()} className="gap-1.5 text-xs w-full">
-                  {groupSearchLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />} Buscar
-                </Button>
-              </div>
-            </div>
-            {foundGroups.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-medium">{foundGroups.length} grupos encontrados</p>
-                <ScrollArea className="h-[200px] border rounded-md">
-                  <div className="p-1.5 space-y-1">
-                    {foundGroups.map((g, i) => (
-                      <div key={i} className="flex items-center justify-between gap-2 p-2.5 rounded-md border hover:bg-secondary/50">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-medium truncate">{g.name}</p>
-                          <p className="text-[10px] text-muted-foreground truncate">{g.source}</p>
-                        </div>
-                        <a href={g.url} target="_blank" rel="noopener noreferrer">
-                          <Button variant="outline" size="sm" className="text-xs gap-1 h-7"><ExternalLink className="h-3 w-3" /> Entrar</Button>
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
-            )}
-          </div>
-
-          {/* Connect WhatsApp */}
-          <div className="border rounded-lg p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-medium flex items-center gap-2"><Smartphone className="h-4 w-4 text-green-500" />Conectar WhatsApp</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Crie instâncias e extraia contatos</p>
-              </div>
-              {instances.length > 0 && (
-                <Button variant="ghost" size="icon" onClick={fetchInstances} disabled={instancesLoading} className="h-8 w-8">
-                  <RefreshCw className={`h-3.5 w-3.5 ${instancesLoading ? "animate-spin" : ""}`} />
-                </Button>
-              )}
-            </div>
-            {instances.length > 0 && (
-              <div className="space-y-1.5">
-                {instances.map(inst => (
-                  <div key={inst.name} className={`flex items-center justify-between p-2.5 rounded-md border transition-colors ${selectedInstance === inst.name ? "bg-primary/5 border-primary/30" : "hover:bg-secondary/50"}`}>
-                    <div className="flex items-center gap-2.5 cursor-pointer flex-1" onClick={() => setSelectedInstance(inst.name)}>
-                      {selectedInstance === inst.name && <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />}
-                      <p className="text-sm">{inst.name}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {instanceState(inst.state)}
-                      {inst.state !== "open" && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => getQRCode(inst.name)}><QrCode className="h-3.5 w-3.5" /></Button>}
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => deleteInstance(inst.name)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="flex gap-2">
-              <Input placeholder="Nome da instância" value={newInstanceName} onChange={(e) => setNewInstanceName(e.target.value)} className="text-sm" onKeyDown={(e) => e.key === "Enter" && createInstance()} />
-              <Button onClick={createInstance} disabled={creatingInstance || !newInstanceName.trim()} size="sm" className="shrink-0 gap-1.5 text-xs">
-                {creatingInstance ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Plus className="h-3.5 w-3.5" />Criar</>}
-              </Button>
-            </div>
-          </div>
-
-          {/* Extract */}
-          <div className="border rounded-lg p-5 space-y-4">
-            <h3 className="text-sm font-medium">Extração de Contatos</h3>
-            <div className="flex gap-1.5 flex-wrap">
-              {([{ key: "group" as const, label: "Grupos", icon: Users2 }, { key: "conversation" as const, label: "Conversas", icon: MessageSquare }, { key: "contact" as const, label: "Contatos", icon: Contact }]).map(opt => (
-                <button key={opt.key} onClick={() => { setWhatsappMode(opt.key); if (opt.key === "group" && availableGroups.length === 0 && selectedInstance) handleFetchGroups(); }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${whatsappMode === opt.key ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
-                  <opt.icon className="h-3 w-3" />{opt.label}
-                </button>
-              ))}
-            </div>
-            {whatsappMode === "group" && (
-              <div className="space-y-3">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input placeholder="Filtrar grupos..." value={groupSearchFilter} onChange={(e) => setGroupSearchFilter(e.target.value)} className="text-xs pl-8 h-8" />
-                </div>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">{availableGroups.filter(g => !groupSearchFilter || g.name.toLowerCase().includes(groupSearchFilter.toLowerCase())).length} grupos</p>
-                  <div className="flex gap-1.5">
-                    {availableGroups.length > 0 && <Button variant="ghost" size="sm" onClick={() => setSelectedGroupIds(prev => prev.size === availableGroups.length ? new Set() : new Set(availableGroups.map(g => g.id)))} className="text-xs h-7">{selectedGroupIds.size === availableGroups.length ? "Desmarcar" : "Todos"}</Button>}
-                    <Button variant="outline" size="sm" onClick={handleFetchGroups} disabled={groupsLoading || !selectedInstance} className="text-xs h-7 gap-1">
-                      <RefreshCw className={`h-3 w-3 ${groupsLoading ? "animate-spin" : ""}`} />{availableGroups.length === 0 ? "Carregar" : "Atualizar"}
-                    </Button>
-                  </div>
-                </div>
-                {groupsLoading ? (
-                  <div className="flex items-center justify-center py-6"><Loader2 className="h-4 w-4 animate-spin mr-2" /><span className="text-xs">Buscando...</span></div>
-                ) : availableGroups.length > 0 ? (
-                  <ScrollArea className="h-[200px] border rounded-md">
-                    <div className="p-1.5 space-y-0.5">
-                      {availableGroups.filter(g => !groupSearchFilter || g.name.toLowerCase().includes(groupSearchFilter.toLowerCase())).map(group => (
-                        <div key={group.id} onClick={() => setSelectedGroupIds(prev => { const next = new Set(prev); next.has(group.id) ? next.delete(group.id) : next.add(group.id); return next; })}
-                          className={`flex items-center gap-2.5 p-2 rounded-md cursor-pointer transition-colors ${selectedGroupIds.has(group.id) ? "bg-primary/10" : "hover:bg-secondary"}`}>
-                          <Checkbox checked={selectedGroupIds.has(group.id)} className="pointer-events-none" />
-                          <div className="flex-1 min-w-0"><p className="text-xs font-medium truncate">{group.name}</p><p className="text-[10px] text-muted-foreground">{group.size} membros</p></div>
-                        </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
-                ) : !selectedInstance ? <p className="text-xs text-yellow-600 py-3 text-center">Selecione uma instância primeiro</p> : null}
-
-                {selectedGroupIds.size > 0 && (
-                  <div className="border rounded-md p-3 space-y-2 bg-secondary/30">
-                    <Label className="text-xs font-medium flex items-center gap-1.5"><Tag className="h-3.5 w-3.5" /> Tags</Label>
-                    <div className="flex gap-1.5">
-                      <Input placeholder="Ex: São Paulo, Fitness..." value={newTag} onChange={(e) => setNewTag(e.target.value)} className="text-xs h-7"
-                        onKeyDown={(e) => { if (e.key === "Enter" && newTag.trim()) { e.preventDefault(); if (!extractTags.includes(newTag.trim())) setExtractTags(prev => [...prev, newTag.trim()]); setNewTag(""); } }} />
-                      <Button variant="outline" size="sm" className="h-7 text-xs" disabled={!newTag.trim()} onClick={() => { if (newTag.trim() && !extractTags.includes(newTag.trim())) setExtractTags(prev => [...prev, newTag.trim()]); setNewTag(""); }}><Plus className="h-3 w-3" /></Button>
-                    </div>
-                    {extractTags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {extractTags.map(tag => (
-                          <Badge key={tag} variant="secondary" className="text-[10px] gap-1 pr-1">{tag}<button onClick={() => setExtractTags(prev => prev.filter(t => t !== tag))} className="hover:text-destructive"><X className="h-2.5 w-2.5" /></button></Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-            <Button onClick={handleWhatsappExtract} size="sm" className="gap-1.5 text-xs" disabled={evolutionLoading || !selectedInstance || (whatsappMode === "group" && selectedGroupIds.size === 0)}>
-              {evolutionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />}
-              {whatsappMode === "group" ? `Extrair de ${selectedGroupIds.size} grupo(s)` : whatsappMode === "conversation" ? "Extrair Conversas" : "Importar Contatos"}
-            </Button>
-          </div>
-        </TabsContent>
-
-        {/* MANUAL TAB */}
-        <TabsContent value="manual">
-          <div className="border rounded-lg p-5 space-y-4 max-w-lg">
-            <h3 className="text-sm font-medium">Adicionar Lead Manualmente</h3>
-            <form onSubmit={handleManualAdd} className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5"><Label className="text-xs">Nome</Label><Input placeholder="João Silva" value={manualName} onChange={(e) => setManualName(e.target.value)} required className="text-sm" /></div>
-                <div className="space-y-1.5"><Label className="text-xs">Telefone</Label><Input placeholder="(11) 99999-9999" value={manualPhone} onChange={(e) => setManualPhone(e.target.value)} required className="text-sm" /></div>
-              </div>
-              <div className="space-y-1.5"><Label className="text-xs">Email (opcional)</Label><Input type="email" placeholder="joao@empresa.com" value={manualEmail} onChange={(e) => setManualEmail(e.target.value)} className="text-sm" /></div>
-              <Button type="submit" size="sm" disabled={manualLoading} className="gap-1.5 text-xs">
-                {manualLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}Adicionar Lead
-              </Button>
-            </form>
-          </div>
-        </TabsContent>
-
-        {/* FILE TAB */}
-        <TabsContent value="file">
-          <div className="border rounded-lg p-5 space-y-4 max-w-lg">
-            <h3 className="text-sm font-medium">Importar de Arquivo</h3>
-            <p className="text-xs text-muted-foreground">CSV com colunas: nome, telefone, email</p>
-            <label htmlFor="file-upload" className="flex flex-col items-center gap-2 border-2 border-dashed rounded-lg p-6 cursor-pointer hover:border-primary/50 transition-colors">
-              <FileSpreadsheet className="h-6 w-6 text-muted-foreground" />
-              <p className="text-xs font-medium">Clique para selecionar</p>
-              <p className="text-[10px] text-muted-foreground">.csv, .txt</p>
-              <input id="file-upload" type="file" accept=".csv,.txt" onChange={handleFileUpload} className="hidden" />
-            </label>
-            {fileError && <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 rounded-md p-2"><AlertCircle className="h-3.5 w-3.5 shrink-0" />{fileError}</div>}
-            {fileParsedLeads.length > 0 && (
-              <div className="space-y-3">
-                <p className="text-xs font-medium">{fileParsedLeads.length} leads encontrados</p>
-                <ScrollArea className="h-[180px] border rounded-md">
-                  <div className="divide-y">
-                    {fileParsedLeads.slice(0, 50).map((l, i) => (
-                      <div key={i} className="flex items-center gap-2 px-3 py-1.5 text-xs">
-                        <span className="text-muted-foreground w-5">{i + 1}</span>
-                        <span className="flex-1 truncate font-medium">{l.name || "—"}</span>
-                        <span className="text-muted-foreground">{l.phone || "—"}</span>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-                <Button onClick={handleFileImport} size="sm" disabled={fileUploading} className="gap-1.5 text-xs">
-                  {fileUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}Importar {fileParsedLeads.length} Leads
-                </Button>
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
-        {/* LEADS SALVOS TAB */}
-        <TabsContent value="leads" className="space-y-4">
+      {/* MAIN CONTENT - 2 zones */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* LEFT — Leads list (2/3) */}
+        <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
-              <h3 className="text-sm font-medium">Leads Salvos</h3>
-              <p className="text-xs text-muted-foreground">{filteredLeads.length} leads · Todos os leads capturados por prospecção, WhatsApp ou importação</p>
+              <h3 className="text-sm font-semibold">Todos os Leads</h3>
+              <p className="text-xs text-muted-foreground">{filteredLeads.length} leads</p>
             </div>
             <div className="flex items-center gap-2">
               {selectedLeadIds.size > 0 && (
-                <Button size="sm" className="gap-1.5 text-xs" onClick={() => handlePromoteToProspect(Array.from(selectedLeadIds))} disabled={promotingIds.size > 0}>
-                  {promotingIds.size > 0 ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                <Button size="sm" className="gap-1.5 text-xs" onClick={() => openPromoteDialog(Array.from(selectedLeadIds))} disabled={promotingIds.size > 0}>
+                  <Send className="h-3.5 w-3.5" />
                   Enviar {selectedLeadIds.size} ao Pipeline
                 </Button>
               )}
               <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => refetchLeads()} disabled={leadsLoading}>
-                <RefreshCw className={`h-3.5 w-3.5 ${leadsLoading ? "animate-spin" : ""}`} /> Atualizar
+                <RefreshCw className={`h-3.5 w-3.5 ${leadsLoading ? "animate-spin" : ""}`} />
               </Button>
             </div>
           </div>
@@ -706,19 +634,18 @@ export default function Prospeccao() {
             {([
               { key: "all" as const, label: "Todos" },
               { key: "high" as const, label: "Alto (60+)" },
-              { key: "medium" as const, label: "Médio (40-59)" },
-              { key: "low" as const, label: "Baixo (<40)" },
+              { key: "medium" as const, label: "Médio" },
+              { key: "low" as const, label: "Baixo" },
             ] as const).map(f => (
               <button key={f.key} onClick={() => setLeadsFilter(f.key)}
                 className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${leadsFilter === f.key ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
                 {f.label}
               </button>
             ))}
-            <span className="text-xs text-muted-foreground ml-2">Fonte:</span>
             <Select value={leadsSourceFilter} onValueChange={setLeadsSourceFilter}>
-              <SelectTrigger className="w-[130px] h-7 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-[110px] h-7 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="all">Todas fontes</SelectItem>
                 <SelectItem value="web">Web</SelectItem>
                 <SelectItem value="whatsapp">WhatsApp</SelectItem>
                 <SelectItem value="manual">Manual</SelectItem>
@@ -740,7 +667,7 @@ export default function Prospeccao() {
                   }
                 }}
               />
-              <span className="text-xs text-muted-foreground">Selecionar todos ({filteredLeads.filter(l => l.status !== "promoted").length} disponíveis)</span>
+              <span className="text-xs text-muted-foreground">Selecionar todos ({filteredLeads.filter(l => l.status !== "promoted").length})</span>
             </div>
           )}
 
@@ -750,17 +677,21 @@ export default function Prospeccao() {
             <div className="border border-dashed rounded-lg p-10 text-center">
               <Database className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
               <p className="text-sm font-medium">Nenhum lead salvo</p>
-              <p className="text-xs text-muted-foreground mt-1">Faça uma prospecção por nicho ou extraia contatos do WhatsApp</p>
+              <p className="text-xs text-muted-foreground mt-1 mb-4">Faça uma prospecção por nicho ou extraia contatos do WhatsApp</p>
+              <Button size="sm" onClick={() => { resetWizard(); setWizardOpen(true); }} className="gap-1.5 text-xs">
+                <Sparkles className="h-3.5 w-3.5" /> Iniciar Pesquisa
+              </Button>
             </div>
           ) : (
-            <ScrollArea className="h-[calc(100vh-340px)] border rounded-lg">
+            <ScrollArea className="h-[calc(100vh-480px)] border rounded-lg">
               <div className="divide-y">
                 {filteredLeads.map(lead => {
                   const enrichment = (lead.enrichment_data as any) || {};
                   const icpScore = enrichment.icp_score ?? null;
                   const isPromoted = lead.status === "promoted";
+                  const isHighIcp = (icpScore ?? 0) >= 60;
                   return (
-                    <div key={lead.id} className={`flex items-center gap-3 px-4 py-3 hover:bg-secondary/30 transition-colors ${isPromoted ? "opacity-50" : ""}`}>
+                    <div key={lead.id} className={`flex items-center gap-3 px-4 py-3 transition-colors ${isPromoted ? "opacity-40 bg-muted/30" : isHighIcp ? "bg-primary/[0.02] hover:bg-primary/[0.04]" : "hover:bg-secondary/30"}`}>
                       {!isPromoted && (
                         <Checkbox
                           checked={selectedLeadIds.has(lead.id)}
@@ -778,26 +709,24 @@ export default function Prospeccao() {
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium truncate">{lead.name || "Sem nome"}</p>
                           {isPromoted && <Badge variant="secondary" className="text-[10px]">No Pipeline</Badge>}
-                          {enrichment.segment && <Badge variant="outline" className="text-[10px]">{enrichment.segment}</Badge>}
+                          {enrichment.segment && <Badge variant="outline" className="text-[10px] max-w-[120px] truncate">{enrichment.segment}</Badge>}
                         </div>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                           {lead.phone && <span>{lead.phone}</span>}
-                          {lead.email && <span>{lead.email}</span>}
                           {enrichment.city && <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{enrichment.city}</span>}
                           {enrichment.company && enrichment.company !== lead.name && <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{enrichment.company}</span>}
                         </div>
-                        {enrichment.icp_reason && <p className="text-[10px] text-muted-foreground/70 mt-0.5 truncate">{enrichment.icp_reason}</p>}
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         {icpScore !== null && (
-                          <Badge variant="outline" className={`text-[10px] ${icpScoreColor(icpScore)}`}>ICP {icpScore}</Badge>
+                          <Badge variant="outline" className={`text-[10px] font-bold ${icpScoreColor(icpScore)}`}>ICP {icpScore}</Badge>
                         )}
                         <Badge variant="outline" className="text-[10px] capitalize">{lead.source}</Badge>
                         {!isPromoted && (
-                          <Button variant="ghost" size="icon" className="h-7 w-7" title="Enviar ao Pipeline"
+                          <Button variant="outline" size="sm" className="h-7 text-xs gap-1" title="Enviar ao Pipeline"
                             disabled={promotingIds.has(lead.id)}
-                            onClick={() => handlePromoteToProspect([lead.id])}>
-                            {promotingIds.has(lead.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
+                            onClick={() => openPromoteDialog([lead.id])}>
+                            {promotingIds.has(lead.id) ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Send className="h-3 w-3" />Pipeline</>}
                           </Button>
                         )}
                       </div>
@@ -807,8 +736,221 @@ export default function Prospeccao() {
               </div>
             </ScrollArea>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+
+        {/* RIGHT — Capture methods (1/3) */}
+        <div className="space-y-4">
+          <h3 className="text-sm font-semibold">Captação</h3>
+
+          {/* Capture tabs */}
+          <div className="flex gap-1 p-0.5 bg-secondary rounded-lg">
+            <button
+              onClick={() => setCaptureTab("web")}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${captureTab === "web" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Globe className="h-3.5 w-3.5" /> Por Nicho
+            </button>
+            <button
+              onClick={() => setCaptureTab("whatsapp")}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${captureTab === "whatsapp" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+            </button>
+          </div>
+
+          {captureTab === "web" && (
+            <div className="space-y-3">
+              {/* Quick launch */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <p className="text-xs font-medium">Pesquisa rápida por nicho</p>
+                <Button size="sm" className="gap-1.5 text-xs w-full" onClick={() => { resetWizard(); setWizardOpen(true); }}>
+                  <Sparkles className="h-3.5 w-3.5" /> Nova Pesquisa
+                </Button>
+              </div>
+
+              {/* Recent jobs */}
+              {scrapeJobs.length > 0 && (
+                <div className="border rounded-lg p-4 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Pesquisas recentes</p>
+                  {scrapeJobs.slice(0, 5).map(job => {
+                    const cfg = statusConfig[job.status];
+                    return (
+                      <div key={job.id} className="flex items-center gap-2 p-2 rounded-md border hover:bg-secondary/30 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{job.niche}</p>
+                          {job.city && <p className="text-[10px] text-muted-foreground truncate">{job.city}</p>}
+                          {job.status === "running" && <ProspectingThinkingFeed isRunning={true} />}
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Badge variant="secondary" className={`text-[10px] ${cfg.color}`}>{cfg.label}</Badge>
+                          {job.status === "completed" && job.results.length > 0 && (
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setViewResults(job)}>
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Manual & File import */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <p className="text-xs font-medium text-muted-foreground">Adicionar manualmente</p>
+                <form onSubmit={handleManualAdd} className="space-y-2">
+                  <Input placeholder="Nome" value={manualName} onChange={(e) => setManualName(e.target.value)} required className="text-xs h-8" />
+                  <Input placeholder="Telefone" value={manualPhone} onChange={(e) => setManualPhone(e.target.value)} required className="text-xs h-8" />
+                  <Input type="email" placeholder="Email (opcional)" value={manualEmail} onChange={(e) => setManualEmail(e.target.value)} className="text-xs h-8" />
+                  <Button type="submit" size="sm" disabled={manualLoading} className="gap-1.5 text-xs w-full" variant="outline">
+                    {manualLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}Adicionar
+                  </Button>
+                </form>
+              </div>
+
+              <div className="border rounded-lg p-4 space-y-3">
+                <p className="text-xs font-medium text-muted-foreground">Importar CSV</p>
+                <label htmlFor="file-upload-sidebar" className="flex flex-col items-center gap-1 border-2 border-dashed rounded-lg p-4 cursor-pointer hover:border-primary/50 transition-colors">
+                  <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
+                  <p className="text-[10px] font-medium">Selecionar arquivo</p>
+                  <input id="file-upload-sidebar" type="file" accept=".csv,.txt" onChange={handleFileUpload} className="hidden" />
+                </label>
+                {fileError && <p className="text-[10px] text-destructive">{fileError}</p>}
+                {fileParsedLeads.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-muted-foreground">{fileParsedLeads.length} leads encontrados</p>
+                    <Button onClick={handleFileImport} size="sm" disabled={fileUploading} className="gap-1.5 text-xs w-full" variant="outline">
+                      {fileUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}Importar
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {captureTab === "whatsapp" && (
+            <div className="space-y-3">
+              {/* Group Search */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <p className="text-xs font-medium flex items-center gap-1.5"><Compass className="h-3.5 w-3.5 text-primary" />Buscar Grupos</p>
+                <Input placeholder="Nicho..." value={groupSearchNiche} onChange={e => setGroupSearchNiche(e.target.value)} className="text-xs h-8" onKeyDown={e => e.key === "Enter" && handleSearchGroups()} />
+                <Input placeholder="Região (opcional)" value={groupSearchRegion} onChange={e => setGroupSearchRegion(e.target.value)} className="text-xs h-8" onKeyDown={e => e.key === "Enter" && handleSearchGroups()} />
+                <Button onClick={handleSearchGroups} size="sm" disabled={groupSearchLoading || !groupSearchNiche.trim()} className="gap-1.5 text-xs w-full">
+                  {groupSearchLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />} Buscar
+                </Button>
+                {foundGroups.length > 0 && (
+                  <ScrollArea className="h-[150px] border rounded-md">
+                    <div className="p-1.5 space-y-1">
+                      {foundGroups.map((g, i) => (
+                        <div key={i} className="flex items-center justify-between gap-2 p-2 rounded-md border hover:bg-secondary/50">
+                          <p className="text-[10px] font-medium truncate flex-1">{g.name}</p>
+                          <a href={g.url} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm" className="text-[10px] gap-1 h-6 px-2"><ExternalLink className="h-2.5 w-2.5" /></Button>
+                          </a>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </div>
+
+              {/* Connect WhatsApp */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium flex items-center gap-1.5"><Smartphone className="h-3.5 w-3.5 text-green-500" />Instâncias</p>
+                  {instances.length > 0 && (
+                    <Button variant="ghost" size="icon" onClick={fetchInstances} disabled={instancesLoading} className="h-6 w-6">
+                      <RefreshCw className={`h-3 w-3 ${instancesLoading ? "animate-spin" : ""}`} />
+                    </Button>
+                  )}
+                </div>
+                {instances.map(inst => (
+                  <div key={inst.name} className={`flex items-center justify-between p-2 rounded-md border transition-colors text-xs ${selectedInstance === inst.name ? "bg-primary/5 border-primary/30" : "hover:bg-secondary/50"}`}>
+                    <div className="flex items-center gap-2 cursor-pointer flex-1 min-w-0" onClick={() => setSelectedInstance(inst.name)}>
+                      {selectedInstance === inst.name && <CheckCircle2 className="h-3 w-3 text-primary shrink-0" />}
+                      <span className="truncate">{inst.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {instanceState(inst.state)}
+                      {inst.state !== "open" && <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => getQRCode(inst.name)}><QrCode className="h-3 w-3" /></Button>}
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => deleteInstance(inst.name)}><Trash2 className="h-3 w-3" /></Button>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex gap-1.5">
+                  <Input placeholder="Nome instância" value={newInstanceName} onChange={(e) => setNewInstanceName(e.target.value)} className="text-xs h-7" onKeyDown={(e) => e.key === "Enter" && createInstance()} />
+                  <Button onClick={createInstance} disabled={creatingInstance || !newInstanceName.trim()} size="sm" className="shrink-0 text-xs h-7 px-2">
+                    {creatingInstance ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Extract */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <p className="text-xs font-medium">Extração</p>
+                <div className="flex gap-1 flex-wrap">
+                  {([{ key: "group" as const, label: "Grupos", icon: Users2 }, { key: "conversation" as const, label: "Conversas", icon: MessageSquare }, { key: "contact" as const, label: "Contatos", icon: Contact }]).map(opt => (
+                    <button key={opt.key} onClick={() => { setWhatsappMode(opt.key); if (opt.key === "group" && availableGroups.length === 0 && selectedInstance) handleFetchGroups(); }}
+                      className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border transition-colors ${whatsappMode === opt.key ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+                      <opt.icon className="h-2.5 w-2.5" />{opt.label}
+                    </button>
+                  ))}
+                </div>
+                {whatsappMode === "group" && (
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                      <Input placeholder="Filtrar..." value={groupSearchFilter} onChange={(e) => setGroupSearchFilter(e.target.value)} className="text-[10px] pl-7 h-7" />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] text-muted-foreground">{availableGroups.filter(g => !groupSearchFilter || g.name.toLowerCase().includes(groupSearchFilter.toLowerCase())).length} grupos</p>
+                      <Button variant="outline" size="sm" onClick={handleFetchGroups} disabled={groupsLoading || !selectedInstance} className="text-[10px] h-6 gap-1 px-2">
+                        <RefreshCw className={`h-2.5 w-2.5 ${groupsLoading ? "animate-spin" : ""}`} />{availableGroups.length === 0 ? "Carregar" : "↻"}
+                      </Button>
+                    </div>
+                    {groupsLoading ? (
+                      <div className="flex items-center justify-center py-4"><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /><span className="text-[10px]">Buscando...</span></div>
+                    ) : availableGroups.length > 0 ? (
+                      <ScrollArea className="h-[150px] border rounded-md">
+                        <div className="p-1 space-y-0.5">
+                          {availableGroups.filter(g => !groupSearchFilter || g.name.toLowerCase().includes(groupSearchFilter.toLowerCase())).map(group => (
+                            <div key={group.id} onClick={() => setSelectedGroupIds(prev => { const next = new Set(prev); next.has(group.id) ? next.delete(group.id) : next.add(group.id); return next; })}
+                              className={`flex items-center gap-2 p-1.5 rounded-md cursor-pointer transition-colors ${selectedGroupIds.has(group.id) ? "bg-primary/10" : "hover:bg-secondary"}`}>
+                              <Checkbox checked={selectedGroupIds.has(group.id)} className="pointer-events-none h-3.5 w-3.5" />
+                              <div className="flex-1 min-w-0"><p className="text-[10px] font-medium truncate">{group.name}</p></div>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    ) : !selectedInstance ? <p className="text-[10px] text-yellow-600 py-2 text-center">Selecione instância</p> : null}
+                    {selectedGroupIds.size > 0 && (
+                      <div className="border rounded-md p-2 space-y-1.5 bg-secondary/30">
+                        <Label className="text-[10px] font-medium flex items-center gap-1"><Tag className="h-3 w-3" /> Tags</Label>
+                        <div className="flex gap-1">
+                          <Input placeholder="Ex: Fitness..." value={newTag} onChange={(e) => setNewTag(e.target.value)} className="text-[10px] h-6"
+                            onKeyDown={(e) => { if (e.key === "Enter" && newTag.trim()) { e.preventDefault(); if (!extractTags.includes(newTag.trim())) setExtractTags(prev => [...prev, newTag.trim()]); setNewTag(""); } }} />
+                          <Button variant="outline" size="sm" className="h-6 px-1.5 text-[10px]" disabled={!newTag.trim()} onClick={() => { if (newTag.trim() && !extractTags.includes(newTag.trim())) setExtractTags(prev => [...prev, newTag.trim()]); setNewTag(""); }}><Plus className="h-2.5 w-2.5" /></Button>
+                        </div>
+                        {extractTags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {extractTags.map(tag => (
+                              <Badge key={tag} variant="secondary" className="text-[10px] gap-0.5 pr-0.5">{tag}<button onClick={() => setExtractTags(prev => prev.filter(t => t !== tag))} className="hover:text-destructive"><X className="h-2 w-2" /></button></Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <Button onClick={handleWhatsappExtract} size="sm" className="gap-1.5 text-xs w-full" disabled={evolutionLoading || !selectedInstance || (whatsappMode === "group" && selectedGroupIds.size === 0)}>
+                  {evolutionLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageCircle className="h-3.5 w-3.5" />}
+                  Extrair
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* WIZARD DIALOG */}
       <Dialog open={wizardOpen} onOpenChange={v => { if (!scrapingLoading) setWizardOpen(v); }}>
@@ -824,7 +966,7 @@ export default function Prospeccao() {
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-green-600">ICP configurado — VS Growth Hub</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  A IA vai qualificar cada lead com base no perfil da consultoria (Público-alvo: donos de negócios locais com faturamento acima de R$ 30k/mês)
+                  Qualificação baseada no perfil da consultoria (donos de negócios locais, faturamento acima de R$ 30k/mês)
                 </p>
               </div>
             </div>
@@ -843,29 +985,60 @@ export default function Prospeccao() {
                 className="text-sm min-h-[70px] resize-none"
                 maxLength={300}
               />
-              <p className="text-[10px] text-muted-foreground">{prospectingIntent.length}/300 — Quanto mais específico, mais assertivos os leads</p>
+              <p className="text-[10px] text-muted-foreground">{prospectingIntent.length}/300</p>
             </div>
 
-            {/* Segment */}
+            {/* Segment — Primary nichos highlighted */}
             <div>
               <Label className="text-sm font-medium">Segmento *</Label>
-              <div className="grid grid-cols-3 gap-2 mt-2">
-                {PRESET_SEGMENTS.map(n => (
-                  <button key={n.value} onClick={() => { setSelectedNiche(n.value); setCustomNiche(""); }}
-                    className={`text-left p-3 rounded-lg border transition-all text-xs ${
-                      selectedNiche === n.value
-                        ? "border-primary bg-primary/5 ring-1 ring-primary/30"
-                        : n.primary
-                          ? "border-primary/20 bg-primary/[0.02] hover:border-primary/40 hover:bg-primary/5"
-                          : "border-border hover:border-primary/30 hover:bg-secondary/50"
-                    }`}>
-                    <span className="text-base">{n.icon}</span>
-                    <p className="font-medium mt-1.5">{n.label}</p>
-                  </button>
-                ))}
+              <div className="mt-2 space-y-3">
+                {/* Primary nichos — Recommended */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-primary font-semibold mb-2 flex items-center gap-1">
+                    <Target className="h-3 w-3" /> Recomendados VS
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {PRESET_SEGMENTS.filter(n => n.primary).map(n => (
+                      <button key={n.value} onClick={() => { setSelectedNiche(n.value); setCustomNiche(""); }}
+                        className={`text-left p-3 rounded-lg border-2 transition-all text-xs ${
+                          selectedNiche === n.value
+                            ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                            : "border-primary/20 bg-primary/[0.02] hover:border-primary/40 hover:bg-primary/5"
+                        }`}>
+                        <span className="text-base">{n.icon}</span>
+                        <p className="font-medium mt-1.5">{n.label}</p>
+                        <p className="text-[10px] text-primary/60 mt-0.5">Recomendado</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Other segments — collapsed */}
+                <Collapsible open={showOtherSegments} onOpenChange={setShowOtherSegments}>
+                  <CollapsibleTrigger className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full">
+                    {showOtherSegments ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                    Outros segmentos ({PRESET_SEGMENTS.filter(n => !n.primary).length})
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      {PRESET_SEGMENTS.filter(n => !n.primary).map(n => (
+                        <button key={n.value} onClick={() => { setSelectedNiche(n.value); setCustomNiche(""); }}
+                          className={`text-left p-3 rounded-lg border transition-all text-xs ${
+                            selectedNiche === n.value
+                              ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                              : "border-border hover:border-primary/30 hover:bg-secondary/50"
+                          }`}>
+                          <span className="text-base">{n.icon}</span>
+                          <p className="font-medium mt-1.5">{n.label}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <Input value={customNiche} onChange={e => { setCustomNiche(e.target.value); setSelectedNiche(""); }}
+                  placeholder="Ou segmento personalizado..." className="text-sm" />
               </div>
-              <Input value={customNiche} onChange={e => { setCustomNiche(e.target.value); setSelectedNiche(""); }}
-                placeholder="Ou segmento personalizado..." className="mt-2 text-sm" />
             </div>
 
             {/* Location */}
@@ -902,7 +1075,6 @@ export default function Prospeccao() {
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Resumo da busca</p>
                 <p className="text-sm"><span className="font-medium">{activeNiche}</span> em <span className="font-medium">{activeLocation}</span> — até <span className="font-medium">{leadCount}</span> empresas</p>
                 {prospectingIntent && <p className="text-xs text-primary/80 italic">"{prospectingIntent.slice(0, 100)}{prospectingIntent.length > 100 ? "..." : ""}"</p>}
-                <p className="text-xs text-muted-foreground">A IA vai buscar, extrair e qualificar cada lead com score de aderência ao ICP da VS Growth Hub.</p>
               </div>
             )}
           </div>
@@ -914,14 +1086,80 @@ export default function Prospeccao() {
         </DialogContent>
       </Dialog>
 
+      {/* PROMOTE DIALOG */}
+      <Dialog open={promoteDialogOpen} onOpenChange={setPromoteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Send className="h-4 w-4 text-primary" /> Enviar ao Pipeline
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Confirme o envio de {promotePreviewLeads.length} lead(s) para o pipeline comercial
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {/* Summary */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="border rounded-md p-3 text-center">
+                <p className="text-lg font-bold">{promotePreviewLeads.length}</p>
+                <p className="text-[10px] text-muted-foreground">Leads</p>
+              </div>
+              <div className="border rounded-md p-3 text-center">
+                <p className="text-lg font-bold">{promoteAvgIcp}</p>
+                <p className="text-[10px] text-muted-foreground">ICP médio</p>
+              </div>
+              <div className="border rounded-md p-3 text-center">
+                <p className="text-lg font-bold">{promotePreviewLeads.filter(l => l.phone).length}</p>
+                <p className="text-[10px] text-muted-foreground">Com telefone</p>
+              </div>
+            </div>
+
+            {/* Preview list */}
+            <ScrollArea className="h-[200px] border rounded-md">
+              <div className="divide-y">
+                {promotePreviewLeads.map(lead => {
+                  const enrichment = (lead.enrichment_data as any) || {};
+                  const score = enrichment.icp_score ?? 0;
+                  return (
+                    <div key={lead.id} className="flex items-center gap-2 px-3 py-2">
+                      <div className={`h-7 w-7 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 border ${icpScoreColor(score)}`}>
+                        {score}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{lead.name || "Sem nome"}</p>
+                        <p className="text-[10px] text-muted-foreground truncate">{enrichment.segment || "—"} · {lead.phone || "Sem tel"}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </ScrollArea>
+
+            {promotePreviewLeads.filter(l => !l.phone).length > 0 && (
+              <div className="flex items-center gap-2 text-xs text-yellow-600 bg-yellow-500/10 rounded-md p-2">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                {promotePreviewLeads.filter(l => !l.phone).length} lead(s) sem telefone serão ignorados
+              </div>
+            )}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPromoteDialogOpen(false)} className="text-xs">Cancelar</Button>
+            <Button size="sm" onClick={() => handlePromoteToProspect(promoteTargetIds)} disabled={promotingIds.size > 0} className="gap-1.5 text-xs">
+              {promotingIds.size > 0 ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+              Confirmar Envio
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* RESULTS DIALOG */}
       <Dialog open={!!viewResults} onOpenChange={() => setViewResults(null)}>
         <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base flex items-center gap-2">Resultados — {viewResults?.niche}</DialogTitle>
             <DialogDescription className="text-xs">
-              {viewResults?.total_found || 0} encontrados na web · {viewResults?.results_count || 0} novos salvos no banco
-              {(viewResults?.duplicates_skipped || 0) > 0 && ` · ${viewResults?.duplicates_skipped} duplicados ignorados`}
+              {viewResults?.total_found || 0} encontrados · {viewResults?.results_count || 0} salvos
+              {(viewResults?.duplicates_skipped || 0) > 0 && ` · ${viewResults?.duplicates_skipped} duplicados`}
             </DialogDescription>
           </DialogHeader>
           {viewResults?.results?.length ? (
