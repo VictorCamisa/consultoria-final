@@ -213,7 +213,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background-color: #2563EB;
+    background-color: #2E6FCC;
     color: #ffffff;
     font-family: 'Barlow', sans-serif;
     font-weight: 500;
@@ -225,7 +225,7 @@
     border: none;
   }
   .btn-vs-primary:hover {
-    background-color: #1D4ED8;
+    background-color: #4A8DE0;
   }
 
   /* ── Kanban column ── */
