@@ -95,7 +95,7 @@ export function AppSidebar() {
                   <item.icon
                     className={cn(
                       "h-4 w-4 flex-shrink-0",
-                      active ? "text-white" : "text-sidebar-foreground"
+                      active ? "text-primary" : "text-sidebar-foreground"
                     )}
                   />
                   {!collapsed && (
