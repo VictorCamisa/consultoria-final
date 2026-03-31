@@ -321,7 +321,7 @@ export default function Dashboard() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Flame className="h-4 w-4 text-red-500" />
+                <Flame className="h-4 w-4 text-destructive" />
                 Top Prospects por Score IA
               </CardTitle>
               <Button size="sm" variant="ghost" className="text-xs" onClick={() => navigate("/comercial")}>
