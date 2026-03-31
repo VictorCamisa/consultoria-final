@@ -86,8 +86,9 @@ export function AppSidebar() {
                 <button
                   onClick={() => navigate(item.url)}
                   className={cn(
-                    "nav-item w-full",
-                    active && "active"
+                    collapsed ? "flex items-center justify-center w-full p-2 rounded-md transition-colors" : "nav-item w-full",
+                    active && !collapsed && "active",
+                    active && collapsed && "bg-primary/10 text-primary"
                   )}
                   title={collapsed ? item.title : undefined}
                 >
