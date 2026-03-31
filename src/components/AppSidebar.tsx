@@ -77,7 +77,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       {/* ── Navigation ── */}
-      <SidebarContent className="py-3 px-2">
+      <SidebarContent className={cn("py-3", collapsed ? "px-1" : "px-2")}>
         <SidebarMenu className="space-y-0.5">
           {navItems.map((item) => {
             const active = isActive(item.url);
