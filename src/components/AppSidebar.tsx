@@ -37,6 +37,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { userName, signOut } = useAuth();
+  const { theme, toggleTheme } = useTheme();
 
   const isActive = (url: string) =>
     url === "/" ? location.pathname === "/" : location.pathname.startsWith(url);
