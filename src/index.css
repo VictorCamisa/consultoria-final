@@ -70,56 +70,56 @@
      muted colors, thin 1px borders, no glow, no gradients.
      ═══════════════════════════════════════════════════ */
   .dark {
-    --background:           240 6% 4%;           /* #09090B — true dark          */
-    --foreground:           210 10% 88%;         /* #D9DCE2 — soft white text    */
+    --background:           220 15% 8%;          /* #111318 — rich dark, not dead black */
+    --foreground:           210 20% 95%;         /* #EFF1F5 — crisp white text   */
 
-    --card:                 240 5% 8%;           /* #121215 — single elevation   */
-    --card-foreground:      210 10% 88%;
+    --card:                 220 14% 12%;         /* #181B22 — clear card elevation */
+    --card-foreground:      210 20% 95%;
 
-    --popover:              240 5% 8%;
-    --popover-foreground:   210 10% 88%;
+    --popover:              220 14% 12%;
+    --popover-foreground:   210 20% 95%;
 
-    --primary:              213 68% 62%;         /* #5A9AE6 — accessible on dark */
-    --primary-foreground:   240 6% 4%;
+    --primary:              213 80% 60%;         /* #4A9CF5 — vibrant blue on dark */
+    --primary-foreground:   220 15% 6%;
 
-    --secondary:            240 4% 12%;          /* #1C1C20 — subtle fill        */
-    --secondary-foreground: 210 8% 62%;          /* #969BA6                      */
+    --secondary:            220 12% 16%;         /* #232730 — visible fill       */
+    --secondary-foreground: 210 15% 75%;         /* #B5BCC9 — readable           */
 
-    --muted:                240 4% 12%;
-    --muted-foreground:     215 6% 48%;          /* #737780 — deliberate low-key */
+    --muted:                220 12% 16%;
+    --muted-foreground:     215 12% 65%;         /* #96A0B3 — READABLE labels    */
 
-    --accent:               213 68% 62%;
-    --accent-foreground:    240 6% 4%;
+    --accent:               213 80% 60%;
+    --accent-foreground:    220 15% 6%;
 
-    --destructive:          0 62% 55%;           /* muted red                    */
+    --destructive:          0 72% 58%;           /* bright red for visibility     */
     --destructive-foreground: 0 0% 100%;
-    --success:              160 60% 44%;
+    --success:              160 70% 48%;
     --success-foreground:   0 0% 100%;
-    --warning:              38 70% 52%;
+    --warning:              38 85% 55%;
     --warning-foreground:   0 0% 100%;
 
-    --border:               240 4% 15%;          /* #232328 — subtle separation  */
-    --input:                240 4% 15%;
-    --ring:                 213 68% 62%;
+    --border:               220 10% 20%;         /* #2E3340 — visible borders     */
+    --input:                220 10% 20%;
+    --ring:                 213 80% 60%;
 
-    --sidebar-background:         240 5% 6%;     /* #0E0E11                      */
-    --sidebar-foreground:         215 6% 48%;
-    --sidebar-primary:            213 68% 62%;
-    --sidebar-primary-foreground: 240 6% 4%;
-    --sidebar-accent:             240 4% 11%;
-    --sidebar-accent-foreground:  210 10% 88%;
-    --sidebar-border:             240 4% 13%;
-    --sidebar-ring:               213 68% 62%;
+    --sidebar-background:         220 15% 7%;    /* #0F1218                       */
+    --sidebar-foreground:         215 12% 65%;   /* readable nav text             */
+    --sidebar-primary:            213 80% 60%;
+    --sidebar-primary-foreground: 220 15% 6%;
+    --sidebar-accent:             220 12% 14%;
+    --sidebar-accent-foreground:  210 20% 95%;
+    --sidebar-border:             220 10% 18%;
+    --sidebar-ring:               213 80% 60%;
 
-    /* Semantic surface helpers (dark) — muted, no neon */
-    --surface-danger:       0 40% 12%;
-    --surface-danger-fg:    0 55% 65%;
-    --surface-warning:      38 40% 12%;
-    --surface-warning-fg:   38 55% 65%;
-    --surface-success:      152 30% 12%;
-    --surface-success-fg:   160 50% 58%;
-    --surface-info:         213 30% 14%;
-    --surface-info-fg:      213 60% 68%;
+    /* Semantic surface helpers (dark) — visible, readable */
+    --surface-danger:       0 50% 15%;
+    --surface-danger-fg:    0 70% 72%;
+    --surface-warning:      38 50% 15%;
+    --surface-warning-fg:   38 70% 72%;
+    --surface-success:      152 40% 14%;
+    --surface-success-fg:   160 60% 65%;
+    --surface-info:         213 40% 16%;
+    --surface-info-fg:      213 70% 75%;
   }
 }
 
