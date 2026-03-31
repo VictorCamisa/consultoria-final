@@ -113,7 +113,7 @@ export function AppSidebar() {
           <button
             onClick={signOut}
             title="Sair"
-            className="nav-item justify-center px-2 hover:text-red-400"
+            className="nav-item justify-center px-2 hover:text-destructive"
           >
             <LogOut className="h-4 w-4" />
           </button>
