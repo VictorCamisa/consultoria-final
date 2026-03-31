@@ -1,0 +1,1 @@
+UPDATE consultoria_config SET instancia_evolution = 'victorcomercial' WHERE instancia_evolution = '' OR instancia_evolution IS NULL;

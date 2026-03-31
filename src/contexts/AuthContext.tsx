@@ -1,0 +1,113 @@
+import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { Session, User } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
+
+interface AuthContextType {
+  session: Session | null;
+  user: User | null;
+  userName: string | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/** Busca o nome do usuário na tabela vs_users — falhas são silenciosas */
+async function fetchUserName(email: string): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from("vs_users")
+      .select("name")
+      .eq("email", email)
+      .maybeSingle();
+    return data?.name ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const applySession = (nextSession: Session | null) => {
+      if (!mounted) return;
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+    };
+
+    const finishBootstrap = () => {
+      if (mounted) setLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, nextSession) => {
+        applySession(nextSession);
+        finishBootstrap();
+      }
+    );
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      applySession(session);
+    }).catch(() => {
+      applySession(null);
+    }).finally(() => {
+      finishBootstrap();
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    if (!user?.email) {
+      setUserName(null);
+      return () => {
+        active = false;
+      };
+    }
+
+    fetchUserName(user.email)
+      .then((name) => {
+        if (active) setUserName(name ?? user.email);
+      })
+      .catch(() => {
+        if (active) setUserName(user.email);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.email]);
+
+  const signIn = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  return (
+    <AuthContext.Provider value={{ session, user, userName, loading, signIn, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
+  return context;
+}

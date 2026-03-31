@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── VS Growth Hub — Design System ─────────────────────────────────────────
+   Brand:   VS Indigo  #5046e4
+   Surface: #f4f6fb (bg)  #ffffff (card)
+   Sidebar: #0b0f1c (deep navy — always dark)
+   Text:    #080d1e  ·  Muted: #7a849a  ·  Border: #dde2ed
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@layer base {
+  :root {
+    /* ── Surfaces ── */
+    --background:         220 22% 97%;
+    --foreground:         226 65% 8%;
+
+    --card:               0 0% 100%;
+    --card-foreground:    226 65% 8%;
+
+    --popover:            0 0% 100%;
+    --popover-foreground: 226 65% 8%;
+
+    /* ── VS Brand ── */
+    --primary:            246 76% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    /* ── Neutrals ── */
+    --secondary:          220 16% 93%;
+    --secondary-foreground: 226 30% 22%;
+
+    --muted:              220 16% 93%;
+    --muted-foreground:   220 10% 48%;
+
+    --accent:             246 76% 95%;
+    --accent-foreground:  246 76% 42%;
+
+    /* ── Semantics ── */
+    --destructive:        355 82% 57%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success:            142 70% 32%;
+    --success-foreground: 0 0% 100%;
+
+    --warning:            38 90% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    /* ── Inputs & Ring ── */
+    --border:             220 16% 88%;
+    --input:              220 16% 88%;
+    --ring:               246 76% 58%;
+
+    --radius: 0.5rem;
+
+    /* ── Sidebar (always dark navy) ── */
+    --sidebar-background:         226 32% 7%;
+    --sidebar-foreground:         220 18% 62%;
+    --sidebar-primary:            246 70% 66%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent:             225 28% 12%;
+    --sidebar-accent-foreground:  220 20% 90%;
+    --sidebar-border:             226 25% 13%;
+    --sidebar-ring:               246 70% 66%;
+  }
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar        { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track  { background: transparent; }
+  ::-webkit-scrollbar-thumb  {
+    @apply rounded-full;
+    background: hsl(220 16% 80%);
+  }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(220 10% 60%); }
+}
+
+/* ─── Utilities ──────────────────────────────────────────────────────────── */
+@layer utilities {
+  .gradient-vs {
+    background: linear-gradient(135deg, #5046e4 0%, #7c3aed 100%);
+  }
+
+  .dot-grid {
+    background-image: radial-gradient(circle, rgba(255,255,255,0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  .page-enter {
+    animation: page-enter 0.18s ease-out both;
+  }
+
+  @keyframes page-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  .glass {
+    @apply bg-white/75 backdrop-blur-xl border border-white/50;
+  }
+}
+
+/* ─── Component layer ────────────────────────────────────────────────────── */
+@layer components {
+  /* Sidebar nav item states */
+  .nav-item {
+    @apply flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium
+           transition-colors duration-100 cursor-pointer select-none w-full;
+    color: hsl(var(--sidebar-foreground));
+  }
+  .nav-item:hover {
+    background: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-accent-foreground));
+  }
+  .nav-item.active {
+    background: rgba(255,255,255,0.07);
+    color: #fff;
+    border-left: 2px solid hsl(var(--sidebar-primary));
+    padding-left: 10px;
+  }
+
+  /* Kanban column */
+  .kanban-col {
+    @apply min-w-[272px] max-w-[272px] flex-shrink-0;
+  }
+
+  /* Card interactive */
+  .card-interactive {
+    @apply transition-all duration-150 hover:shadow-md hover:-translate-y-px cursor-pointer;
+  }
+}

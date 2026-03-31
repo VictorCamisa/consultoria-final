@@ -1,0 +1,1 @@
+UPDATE consultoria_prospects SET status = 'novo', dia_cadencia = 0, data_abordagem = NULL, script_usado = NULL, updated_at = now() WHERE status = 'abordado';
