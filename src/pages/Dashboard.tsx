@@ -120,8 +120,8 @@ export default function Dashboard() {
   const kpis = [
     { title: "Abordados esta semana", value: prospectsThisWeek, icon: Phone, color: "text-primary" },
     { title: "Taxa de resposta", value: `${taxaResposta}%`, icon: BarChart3, color: "text-primary" },
-    { title: "Fechados este mês", value: fechadosMes, icon: Target, color: "text-green-600" },
-    { title: "Fee total (mês)", value: `R$ ${feeTotalMes.toLocaleString("pt-BR")}`, icon: DollarSign, color: "text-green-600" },
+    { title: "Fechados este mês", value: fechadosMes, icon: Target, color: "text-success" },
+    { title: "Fee total (mês)", value: `R$ ${feeTotalMes.toLocaleString("pt-BR")}`, icon: DollarSign, color: "text-success" },
     { title: "Convertidos recorrente", value: convertidos, icon: TrendingUp, color: "text-primary" },
     { title: "Taxa conversão", value: `${taxaConversao}%`, icon: Users, color: "text-primary" },
   ];
