@@ -166,8 +166,8 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-2">
             {respondeuAguardando.length > 0 && (
-              <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-3">
-                <p className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-1">
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
+                <p className="text-sm font-medium text-amber-800 mb-1">
                   {respondeuAguardando.length} prospect(s) responderam — aguardando ação
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -192,8 +192,8 @@ export default function Dashboard() {
             )}
 
             {quentesParados.length > 0 && (
-              <div className="rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 p-3">
-                <p className="text-sm font-medium text-red-800 dark:text-red-300 mb-1">
+              <div className="rounded-lg bg-red-50 border border-red-200 p-3">
+                <p className="text-sm font-medium text-red-800 mb-1">
                   {quentesParados.length} prospect(s) QUENTES sem contato há +2 dias
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -272,19 +272,19 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg bg-red-50 dark:bg-red-950/30 p-3 text-center">
+              <div className="rounded-lg bg-red-50 p-3 text-center">
                 <Flame className="h-4 w-4 text-red-600 mx-auto mb-1" />
-                <p className="text-2xl font-bold text-red-700 dark:text-red-400">{iaQuente}</p>
+                <p className="text-2xl font-bold text-red-700">{iaQuente}</p>
                 <p className="text-xs text-muted-foreground">Quentes</p>
               </div>
-              <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 p-3 text-center">
+              <div className="rounded-lg bg-amber-50 p-3 text-center">
                 <Thermometer className="h-4 w-4 text-amber-600 mx-auto mb-1" />
-                <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">{iaMorno}</p>
+                <p className="text-2xl font-bold text-amber-700">{iaMorno}</p>
                 <p className="text-xs text-muted-foreground">Mornos</p>
               </div>
-              <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-3 text-center">
+              <div className="rounded-lg bg-blue-50 p-3 text-center">
                 <Snowflake className="h-4 w-4 text-blue-600 mx-auto mb-1" />
-                <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{iaFrio}</p>
+                <p className="text-2xl font-bold text-blue-700">{iaFrio}</p>
                 <p className="text-xs text-muted-foreground">Frios</p>
               </div>
               <div className="rounded-lg bg-muted p-3 text-center">

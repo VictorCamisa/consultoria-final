@@ -43,15 +43,14 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r-0">
       {/* ── Brand header ── */}
-      <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
+      <SidebarHeader className={cn("py-5 border-b border-sidebar-border", collapsed ? "px-2" : "px-4")}>
         <div
-          className="flex items-center gap-3 cursor-pointer"
+          className={cn("flex items-center cursor-pointer", collapsed ? "justify-center" : "gap-3")}
           onClick={() => navigate("/")}
         >
-          {/* VS monogram — V prata #D4D8E4 · S azul #4A8DE0 (Brand Bible v1.0) */}
+          {/* VS monogram — V prata · S azul (Brand Bible v1.0) */}
           <div
-            className="rounded-lg w-8 h-8 flex-shrink-0 flex items-center justify-center"
-            style={{ background: "#111216", border: "1px solid rgba(255,255,255,0.07)" }}
+            className="rounded-lg w-8 h-8 flex-shrink-0 flex items-center justify-center bg-foreground"
           >
             <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 15, letterSpacing: "-0.03em", lineHeight: 1 }}>
               <span style={{ color: "#D4D8E4" }}>V</span>
@@ -61,14 +60,14 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="min-w-0">
               <p
-                className="leading-none"
-                style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, color: "#D4D8E4", letterSpacing: "0.01em" }}
+                className="leading-none text-foreground"
+                style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: "0.01em" }}
               >
                 VS Growth Hub
               </p>
               <p
-                className="mt-0.5 leading-none"
-                style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 600, fontSize: 9, color: "#9097AB", letterSpacing: "0.18em", textTransform: "uppercase" }}
+                className="mt-0.5 leading-none text-muted-foreground"
+                style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 600, fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase" }}
               >
                 Ecossistemas Digitais
               </p>
@@ -78,7 +77,7 @@ export function AppSidebar() {
       </SidebarHeader>
 
       {/* ── Navigation ── */}
-      <SidebarContent className="py-3 px-2">
+      <SidebarContent className={cn("py-3", collapsed ? "px-1" : "px-2")}>
         <SidebarMenu className="space-y-0.5">
           {navItems.map((item) => {
             const active = isActive(item.url);
@@ -87,8 +86,9 @@ export function AppSidebar() {
                 <button
                   onClick={() => navigate(item.url)}
                   className={cn(
-                    "nav-item w-full",
-                    active && "active"
+                    collapsed ? "flex items-center justify-center w-full p-2 rounded-md transition-colors" : "nav-item w-full",
+                    active && !collapsed && "active",
+                    active && collapsed && "bg-primary/10 text-primary"
                   )}
                   title={collapsed ? item.title : undefined}
                 >
@@ -109,12 +109,12 @@ export function AppSidebar() {
       </SidebarContent>
 
       {/* ── User footer ── */}
-      <SidebarFooter className="border-t border-sidebar-border p-3">
+      <SidebarFooter className={cn("border-t border-sidebar-border", collapsed ? "p-2" : "p-3")}>
         {collapsed ? (
           <button
             onClick={signOut}
             title="Sair"
-            className="nav-item justify-center px-2 hover:text-red-400"
+            className="nav-item justify-center px-2 hover:text-destructive"
           >
             <LogOut className="h-4 w-4" />
           </button>
@@ -134,7 +134,7 @@ export function AppSidebar() {
             <button
               onClick={signOut}
               title="Sair"
-              className="p-1.5 rounded-md text-sidebar-foreground/60 hover:text-red-400 hover:bg-sidebar-accent transition-colors"
+              className="p-1.5 rounded-md text-sidebar-foreground/60 hover:text-destructive hover:bg-sidebar-accent transition-colors"
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>

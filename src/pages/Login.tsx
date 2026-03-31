@@ -39,8 +39,8 @@ export default function Login() {
         <div className="rounded-2xl border border-border bg-background p-8 shadow-xl">
           {/* Brand */}
           <div className="flex flex-col items-center gap-3 mb-8">
-            <div className="gradient-vs rounded-xl w-12 h-12 flex items-center justify-center shadow-lg shadow-primary/20">
-              <span className="text-white text-base font-bold tracking-tight">VS</span>
+            <div className="bg-primary rounded-xl w-12 h-12 flex items-center justify-center shadow-lg shadow-primary/20">
+              <span className="text-primary-foreground text-base font-bold tracking-tight">VS</span>
             </div>
             <div className="text-center">
               <h1 className="text-lg font-semibold text-foreground tracking-tight">VS Growth Hub</h1>
