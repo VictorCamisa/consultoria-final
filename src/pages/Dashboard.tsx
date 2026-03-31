@@ -344,8 +344,8 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-2">
                   <span className={`text-sm font-bold ${
-                    (p.score_qualificacao ?? 0) >= 70 ? "text-red-600" :
-                    (p.score_qualificacao ?? 0) >= 40 ? "text-amber-600" : "text-blue-600"
+                    (p.score_qualificacao ?? 0) >= 70 ? "text-destructive" :
+                    (p.score_qualificacao ?? 0) >= 40 ? "text-warning" : "text-primary"
                   }`}>
                     {p.score_qualificacao}
                   </span>
