@@ -9,8 +9,8 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4 animate-fade-in">
           {/* VS monogram */}
-          <div className="gradient-vs rounded-xl w-12 h-12 flex items-center justify-center shadow-lg">
-            <span className="text-white text-base font-bold tracking-tight">VS</span>
+          <div className="bg-primary rounded-xl w-12 h-12 flex items-center justify-center shadow-lg">
+            <span className="text-primary-foreground text-base font-bold tracking-tight">VS</span>
           </div>
           {/* Spinner */}
           <div className="flex gap-1.5">

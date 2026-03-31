@@ -133,7 +133,7 @@ export function AppSidebar() {
             <button
               onClick={signOut}
               title="Sair"
-              className="p-1.5 rounded-md text-sidebar-foreground/60 hover:text-red-400 hover:bg-sidebar-accent transition-colors"
+              className="p-1.5 rounded-md text-sidebar-foreground/60 hover:text-destructive hover:bg-sidebar-accent transition-colors"
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>

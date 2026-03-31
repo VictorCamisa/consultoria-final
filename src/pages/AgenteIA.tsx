@@ -201,8 +201,8 @@ export default function AgenteIA() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2.5">
-          <div className="p-2 rounded-lg gradient-vs">
-            <BrainCircuit className="h-5 w-5 text-white" />
+          <div className="p-2 rounded-lg bg-primary">
+            <BrainCircuit className="h-5 w-5 text-primary-foreground" />
           </div>
           Central de Automação IA
         </h1>
