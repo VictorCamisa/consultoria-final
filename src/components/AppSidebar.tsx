@@ -43,7 +43,7 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r-0">
       {/* ── Brand header ── */}
-      <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
+      <SidebarHeader className={cn("py-5 border-b border-sidebar-border", collapsed ? "px-2" : "px-4")}>
         <div
           className="flex items-center gap-3 cursor-pointer"
           onClick={() => navigate("/")}
