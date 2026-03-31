@@ -95,11 +95,11 @@ export function AppSidebar() {
                   <item.icon
                     className={cn(
                       "h-4 w-4 flex-shrink-0",
-                      active ? "text-white" : "text-sidebar-foreground"
+                      active ? "text-primary" : "text-sidebar-foreground"
                     )}
                   />
                   {!collapsed && (
-                    <span className={active ? "text-white" : ""}>{item.title}</span>
+                    <span className={active ? "text-primary" : ""}>{item.title}</span>
                   )}
                 </button>
               </SidebarMenuItem>
