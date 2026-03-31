@@ -169,8 +169,8 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-2">
             {respondeuAguardando.length > 0 && (
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
-                <p className="text-sm font-medium text-amber-800 mb-1">
+              <div className="rounded-lg surface-warning border border-warning/20 p-3">
+                <p className="text-sm font-medium mb-1">
                   {respondeuAguardando.length} prospect(s) responderam — aguardando ação
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -195,8 +195,8 @@ export default function Dashboard() {
             )}
 
             {quentesParados.length > 0 && (
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3">
-                <p className="text-sm font-medium text-red-800 mb-1">
+              <div className="rounded-lg surface-danger border border-destructive/20 p-3">
+                <p className="text-sm font-medium mb-1">
                   {quentesParados.length} prospect(s) QUENTES sem contato há +2 dias
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -275,19 +275,19 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg bg-red-50 p-3 text-center">
-                <Flame className="h-4 w-4 text-red-600 mx-auto mb-1" />
-                <p className="text-2xl font-bold text-red-700">{iaQuente}</p>
+              <div className="rounded-lg surface-danger p-3 text-center">
+                <Flame className="h-4 w-4 mx-auto mb-1" />
+                <p className="text-2xl font-bold">{iaQuente}</p>
                 <p className="text-xs text-muted-foreground">Quentes</p>
               </div>
-              <div className="rounded-lg bg-amber-50 p-3 text-center">
-                <Thermometer className="h-4 w-4 text-amber-600 mx-auto mb-1" />
-                <p className="text-2xl font-bold text-amber-700">{iaMorno}</p>
+              <div className="rounded-lg surface-warning p-3 text-center">
+                <Thermometer className="h-4 w-4 mx-auto mb-1" />
+                <p className="text-2xl font-bold">{iaMorno}</p>
                 <p className="text-xs text-muted-foreground">Mornos</p>
               </div>
-              <div className="rounded-lg bg-blue-50 p-3 text-center">
-                <Snowflake className="h-4 w-4 text-blue-600 mx-auto mb-1" />
-                <p className="text-2xl font-bold text-blue-700">{iaFrio}</p>
+              <div className="rounded-lg surface-info p-3 text-center">
+                <Snowflake className="h-4 w-4 mx-auto mb-1" />
+                <p className="text-2xl font-bold">{iaFrio}</p>
                 <p className="text-xs text-muted-foreground">Frios</p>
               </div>
               <div className="rounded-lg bg-muted p-3 text-center">
@@ -344,8 +344,8 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0 ml-2">
                   <span className={`text-sm font-bold ${
-                    (p.score_qualificacao ?? 0) >= 70 ? "text-red-600" :
-                    (p.score_qualificacao ?? 0) >= 40 ? "text-amber-600" : "text-blue-600"
+                    (p.score_qualificacao ?? 0) >= 70 ? "text-destructive" :
+                    (p.score_qualificacao ?? 0) >= 40 ? "text-warning" : "text-primary"
                   }`}>
                     {p.score_qualificacao}
                   </span>

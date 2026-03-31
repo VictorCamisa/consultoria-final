@@ -37,7 +37,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { userName, signOut } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, setTheme } = useTheme();
 
   const isActive = (url: string) =>
     url === "/" ? location.pathname === "/" : location.pathname.startsWith(url);
@@ -119,9 +119,9 @@ export function AppSidebar() {
             {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
           </button>
         ) : (
-          <div className="flex items-center gap-1 p-1 bg-secondary rounded-lg">
+          <div className="flex items-center gap-0.5 p-0.5 bg-secondary rounded-lg">
             <button
-              onClick={() => toggleTheme()}
+              onClick={() => setTheme("light")}
               className={cn(
                 "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all",
                 theme === "light" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
@@ -130,7 +130,7 @@ export function AppSidebar() {
               <Sun className="h-3.5 w-3.5" /> Light
             </button>
             <button
-              onClick={() => toggleTheme()}
+              onClick={() => setTheme("dark")}
               className={cn(
                 "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all",
                 theme === "dark" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
