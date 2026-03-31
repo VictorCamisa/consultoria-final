@@ -1,36 +1,16 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import {
-  BrainCircuit, Flame, Thermometer, Snowflake, MessageSquare,
-  PlayCircle, Loader2, CheckCircle2, XCircle, Sparkles, RefreshCw,
-  Megaphone, Zap, Activity, TrendingUp, Target,
+  BrainCircuit, Megaphone, RefreshCw, MessageSquare,
 } from "lucide-react";
 
-type LogEntry = {
-  id: string;
-  agent: string;
-  status: "ok" | "erro";
-  msg: string;
-  ts: Date;
-};
-
-type AgentConfig = {
-  id: string;
-  icon: React.ElementType;
-  gradient: string;
-  title: string;
-  description: string;
-  stats: { label: string; value: string | number; trend?: "up" | "down" | "neutral" }[];
-  action: string | null;
-  disabled: boolean;
-  loading: boolean;
-};
+import KPICards from "@/components/agente-ia/KPICards";
+import AgentCard from "@/components/agente-ia/AgentCard";
+import ExecutionLog from "@/components/agente-ia/ExecutionLog";
+import ConfirmActionDialog from "@/components/agente-ia/ConfirmActionDialog";
+import type { LogEntry, AgentConfig } from "@/components/agente-ia/types";
 
 export default function AgenteIA() {
   const queryClient = useQueryClient();
@@ -40,14 +20,26 @@ export default function AgenteIA() {
   const [loadingCadencia, setLoadingCadencia] = useState(false);
   const [progresso, setProgresso] = useState(0);
 
-  const addLog = (agent: string, status: "ok" | "erro", msg: string) => {
-    setLogs(prev => [{ id: crypto.randomUUID(), agent, status, msg, ts: new Date() }, ...prev.slice(0, 49)]);
-  };
+  // AbortControllers
+  const abortClassificar = useRef<AbortController | null>(null);
+  const abortAbordar = useRef<AbortController | null>(null);
 
-  const { data: prospects } = useQuery({
-    queryKey: ["prospects"],
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean; title: string; description: string; onConfirm: () => void;
+  }>({ open: false, title: "", description: "", onConfirm: () => {} });
+
+  const addLog = useCallback((agent: string, status: "ok" | "erro", msg: string) => {
+    setLogs(prev => [{ id: crypto.randomUUID(), agent, status, msg, ts: new Date() }, ...prev.slice(0, 49)]);
+  }, []);
+
+  // Optimized query — only fetch columns needed for stats
+  const { data: prospects, isLoading } = useQuery({
+    queryKey: ["prospects-stats"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("consultoria_prospects").select("*");
+      const { data, error } = await supabase
+        .from("consultoria_prospects")
+        .select("id, status, score_qualificacao, classificacao_ia, nome_negocio");
       if (error) throw error;
       return data;
     },
@@ -69,7 +61,7 @@ export default function AgenteIA() {
     {
       id: "classify",
       icon: BrainCircuit,
-      gradient: "from-purple-500/10 to-indigo-500/10",
+      gradient: "from-primary/10 to-accent/10",
       title: "Classificador IA",
       description: "Analisa conversas e atribui score (0–100) + classificação via GPT-4o",
       stats: [
@@ -84,7 +76,7 @@ export default function AgenteIA() {
     {
       id: "abordar",
       icon: Megaphone,
-      gradient: "from-blue-500/10 to-cyan-500/10",
+      gradient: "from-primary/10 to-primary/5",
       title: "Abordagem Automática",
       description: "Envia script inicial via WhatsApp e inicia cadência de follow-up",
       stats: [
@@ -98,7 +90,7 @@ export default function AgenteIA() {
     {
       id: "cadencia",
       icon: RefreshCw,
-      gradient: "from-emerald-500/10 to-green-500/10",
+      gradient: "from-success/10 to-success/5",
       title: "Follow-up Automático",
       description: "Dispara follow-ups vencidos (D1 → D3 → D7 → D14 → D30)",
       stats: [
@@ -111,7 +103,7 @@ export default function AgenteIA() {
     {
       id: "suggest",
       icon: MessageSquare,
-      gradient: "from-amber-500/10 to-orange-500/10",
+      gradient: "from-warning/10 to-warning/5",
       title: "Sugestor de Respostas",
       description: "Gera respostas contextualizadas para prospects que responderam",
       stats: [
@@ -123,14 +115,22 @@ export default function AgenteIA() {
     },
   ];
 
-  // --- Handlers ---
+  // --- Handlers with AbortController ---
   async function handleClassificar() {
     const pendentes = prospects?.filter(p => !p.score_qualificacao) ?? [];
     if (!pendentes.length) return;
+
+    const controller = new AbortController();
+    abortClassificar.current = controller;
     setLoadingClassificar(true);
     setProgresso(0);
+
     let ok = 0, erros = 0;
     for (let i = 0; i < pendentes.length; i++) {
+      if (controller.signal.aborted) {
+        addLog("Classificador", "erro", `Cancelado pelo usuário (${ok} ok, ${erros} erros)`);
+        break;
+      }
       const p = pendentes[i];
       try {
         const { data, error } = await supabase.functions.invoke("classify-prospect", { body: { prospect_id: p.id } });
@@ -139,23 +139,36 @@ export default function AgenteIA() {
         ok++;
         addLog("Classificador", "ok", `${p.nome_negocio} — score: ${data?.result?.score ?? '?'}`);
       } catch (e: unknown) {
+        if (controller.signal.aborted) break;
         erros++;
         const msg = e instanceof Error ? e.message : "Erro desconhecido";
         addLog("Classificador", "erro", `${p.nome_negocio}: ${msg}`);
       }
       setProgresso(Math.round(((i + 1) / pendentes.length) * 100));
     }
+
     setLoadingClassificar(false);
-    queryClient.invalidateQueries({ queryKey: ["prospects"] });
+    abortClassificar.current = null;
+    queryClient.invalidateQueries({ queryKey: ["prospects-stats"] });
     toast({ title: "Classificação concluída", description: `${ok} ok · ${erros} erros` });
   }
 
   async function handleAbordar() {
     const novosP = prospects?.filter(p => p.status === "novo") ?? [];
     if (!novosP.length) return;
+
+    const controller = new AbortController();
+    abortAbordar.current = controller;
     setLoadingAbordar(true);
+    setProgresso(0);
+
     let ok = 0, erros = 0;
-    for (const p of novosP) {
+    for (let i = 0; i < novosP.length; i++) {
+      if (controller.signal.aborted) {
+        addLog("Abordagem", "erro", `Cancelado pelo usuário (${ok} ok, ${erros} erros)`);
+        break;
+      }
+      const p = novosP[i];
       try {
         const { data, error } = await supabase.functions.invoke("abordar-prospect", { body: { prospect_id: p.id } });
         if (error) throw error;
@@ -164,13 +177,17 @@ export default function AgenteIA() {
         ok++;
         addLog("Abordagem", "ok", `${p.nome_negocio} — ${status}`);
       } catch (e: unknown) {
+        if (controller.signal.aborted) break;
         erros++;
         const msg = e instanceof Error ? e.message : "Erro desconhecido";
         addLog("Abordagem", "erro", `${p.nome_negocio}: ${msg}`);
       }
+      setProgresso(Math.round(((i + 1) / novosP.length) * 100));
     }
+
     setLoadingAbordar(false);
-    queryClient.invalidateQueries({ queryKey: ["prospects"] });
+    abortAbordar.current = null;
+    queryClient.invalidateQueries({ queryKey: ["prospects-stats"] });
     toast({ title: "Abordagens enviadas", description: `${ok} ok · ${erros} erros` });
   }
 
@@ -182,7 +199,7 @@ export default function AgenteIA() {
       const n = (data as { processados?: number })?.processados ?? 0;
       addLog("Cadência", "ok", `${n} follow-up(s) enviados`);
       toast({ title: "Cadência processada", description: `${n} mensagens` });
-      queryClient.invalidateQueries({ queryKey: ["prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["prospects-stats"] });
     } catch {
       addLog("Cadência", "erro", "Falha ao processar");
       toast({ title: "Erro", description: "Falha ao processar cadência", variant: "destructive" });
@@ -190,175 +207,83 @@ export default function AgenteIA() {
     setLoadingCadencia(false);
   }
 
+  function handleCancel(id: string) {
+    if (id === "classify") abortClassificar.current?.abort();
+    else if (id === "abordar") abortAbordar.current?.abort();
+  }
+
+  // Actions with confirmation for destructive bulk ops
   function handleAction(id: string) {
-    if (id === "classify") handleClassificar();
-    else if (id === "abordar") handleAbordar();
-    else if (id === "cadencia") handleCadencia();
+    if (id === "classify") {
+      setConfirmDialog({
+        open: true,
+        title: "Classificar prospects",
+        description: `Isso vai classificar ${semScore} prospect${semScore !== 1 ? "s" : ""} pendente${semScore !== 1 ? "s" : ""} usando GPT-4o. Cada chamada consome tokens da API. Deseja continuar?`,
+        onConfirm: handleClassificar,
+      });
+    } else if (id === "abordar") {
+      setConfirmDialog({
+        open: true,
+        title: "Abordar prospects",
+        description: `Isso vai enviar mensagens via WhatsApp para ${novos} prospect${novos !== 1 ? "s" : ""} novo${novos !== 1 ? "s" : ""}. Essa ação não pode ser desfeita. Deseja continuar?`,
+        onConfirm: handleAbordar,
+      });
+    } else if (id === "cadencia") {
+      handleCadencia();
+    }
   }
 
   return (
-    <div className="space-y-6 page-enter">
+    <div className="space-y-8 page-enter">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2.5">
-          <div className="p-2 rounded-lg bg-primary">
+        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
+          <div className="p-2.5 rounded-lg bg-primary">
             <BrainCircuit className="h-5 w-5 text-primary-foreground" />
           </div>
           Central de Automação IA
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-1.5">
           Controle seus agentes inteligentes de prospecção e cadência
         </p>
       </div>
 
       {/* KPI Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="overflow-hidden">
-          <CardContent className="p-4 relative">
-            <div className="flex items-center justify-between mb-2">
-              <Target className="h-4 w-4 text-primary" />
-              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Cobertura IA</span>
-            </div>
-            <p className="text-3xl font-bold tabular">{cobertura}<span className="text-lg text-muted-foreground">%</span></p>
-            <Progress value={cobertura} className="mt-2 h-1" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Flame className="h-4 w-4 text-red-500" />
-              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Quentes</span>
-            </div>
-            <p className="text-3xl font-bold tabular text-red-600">{quentes}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">{mornos} mornos · {frios} frios</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <Activity className="h-4 w-4 text-indigo-500" />
-              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Em Cadência</span>
-            </div>
-            <p className="text-3xl font-bold tabular text-indigo-600">{emCadencia}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">{novos} aguardando abordagem</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-2">
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
-              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Responderam</span>
-            </div>
-            <p className="text-3xl font-bold tabular text-emerald-600">{responderam}</p>
-            <p className="text-[10px] text-muted-foreground mt-1">de {total} prospects</p>
-          </CardContent>
-        </Card>
-      </div>
+      <KPICards
+        cobertura={cobertura} quentes={quentes} mornos={mornos} frios={frios}
+        emCadencia={emCadencia} novos={novos} responderam={responderam}
+        total={total} isLoading={isLoading}
+      />
 
       {/* Agents Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {agents.map(agent => (
-          <Card key={agent.id} className="overflow-hidden">
-            <CardContent className="p-0">
-              <div className={`bg-gradient-to-br ${agent.gradient} p-5 space-y-4`}>
-                {/* Agent header */}
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-card shadow-sm border">
-                    <agent.icon className="h-5 w-5 text-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm">{agent.title}</h3>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">{agent.description}</p>
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div className="flex gap-2">
-                  {agent.stats.map(s => (
-                    <div key={s.label} className="bg-card/80 backdrop-blur rounded-lg border px-3 py-2 flex-1 text-center">
-                      <p className="text-lg font-bold tabular">{s.value}</p>
-                      <p className="text-[10px] text-muted-foreground">{s.label}</p>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Progress bar for classify */}
-                {agent.id === "classify" && loadingClassificar && (
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[10px] text-muted-foreground">
-                      <span>Classificando...</span>
-                      <span className="tabular">{progresso}%</span>
-                    </div>
-                    <Progress value={progresso} className="h-1.5" />
-                  </div>
-                )}
-
-                {/* Action button */}
-                {agent.action ? (
-                  <Button
-                    size="sm"
-                    disabled={agent.disabled}
-                    onClick={() => handleAction(agent.id)}
-                    className="w-full h-9"
-                  >
-                    {agent.loading ? (
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                    ) : (
-                      <PlayCircle className="h-3.5 w-3.5 mr-1.5" />
-                    )}
-                    {agent.loading ? "Processando..." : agent.action}
-                  </Button>
-                ) : (
-                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                    <Sparkles className="h-3 w-3" />
-                    Disponível individualmente no módulo Comercial
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <AgentCard
+            key={agent.id}
+            agent={agent}
+            onAction={handleAction}
+            onCancel={handleCancel}
+            progresso={progresso}
+            showProgress={agent.id === "classify" || agent.id === "abordar"}
+            cancellable={agent.id === "classify" || agent.id === "abordar"}
+          />
         ))}
       </div>
 
       {/* Execution Log */}
-      <Card>
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4 text-muted-foreground" />
-              <h3 className="font-semibold text-sm">Log de Execução</h3>
-            </div>
-            {logs.length > 0 && (
-              <Badge variant="secondary" className="text-[10px]">{logs.length} entradas</Badge>
-            )}
-          </div>
+      <ExecutionLog logs={logs} />
 
-          {logs.length === 0 ? (
-            <div className="text-center py-8">
-              <Activity className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">Nenhuma execução nesta sessão</p>
-              <p className="text-[11px] text-muted-foreground/60">Acione um agente acima para começar</p>
-            </div>
-          ) : (
-            <div className="space-y-1 max-h-72 overflow-y-auto">
-              {logs.map(entry => (
-                <div key={entry.id} className="flex items-center gap-2.5 text-xs py-1.5 px-2 rounded-md hover:bg-muted/50 transition-colors">
-                  {entry.status === "ok" ? (
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                  ) : (
-                    <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
-                  )}
-                  <span className="font-medium text-muted-foreground shrink-0">[{entry.agent}]</span>
-                  <span className="flex-1 min-w-0 truncate">{entry.msg}</span>
-                  <span className="text-muted-foreground/50 tabular shrink-0">
-                    {entry.ts.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Confirmation Dialog */}
+      <ConfirmActionDialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
+        title={confirmDialog.title}
+        description={confirmDialog.description}
+        onConfirm={() => {
+          setConfirmDialog(prev => ({ ...prev, open: false }));
+          confirmDialog.onConfirm();
+        }}
+      />
     </div>
   );
 }
