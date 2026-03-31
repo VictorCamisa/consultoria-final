@@ -147,12 +147,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {kpis.map((kpi) => (
           <Card key={kpi.title}>
-            <CardContent className="pt-4 pb-4">
-              <div className="flex items-center gap-2 mb-1">
-                <kpi.icon className={`h-4 w-4 ${kpi.color}`} />
-                <span className="text-xs text-muted-foreground">{kpi.title}</span>
+            <CardContent className="pt-5 pb-5 px-5">
+              <div className="flex items-center gap-2 mb-2">
+                <kpi.icon className={`h-4.5 w-4.5 ${kpi.color}`} />
+                <span className="text-sm text-muted-foreground font-medium">{kpi.title}</span>
               </div>
-              <p className="text-2xl font-bold">{kpi.value}</p>
+              <p className="text-3xl font-bold tracking-tight">{kpi.value}</p>
             </CardContent>
           </Card>
         ))}
