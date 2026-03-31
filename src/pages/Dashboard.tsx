@@ -195,8 +195,8 @@ export default function Dashboard() {
             )}
 
             {quentesParados.length > 0 && (
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3">
-                <p className="text-sm font-medium text-red-800 mb-1">
+              <div className="rounded-lg surface-danger border border-destructive/20 p-3">
+                <p className="text-sm font-medium mb-1">
                   {quentesParados.length} prospect(s) QUENTES sem contato há +2 dias
                 </p>
                 <div className="flex flex-wrap gap-2">
