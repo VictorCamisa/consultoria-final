@@ -111,9 +111,9 @@
   ::-webkit-scrollbar-track  { background: transparent; }
   ::-webkit-scrollbar-thumb  {
     @apply rounded-full;
-    background: hsl(225 13% 20%);
+    background: hsl(240 6% 85%);
   }
-  ::-webkit-scrollbar-thumb:hover { background: hsl(224 14% 30%); }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(240 4% 70%); }
 }
 
 /* ─── Utilities VS Brand Bible ───────────────────────────────────────────── */
