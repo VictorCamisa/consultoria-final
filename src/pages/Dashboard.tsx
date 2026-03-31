@@ -275,19 +275,19 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg bg-red-50 p-3 text-center">
-                <Flame className="h-4 w-4 text-red-600 mx-auto mb-1" />
-                <p className="text-2xl font-bold text-red-700">{iaQuente}</p>
+              <div className="rounded-lg surface-danger p-3 text-center">
+                <Flame className="h-4 w-4 mx-auto mb-1" />
+                <p className="text-2xl font-bold">{iaQuente}</p>
                 <p className="text-xs text-muted-foreground">Quentes</p>
               </div>
-              <div className="rounded-lg bg-amber-50 p-3 text-center">
-                <Thermometer className="h-4 w-4 text-amber-600 mx-auto mb-1" />
-                <p className="text-2xl font-bold text-amber-700">{iaMorno}</p>
+              <div className="rounded-lg surface-warning p-3 text-center">
+                <Thermometer className="h-4 w-4 mx-auto mb-1" />
+                <p className="text-2xl font-bold">{iaMorno}</p>
                 <p className="text-xs text-muted-foreground">Mornos</p>
               </div>
-              <div className="rounded-lg bg-blue-50 p-3 text-center">
-                <Snowflake className="h-4 w-4 text-blue-600 mx-auto mb-1" />
-                <p className="text-2xl font-bold text-blue-700">{iaFrio}</p>
+              <div className="rounded-lg surface-info p-3 text-center">
+                <Snowflake className="h-4 w-4 mx-auto mb-1" />
+                <p className="text-2xl font-bold">{iaFrio}</p>
                 <p className="text-xs text-muted-foreground">Frios</p>
               </div>
               <div className="rounded-lg bg-muted p-3 text-center">
