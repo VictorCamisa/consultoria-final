@@ -12,59 +12,59 @@
 
 @layer base {
   :root {
-    /* ── Fundos — Hierarquia Dark ── */
-    --background:         0 0% 4%;           /* #0A0A0A VS Black   — nível 1 */
-    --foreground:         225 23% 86%;       /* #D4D8E4 Silver Light         */
+    /* ── Fundos — Hierarquia Light ── */
+    --background:         0 0% 100%;          /* #FFFFFF Branco              */
+    --foreground:         240 6% 10%;         /* #18181B Texto principal      */
 
-    --card:               228 13% 8%;        /* #111216 VS Dark    — nível 2 */
-    --card-foreground:    225 23% 86%;
+    --card:               240 5% 96%;         /* #F4F4F5 Cinza suave         */
+    --card-foreground:    240 6% 10%;
 
-    --popover:            225 13% 12%;       /* #1A1C22 VS Surface — nível 3 */
-    --popover-foreground: 225 23% 86%;
+    --popover:            0 0% 100%;          /* #FFFFFF                     */
+    --popover-foreground: 240 6% 10%;
 
-    /* ── Primary = VS Blue — botões filled ── */
-    --primary:            215 63% 49%;       /* #2E6FCC VS Blue              */
+    /* ── Primary = Azul — botões filled ── */
+    --primary:            217 91% 60%;        /* #2563EB Azul                */
     --primary-foreground: 0 0% 100%;
 
-    /* ── Secundário = VS Surface ── */
-    --secondary:          225 13% 12%;       /* #1A1C22                      */
-    --secondary-foreground: 225 13% 75%;     /* #B8BCC8 Silver               */
+    /* ── Secundário ── */
+    --secondary:          240 5% 96%;         /* #F4F4F5                     */
+    --secondary-foreground: 240 4% 46%;       /* #71717A                     */
 
-    /* ── Muted = VS Card ── */
-    --muted:              224 15% 15%;       /* #20232B VS Card              */
-    --muted-foreground:   224 14% 62%;       /* #9097AB Silver Dim           */
+    /* ── Muted ── */
+    --muted:              240 5% 96%;         /* #F4F4F5                     */
+    --muted-foreground:   240 4% 46%;         /* #71717A                     */
 
-    /* ── Accent = Blue Light — links, interativo, badges ── */
-    --accent:             213 71% 58%;       /* #4A8DE0 Blue Light           */
+    /* ── Accent = Azul — links, interativo, badges ── */
+    --accent:             217 91% 60%;        /* #2563EB                     */
     --accent-foreground:  0 0% 100%;
 
     /* ── Semântica ── */
-    --destructive:        0 84% 60%;         /* #EF4444 Erro                 */
+    --destructive:        0 72% 51%;          /* #DC2626 Erro                */
     --destructive-foreground: 0 0% 100%;
 
-    --success:            160 84% 39%;       /* #10B981 Sucesso              */
+    --success:            142 76% 36%;        /* #16A34A Sucesso             */
     --success-foreground: 0 0% 100%;
 
-    --warning:            38 92% 50%;        /* #F59E0B Alerta               */
+    --warning:            45 93% 47%;         /* #CA8A04 Alerta              */
     --warning-foreground: 0 0% 100%;
 
     /* ── Bordas e inputs ── */
-    --border:             225 13% 14%;       /* ~rgba(255,255,255,0.07)       */
-    --input:              225 13% 12%;       /* VS Surface                   */
-    --ring:               213 71% 58%;       /* Blue Light                   */
+    --border:             240 6% 90%;         /* #E4E4E7                     */
+    --input:              240 6% 90%;         /* #E4E4E7                     */
+    --ring:               217 91% 60%;        /* #2563EB                     */
 
     /* ── Raio global: 6px conforme brand ── */
     --radius: 0.375rem;
 
     /* ── Sidebar ── */
-    --sidebar-background:         0 0% 4%;        /* VS Black                */
-    --sidebar-foreground:         224 14% 62%;    /* Silver Dim              */
-    --sidebar-primary:            213 71% 58%;    /* Blue Light              */
+    --sidebar-background:         240 5% 96%;     /* #F4F4F5             */
+    --sidebar-foreground:         240 4% 46%;     /* #71717A             */
+    --sidebar-primary:            217 91% 60%;    /* #2563EB             */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent:             225 13% 12%;    /* VS Surface              */
-    --sidebar-accent-foreground:  225 23% 86%;    /* Silver Light            */
-    --sidebar-border:             225 13% 14%;
-    --sidebar-ring:               213 71% 58%;    /* Blue Light              */
+    --sidebar-accent:             240 5% 92%;     /* #EBEBEF             */
+    --sidebar-accent-foreground:  240 6% 10%;     /* #18181B             */
+    --sidebar-border:             240 6% 90%;
+    --sidebar-ring:               217 91% 60%;    /* #2563EB             */
   }
 }
 
