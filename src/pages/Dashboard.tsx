@@ -148,6 +148,7 @@ export default function Dashboard() {
               {totalAlertas} alerta{totalAlertas > 1 ? "s" : ""}
             </Badge>
           )}
+        </div>
       </div>
 
       {/* KPIs */}
