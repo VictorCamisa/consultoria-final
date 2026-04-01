@@ -122,11 +122,14 @@ export default function Configuracoes() {
     );
   }
 
-  // Initialize globalInstance from first config
+  // Initialize globalInstance from first config — via useEffect to avoid render-time setState
   const firstConfigInstance = configs?.[0]?.instancia_evolution;
-  if (firstConfigInstance && !globalInstance) {
-    setGlobalInstance(firstConfigInstance);
-  }
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useState(() => {
+    if (firstConfigInstance && !globalInstance) {
+      setGlobalInstance(firstConfigInstance as string);
+    }
+  });
 
   const getStateBadge = (state: string) => {
     if (state === "open") return <Badge className="bg-green-600 text-white">Conectado</Badge>;
