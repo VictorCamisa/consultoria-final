@@ -41,6 +41,38 @@ export function AppSidebar() {
   const { userName, signOut } = useAuth();
   const { theme, toggleTheme, setTheme } = useTheme();
 
+  // Notification badges
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["sidebar-unread"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("consultoria_conversas")
+        .select("*", { count: "exact", head: true })
+        .eq("direcao", "entrada")
+        .eq("processado_ia", false);
+      return count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
+
+  const { data: pendentesCount = 0 } = useQuery({
+    queryKey: ["sidebar-pendentes"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("consultoria_acompanhamentos")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pendente")
+        .lte("agendado_para", new Date().toISOString());
+      return count ?? 0;
+    },
+    refetchInterval: 60000,
+  });
+
+  const badgeCounts: Record<string, number> = {
+    unread: unreadCount,
+    pendentes: pendentesCount,
+  };
+
   const isActive = (url: string) =>
     url === "/" ? location.pathname === "/" : location.pathname.startsWith(url);
 
