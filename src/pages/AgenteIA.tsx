@@ -76,7 +76,7 @@ export default function AgenteIA() {
       icon: Megaphone,
       gradient: "from-warning/10 to-warning/5",
       title: "Abordagem Automática",
-      description: "Envia o script inicial via WhatsApp e inicia cadência de follow-up automático",
+      description: "Envia script inicial via WhatsApp e inicia cadência de follow-up",
       stats: [
         { label: "Novos", value: novos },
         { label: "Em cadência", value: emCadencia },
@@ -90,7 +90,7 @@ export default function AgenteIA() {
       icon: RefreshCw,
       gradient: "from-success/10 to-success/5",
       title: "Follow-up Automático",
-      description: "Dispara follow-ups vencidos na sequência D1 → D3 → D7 → D14 → D30",
+      description: "Dispara follow-ups vencidos: D1 → D3 → D7 → D14 → D30",
       stats: [
         { label: "Em cadência", value: emCadencia },
       ],
@@ -103,7 +103,7 @@ export default function AgenteIA() {
       icon: MessageSquare,
       gradient: "from-accent/10 to-accent/5",
       title: "Sugestor de Respostas",
-      description: "Gera respostas contextualizadas para prospects que responderam à abordagem",
+      description: "Gera respostas contextualizadas para prospects que responderam",
       stats: [
         { label: "Responderam", value: responderam },
       ],
@@ -124,7 +124,7 @@ export default function AgenteIA() {
     let ok = 0, erros = 0;
     for (let i = 0; i < pendentes.length; i++) {
       if (controller.signal.aborted) {
-        addLog("Classificador", "erro", `Cancelado pelo usuário (${ok} ok, ${erros} erros)`);
+        addLog("Classificador", "erro", `Cancelado (${ok} ok, ${erros} erros)`);
         break;
       }
       const p = pendentes[i];
@@ -137,8 +137,7 @@ export default function AgenteIA() {
       } catch (e: unknown) {
         if (controller.signal.aborted) break;
         erros++;
-        const msg = e instanceof Error ? e.message : "Erro desconhecido";
-        addLog("Classificador", "erro", `${p.nome_negocio}: ${msg}`);
+        addLog("Classificador", "erro", `${p.nome_negocio}: ${e instanceof Error ? e.message : "Erro"}`);
       }
       setProgresso(Math.round(((i + 1) / pendentes.length) * 100));
     }
@@ -158,7 +157,7 @@ export default function AgenteIA() {
     let ok = 0, erros = 0;
     for (let i = 0; i < novosP.length; i++) {
       if (controller.signal.aborted) {
-        addLog("Abordagem", "erro", `Cancelado pelo usuário (${ok} ok, ${erros} erros)`);
+        addLog("Abordagem", "erro", `Cancelado (${ok} ok, ${erros} erros)`);
         break;
       }
       const p = novosP[i];
@@ -166,14 +165,12 @@ export default function AgenteIA() {
         const { data, error } = await supabase.functions.invoke("abordar-prospect", { body: { prospect_id: p.id } });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
-        const status = data?.enviado ? "enviado" : "salvo (sem WhatsApp)";
         ok++;
-        addLog("Abordagem", "ok", `${p.nome_negocio} — ${status}`);
+        addLog("Abordagem", "ok", `${p.nome_negocio} — ${data?.enviado ? "enviado" : "salvo"}`);
       } catch (e: unknown) {
         if (controller.signal.aborted) break;
         erros++;
-        const msg = e instanceof Error ? e.message : "Erro desconhecido";
-        addLog("Abordagem", "erro", `${p.nome_negocio}: ${msg}`);
+        addLog("Abordagem", "erro", `${p.nome_negocio}: ${e instanceof Error ? e.message : "Erro"}`);
       }
       setProgresso(Math.round(((i + 1) / novosP.length) * 100));
     }
@@ -209,14 +206,14 @@ export default function AgenteIA() {
       setConfirmDialog({
         open: true,
         title: "Classificar prospects pendentes",
-        description: `Isso vai classificar ${semScore} prospect${semScore !== 1 ? "s" : ""} pendente${semScore !== 1 ? "s" : ""} usando GPT-4o. Cada chamada consome tokens da API. Deseja continuar?`,
+        description: `Classificar ${semScore} prospect${semScore !== 1 ? "s" : ""} usando GPT-4o. Cada chamada consome tokens. Continuar?`,
         onConfirm: handleClassificar,
       });
     } else if (id === "abordar") {
       setConfirmDialog({
         open: true,
         title: "Abordar prospects novos",
-        description: `Isso vai enviar mensagens via WhatsApp para ${novos} prospect${novos !== 1 ? "s" : ""} novo${novos !== 1 ? "s" : ""}. Essa ação não pode ser desfeita. Deseja continuar?`,
+        description: `Enviar mensagens via WhatsApp para ${novos} prospect${novos !== 1 ? "s" : ""}. Ação irreversível. Continuar?`,
         onConfirm: handleAbordar,
       });
     } else if (id === "cadencia") {
@@ -225,22 +222,22 @@ export default function AgenteIA() {
   }
 
   return (
-    <div className="space-y-6 page-enter">
+    <div className="space-y-8 page-enter">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl">Central de Automação</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-1">
+          <h1>Central de Automação</h1>
+          <p className="vs-body text-muted-foreground">
             Monitore e execute agentes de prospecção e cadência
           </p>
         </div>
         {anyRunning && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-            <span className="relative flex h-2 w-2">
+          <div className="flex items-center gap-2.5 px-4 py-2 rounded-full border border-primary/25 bg-primary/5">
+            <span className="relative flex h-2.5 w-2.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary" />
             </span>
-            <span className="text-xs font-medium text-primary">Executando</span>
+            <span className="text-sm font-semibold text-primary">Agentes em execução</span>
           </div>
         )}
       </div>
@@ -252,12 +249,12 @@ export default function AgenteIA() {
         total={total} isLoading={isLoading}
       />
 
-      {/* ── Main: Agents (left) + Log (right) ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6 items-start">
-        {/* Agents */}
-        <div className="space-y-4">
-          <h2 className="text-lg">Agentes</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* ── Main content ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-8 items-start">
+        {/* Agents grid */}
+        <div className="space-y-5">
+          <h2>Agentes</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {agents.map(agent => (
               <AgentCard
                 key={agent.id}
@@ -272,13 +269,12 @@ export default function AgenteIA() {
           </div>
         </div>
 
-        {/* Sidebar: Log */}
+        {/* Log sidebar */}
         <div className="xl:sticky xl:top-20">
           <ExecutionLog logs={logs} />
         </div>
       </div>
 
-      {/* Confirmation */}
       <ConfirmActionDialog
         open={confirmDialog.open}
         onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
