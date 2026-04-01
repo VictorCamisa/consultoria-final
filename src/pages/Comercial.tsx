@@ -175,9 +175,7 @@ export default function Comercial() {
 
       {/* Kanban */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="animate-spin h-6 w-6 text-primary" />
-        </div>
+        <KanbanSkeleton />
       ) : (
         <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1">
           {PIPELINE_STAGES.map(col => {
