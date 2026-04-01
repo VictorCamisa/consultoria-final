@@ -31,15 +31,19 @@ export default function AppLayout() {
         <AppSidebar />
 
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Topbar — clean, minimal */}
-          <header className="h-12 flex items-center gap-3 border-b bg-card px-6 shrink-0 sticky top-0 z-10">
+          {/* Topbar */}
+          <header className="h-11 flex items-center gap-3 border-b border-border bg-card px-5 shrink-0 sticky top-0 z-10">
             <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors -ml-1" />
+            {showBreadcrumbs && (
+              <div className="border-l border-border pl-3">
+                <Breadcrumbs />
+              </div>
+            )}
           </header>
 
-          {/* Content — generous padding, max-width for readability */}
+          {/* Content */}
           <main className="flex-1 overflow-auto">
-            <div className="page-enter max-w-[1400px] mx-auto px-8 py-8">
-              {showBreadcrumbs && <Breadcrumbs />}
+            <div className="page-enter max-w-[1400px] mx-auto px-6 py-6 lg:px-8 lg:py-8">
               <Outlet />
             </div>
           </main>

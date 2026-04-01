@@ -1,7 +1,6 @@
 import type { Config } from "tailwindcss";
 
 export default {
-  darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
@@ -83,10 +82,10 @@ export default {
       },
       boxShadow: {
         xs:  "0 1px 2px 0 rgba(0,0,0,0.03)",
-        sm:  "0 1px 3px 0 rgba(0,0,0,0.06), 0 1px 2px -1px rgba(0,0,0,0.04)",
-        md:  "0 4px 12px -2px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.04)",
-        lg:  "0 8px 24px -4px rgba(0,0,0,0.10), 0 4px 8px -4px rgba(0,0,0,0.05)",
-        xl:  "0 20px 40px -8px rgba(0,0,0,0.12)",
+        sm:  "0 1px 3px 0 rgba(0,0,0,0.05), 0 1px 2px -1px rgba(0,0,0,0.03)",
+        md:  "0 4px 12px -2px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.03)",
+        lg:  "0 8px 24px -4px rgba(0,0,0,0.08), 0 4px 8px -4px rgba(0,0,0,0.04)",
+        xl:  "0 20px 40px -8px rgba(0,0,0,0.10)",
       },
       keyframes: {
         "accordion-down": {
@@ -102,20 +101,15 @@ export default {
           to:   { opacity: "1" },
         },
         "slide-up": {
-          from: { opacity: "0", transform: "translateY(12px)" },
+          from: { opacity: "0", transform: "translateY(8px)" },
           to:   { opacity: "1", transform: "translateY(0)" },
-        },
-        "slide-in-right": {
-          from: { opacity: "0", transform: "translateX(16px)" },
-          to:   { opacity: "1", transform: "translateX(0)" },
         },
       },
       animation: {
         "accordion-down":   "accordion-down 0.2s ease-out",
         "accordion-up":     "accordion-up 0.2s ease-out",
         "fade-in":          "fade-in 0.15s ease-out",
-        "slide-up":         "slide-up 0.2s ease-out",
-        "slide-in-right":   "slide-in-right 0.2s ease-out",
+        "slide-up":         "slide-up 0.15s ease-out",
       },
     },
   },

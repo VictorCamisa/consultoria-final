@@ -1,4 +1,7 @@
-import { LayoutDashboard, Megaphone, Users, CalendarCheck, Settings, LogOut, BrainCircuit, Search, UserRoundCog, Sun, Moon } from "lucide-react";
+import {
+  LayoutDashboard, Megaphone, Users, CalendarCheck, Settings,
+  LogOut, BrainCircuit, Search, UserRoundCog,
+} from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -13,17 +16,41 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useTheme } from "@/hooks/useTheme";
 
-const navItems = [
-  { title: "Dashboard",       url: "/",               icon: LayoutDashboard, badgeKey: null },
-  { title: "Comercial",       url: "/comercial",       icon: Megaphone, badgeKey: "unread" as const },
-  { title: "Agente IA",       url: "/agente-ia",       icon: BrainCircuit, badgeKey: null },
-  { title: "Prospecção",      url: "/prospeccao",      icon: Search, badgeKey: null },
-  { title: "Meu Vendedor",   url: "/meu-vendedor",    icon: UserRoundCog, badgeKey: null },
-  { title: "Clientes",        url: "/clientes",        icon: Users, badgeKey: null },
-  { title: "Acompanhamento",  url: "/acompanhamento",  icon: CalendarCheck, badgeKey: "pendentes" as const },
-  { title: "Configurações",   url: "/configuracoes",   icon: Settings, badgeKey: null },
+interface NavSection {
+  label: string;
+  items: { title: string; url: string; icon: React.ElementType; badgeKey?: string }[];
+}
+
+const sections: NavSection[] = [
+  {
+    label: "Geral",
+    items: [
+      { title: "Dashboard", url: "/", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "Vendas",
+    items: [
+      { title: "Comercial", url: "/comercial", icon: Megaphone, badgeKey: "unread" },
+      { title: "Prospecção", url: "/prospeccao", icon: Search },
+      { title: "Meu Vendedor", url: "/meu-vendedor", icon: UserRoundCog },
+    ],
+  },
+  {
+    label: "Clientes",
+    items: [
+      { title: "Clientes", url: "/clientes", icon: Users },
+      { title: "Acompanhamento", url: "/acompanhamento", icon: CalendarCheck, badgeKey: "pendentes" },
+    ],
+  },
+  {
+    label: "Sistema",
+    items: [
+      { title: "Agente IA", url: "/agente-ia", icon: BrainCircuit },
+      { title: "Configurações", url: "/configuracoes", icon: Settings },
+    ],
+  },
 ];
 
 function getInitials(name: string | null) {
@@ -39,9 +66,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { userName, signOut } = useAuth();
-  const { theme, toggleTheme, setTheme } = useTheme();
 
-  // Notification badges
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["sidebar-unread"],
     queryFn: async () => {
@@ -77,28 +102,28 @@ export function AppSidebar() {
     url === "/" ? location.pathname === "/" : location.pathname.startsWith(url);
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       {/* ── Brand ── */}
-      <SidebarHeader className={cn("py-6 border-b border-border", collapsed ? "px-2" : "px-5")}>
+      <SidebarHeader className={cn("py-5 border-b border-sidebar-border", collapsed ? "px-2" : "px-4")}>
         <div
-          className={cn("flex items-center cursor-pointer", collapsed ? "justify-center" : "gap-3")}
+          className={cn("flex items-center cursor-pointer", collapsed ? "justify-center" : "gap-2.5")}
           onClick={() => navigate("/")}
         >
-          <div className="rounded-lg w-9 h-9 flex-shrink-0 flex items-center justify-center bg-primary">
-            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 16, letterSpacing: "-0.03em", lineHeight: 1 }}>
-              <span className="text-white/80">V</span>
-              <span className="text-white">S</span>
+          <div className="rounded-md w-8 h-8 flex-shrink-0 flex items-center justify-center bg-primary">
+            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 14, letterSpacing: "-0.03em", lineHeight: 1 }}>
+              <span className="text-primary-foreground/70">V</span>
+              <span className="text-primary-foreground">S</span>
             </span>
           </div>
           {!collapsed && (
             <div className="min-w-0">
               <p
                 className="leading-none text-foreground"
-                style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 15, letterSpacing: "0.01em" }}
+                style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: "0.01em" }}
               >
                 VS Growth Hub
               </p>
-              <p className="vs-overline mt-1 text-[9px]">
+              <p className="vs-overline mt-0.5" style={{ fontSize: 9 }}>
                 Ecossistemas Digitais
               </p>
             </div>
@@ -107,96 +132,71 @@ export function AppSidebar() {
       </SidebarHeader>
 
       {/* ── Navigation ── */}
-      <SidebarContent className={cn("py-4", collapsed ? "px-1.5" : "px-3")}>
-        <SidebarMenu className="space-y-0.5">
-          {navItems.map((item) => {
-            const active = isActive(item.url);
-            const badgeCount = item.badgeKey ? badgeCounts[item.badgeKey] ?? 0 : 0;
-            return (
-              <SidebarMenuItem key={item.title}>
-                <button
-                  onClick={() => navigate(item.url)}
-                  className={cn(
-                    collapsed
-                      ? "flex items-center justify-center w-full p-2.5 rounded-lg transition-all relative"
-                      : "nav-item w-full",
-                    active && !collapsed && "active",
-                    active && collapsed && "bg-primary/10 text-primary",
-                    !active && collapsed && "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                  )}
-                  title={collapsed ? item.title : undefined}
-                >
-                  <item.icon
-                    className={cn(
-                      "h-[18px] w-[18px] flex-shrink-0 nav-icon",
-                      active ? "text-primary" : "text-muted-foreground"
-                    )}
-                  />
-                  {!collapsed && (
-                    <span className={cn("text-[13px] flex-1 text-left", active ? "text-primary" : "")}>{item.title}</span>
-                  )}
-                  {badgeCount > 0 && (
-                    <span className={cn(
-                      "bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center",
-                      collapsed && "absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px]"
-                    )}>
-                      {badgeCount > 99 ? "99+" : badgeCount}
-                    </span>
-                  )}
-                </button>
-              </SidebarMenuItem>
-            );
-          })}
-        </SidebarMenu>
+      <SidebarContent className={cn("py-1 flex-1 overflow-y-auto", collapsed ? "px-1.5" : "px-2")}>
+        {sections.map((section) => (
+          <div key={section.label}>
+            {!collapsed && (
+              <div className="nav-section-label">{section.label}</div>
+            )}
+            {collapsed && <div className="h-3" />}
+            <SidebarMenu className="space-y-0.5">
+              {section.items.map((item) => {
+                const active = isActive(item.url);
+                const badgeCount = item.badgeKey ? badgeCounts[item.badgeKey] ?? 0 : 0;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <button
+                      onClick={() => navigate(item.url)}
+                      className={cn(
+                        collapsed
+                          ? "flex items-center justify-center w-full p-2 rounded-md transition-colors relative"
+                          : "nav-item w-full",
+                        active && !collapsed && "active",
+                        active && collapsed && "bg-primary/8 text-primary",
+                        !active && collapsed && "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                      )}
+                      title={collapsed ? item.title : undefined}
+                    >
+                      <item.icon
+                        className={cn(
+                          "h-4 w-4 flex-shrink-0 nav-icon",
+                          active ? "text-primary" : "text-muted-foreground"
+                        )}
+                      />
+                      {!collapsed && (
+                        <span className={cn("flex-1 text-left", active ? "text-primary" : "")}>{item.title}</span>
+                      )}
+                      {badgeCount > 0 && (
+                        <span className={cn(
+                          "bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center",
+                          collapsed && "absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] text-[8px]"
+                        )}>
+                          {badgeCount > 99 ? "99+" : badgeCount}
+                        </span>
+                      )}
+                    </button>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </div>
+        ))}
       </SidebarContent>
 
       {/* ── User footer ── */}
-      <SidebarFooter className={cn("border-t border-border", collapsed ? "p-2 space-y-1" : "p-4 space-y-3")}>
-        {/* Theme toggle */}
-        {collapsed ? (
-          <button
-            onClick={toggleTheme}
-            title={theme === "light" ? "Modo escuro" : "Modo claro"}
-            className="flex items-center justify-center w-full p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
-          >
-            {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-          </button>
-        ) : (
-          <div className="flex items-center gap-0.5 p-0.5 bg-secondary rounded-lg">
-            <button
-              onClick={() => setTheme("light")}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all",
-                theme === "light" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Sun className="h-3.5 w-3.5" /> Light
-            </button>
-            <button
-              onClick={() => setTheme("dark")}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-xs font-medium transition-all",
-                theme === "dark" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Moon className="h-3.5 w-3.5" /> Dark
-            </button>
-          </div>
-        )}
-
-        {/* User */}
+      <SidebarFooter className={cn("border-t border-sidebar-border", collapsed ? "p-2" : "p-3")}>
         {collapsed ? (
           <button
             onClick={signOut}
             title="Sair"
-            className="flex items-center justify-center w-full p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+            className="flex items-center justify-center w-full p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/8 transition-colors"
           >
             <LogOut className="h-4 w-4" />
           </button>
         ) : (
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex-shrink-0 flex items-center justify-center">
-              <span className="text-xs font-semibold text-primary">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-md bg-primary/8 flex-shrink-0 flex items-center justify-center">
+              <span className="text-[11px] font-semibold text-primary">
                 {getInitials(userName)}
               </span>
             </div>
@@ -208,9 +208,9 @@ export function AppSidebar() {
             <button
               onClick={signOut}
               title="Sair"
-              className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all"
+              className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/8 transition-colors"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-3.5 w-3.5" />
             </button>
           </div>
         )}
