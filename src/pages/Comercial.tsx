@@ -14,6 +14,7 @@ import { PipelineStats } from "@/components/comercial/PipelineStats";
 import { ProspectCard } from "@/components/comercial/ProspectCard";
 import { ChatSheet } from "@/components/comercial/ChatSheet";
 import { NewProspectDialog } from "@/components/comercial/NewProspectDialog";
+import { KanbanSkeleton } from "@/components/PageSkeleton";
 
 export default function Comercial() {
   const queryClient = useQueryClient();
