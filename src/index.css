@@ -2,14 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── VS Growth Hub — Design System v2.1 ─────────────────────────────────
+/* ─── VS Growth Hub — Design System v3.0 ─────────────────────────────────
    Brand:     VS Blue #2E6FCC · Blue Light #4A8DE0 · Silver #D4D8E4
    Type:      Barlow Condensed (headings) · Barlow (body)
-   Modes:     Light (high-contrast canvas) · Dark (minimal, muted, layered)
+   Mode:      Light only — high-contrast, professional canvas
    ────────────────────────────────────────────────────────────────────── */
 
 @layer base {
-  /* ═══════════════════ LIGHT MODE ═══════════════════ */
   :root {
     --background:           220 20% 97%;
     --foreground:           225 15% 14%;
@@ -39,7 +38,7 @@
     --warning:              38 92% 50%;
     --warning-foreground:   0 0% 100%;
 
-    --border:               220 14% 87%;
+    --border:               220 14% 90%;
     --input:                220 14% 87%;
     --ring:                 215 63% 49%;
 
@@ -51,10 +50,10 @@
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent:             220 20% 96%;
     --sidebar-accent-foreground:  225 15% 14%;
-    --sidebar-border:             220 14% 90%;
+    --sidebar-border:             220 14% 92%;
     --sidebar-ring:               215 63% 49%;
 
-    /* Semantic surface helpers (light) */
+    /* Semantic surface helpers */
     --surface-danger:       0 80% 96%;
     --surface-danger-fg:    0 72% 42%;
     --surface-warning:      38 90% 95%;
@@ -63,63 +62,6 @@
     --surface-success-fg:   160 72% 32%;
     --surface-info:         213 70% 95%;
     --surface-info-fg:      215 63% 42%;
-  }
-
-  /* ═══════════════════ DARK MODE ═══════════════════
-     Philosophy: near-black base (#09090B), single card elevation,
-     muted colors, thin 1px borders, no glow, no gradients.
-     ═══════════════════════════════════════════════════ */
-  .dark {
-    --background:           220 15% 8%;          /* #111318 — rich dark, not dead black */
-    --foreground:           210 20% 95%;         /* #EFF1F5 — crisp white text   */
-
-    --card:                 220 14% 12%;         /* #181B22 — clear card elevation */
-    --card-foreground:      210 20% 95%;
-
-    --popover:              220 14% 12%;
-    --popover-foreground:   210 20% 95%;
-
-    --primary:              213 80% 60%;         /* #4A9CF5 — vibrant blue on dark */
-    --primary-foreground:   220 15% 6%;
-
-    --secondary:            220 12% 16%;         /* #232730 — visible fill       */
-    --secondary-foreground: 210 15% 75%;         /* #B5BCC9 — readable           */
-
-    --muted:                220 12% 16%;
-    --muted-foreground:     215 12% 65%;         /* #96A0B3 — READABLE labels    */
-
-    --accent:               213 80% 60%;
-    --accent-foreground:    220 15% 6%;
-
-    --destructive:          0 72% 58%;           /* bright red for visibility     */
-    --destructive-foreground: 0 0% 100%;
-    --success:              160 70% 48%;
-    --success-foreground:   0 0% 100%;
-    --warning:              38 85% 55%;
-    --warning-foreground:   0 0% 100%;
-
-    --border:               220 10% 20%;         /* #2E3340 — visible borders     */
-    --input:                220 10% 20%;
-    --ring:                 213 80% 60%;
-
-    --sidebar-background:         220 15% 7%;    /* #0F1218                       */
-    --sidebar-foreground:         215 12% 65%;   /* readable nav text             */
-    --sidebar-primary:            213 80% 60%;
-    --sidebar-primary-foreground: 220 15% 6%;
-    --sidebar-accent:             220 12% 14%;
-    --sidebar-accent-foreground:  210 20% 95%;
-    --sidebar-border:             220 10% 18%;
-    --sidebar-ring:               213 80% 60%;
-
-    /* Semantic surface helpers (dark) — visible, readable */
-    --surface-danger:       0 50% 15%;
-    --surface-danger-fg:    0 70% 72%;
-    --surface-warning:      38 50% 15%;
-    --surface-warning-fg:   38 70% 72%;
-    --surface-success:      152 40% 14%;
-    --surface-success-fg:   160 60% 65%;
-    --surface-info:         213 40% 16%;
-    --surface-info-fg:      213 70% 75%;
   }
 }
 
@@ -140,7 +82,6 @@
     font-weight: 400;
     line-height: 1.6;
     letter-spacing: 0.005em;
-    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   h1 {
@@ -167,14 +108,14 @@
     color: hsl(var(--foreground));
   }
 
-  /* Scrollbar — adapts to theme */
-  ::-webkit-scrollbar        { width: 6px; height: 6px; }
+  /* Scrollbar */
+  ::-webkit-scrollbar        { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track  { background: transparent; }
   ::-webkit-scrollbar-thumb  {
     @apply rounded-full;
     background: hsl(var(--border));
   }
-  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.4); }
 }
 
 /* ─── VS Utilities ───────────────────────────────────────────────────── */
@@ -232,14 +173,14 @@
   .tabular { font-variant-numeric: tabular-nums; }
 
   .page-enter {
-    animation: page-enter 0.2s ease-out both;
+    animation: page-enter 0.15s ease-out both;
   }
   @keyframes page-enter {
-    from { opacity: 0; transform: translateY(6px); }
+    from { opacity: 0; transform: translateY(4px); }
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  /* Semantic surfaces — use instead of hardcoded bg-red-50, bg-amber-50 etc */
+  /* Semantic surfaces */
   .surface-danger  { background: hsl(var(--surface-danger));  color: hsl(var(--surface-danger-fg));  }
   .surface-warning { background: hsl(var(--surface-warning)); color: hsl(var(--surface-warning-fg)); }
   .surface-success { background: hsl(var(--surface-success)); color: hsl(var(--surface-success-fg)); }
@@ -249,8 +190,8 @@
 /* ─── Components ─────────────────────────────────────────────────────── */
 @layer components {
   .nav-item {
-    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm
-           transition-all duration-150 cursor-pointer select-none w-full;
+    @apply flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px]
+           transition-colors duration-100 cursor-pointer select-none w-full;
     font-family: 'Barlow', sans-serif;
     font-weight: 500;
     color: hsl(var(--sidebar-foreground));
@@ -260,7 +201,7 @@
     color: hsl(var(--sidebar-accent-foreground));
   }
   .nav-item.active {
-    background: hsl(var(--primary) / 0.1);
+    background: hsl(var(--primary) / 0.08);
     color: hsl(var(--primary));
     font-weight: 600;
   }
@@ -269,13 +210,19 @@
   }
 
   .vs-card {
-    @apply bg-card border border-border rounded-lg shadow-sm;
+    @apply bg-card border border-border rounded-lg shadow-xs;
   }
   .vs-card-interactive {
-    @apply vs-card transition-all duration-150 hover:shadow-md hover:border-primary/30 cursor-pointer;
+    @apply vs-card transition-colors duration-100 hover:border-primary/25 cursor-pointer;
   }
 
   .kanban-col {
     @apply min-w-[280px] max-w-[280px] flex-shrink-0;
+  }
+
+  /* Section label for sidebar groups */
+  .nav-section-label {
+    @apply text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70 px-2.5 pt-5 pb-1.5;
+    font-family: 'Barlow', sans-serif;
   }
 }
