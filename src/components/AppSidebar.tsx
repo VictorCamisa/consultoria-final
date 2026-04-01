@@ -2,6 +2,8 @@ import { LayoutDashboard, Megaphone, Users, CalendarCheck, Settings, LogOut, Bra
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar,
   SidebarContent,
@@ -14,14 +16,14 @@ import {
 import { useTheme } from "@/hooks/useTheme";
 
 const navItems = [
-  { title: "Dashboard",       url: "/",               icon: LayoutDashboard },
-  { title: "Comercial",       url: "/comercial",       icon: Megaphone },
-  { title: "Agente IA",       url: "/agente-ia",       icon: BrainCircuit },
-  { title: "Prospecção",      url: "/prospeccao",      icon: Search },
-  { title: "Meu Vendedor",   url: "/meu-vendedor",    icon: UserRoundCog },
-  { title: "Clientes",        url: "/clientes",        icon: Users },
-  { title: "Acompanhamento",  url: "/acompanhamento",  icon: CalendarCheck },
-  { title: "Configurações",   url: "/configuracoes",   icon: Settings },
+  { title: "Dashboard",       url: "/",               icon: LayoutDashboard, badgeKey: null },
+  { title: "Comercial",       url: "/comercial",       icon: Megaphone, badgeKey: "unread" as const },
+  { title: "Agente IA",       url: "/agente-ia",       icon: BrainCircuit, badgeKey: null },
+  { title: "Prospecção",      url: "/prospeccao",      icon: Search, badgeKey: null },
+  { title: "Meu Vendedor",   url: "/meu-vendedor",    icon: UserRoundCog, badgeKey: null },
+  { title: "Clientes",        url: "/clientes",        icon: Users, badgeKey: null },
+  { title: "Acompanhamento",  url: "/acompanhamento",  icon: CalendarCheck, badgeKey: "pendentes" as const },
+  { title: "Configurações",   url: "/configuracoes",   icon: Settings, badgeKey: null },
 ];
 
 function getInitials(name: string | null) {
@@ -38,6 +40,38 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const { userName, signOut } = useAuth();
   const { theme, toggleTheme, setTheme } = useTheme();
+
+  // Notification badges
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["sidebar-unread"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("consultoria_conversas")
+        .select("*", { count: "exact", head: true })
+        .eq("direcao", "entrada")
+        .eq("processado_ia", false);
+      return count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
+
+  const { data: pendentesCount = 0 } = useQuery({
+    queryKey: ["sidebar-pendentes"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("consultoria_acompanhamentos")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pendente")
+        .lte("agendado_para", new Date().toISOString());
+      return count ?? 0;
+    },
+    refetchInterval: 60000,
+  });
+
+  const badgeCounts: Record<string, number> = {
+    unread: unreadCount,
+    pendentes: pendentesCount,
+  };
 
   const isActive = (url: string) =>
     url === "/" ? location.pathname === "/" : location.pathname.startsWith(url);
@@ -77,13 +111,14 @@ export function AppSidebar() {
         <SidebarMenu className="space-y-0.5">
           {navItems.map((item) => {
             const active = isActive(item.url);
+            const badgeCount = item.badgeKey ? badgeCounts[item.badgeKey] ?? 0 : 0;
             return (
               <SidebarMenuItem key={item.title}>
                 <button
                   onClick={() => navigate(item.url)}
                   className={cn(
                     collapsed
-                      ? "flex items-center justify-center w-full p-2.5 rounded-lg transition-all"
+                      ? "flex items-center justify-center w-full p-2.5 rounded-lg transition-all relative"
                       : "nav-item w-full",
                     active && !collapsed && "active",
                     active && collapsed && "bg-primary/10 text-primary",
@@ -98,7 +133,15 @@ export function AppSidebar() {
                     )}
                   />
                   {!collapsed && (
-                    <span className={cn("text-[13px]", active ? "text-primary" : "")}>{item.title}</span>
+                    <span className={cn("text-[13px] flex-1 text-left", active ? "text-primary" : "")}>{item.title}</span>
+                  )}
+                  {badgeCount > 0 && (
+                    <span className={cn(
+                      "bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center",
+                      collapsed && "absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px]"
+                    )}>
+                      {badgeCount > 99 ? "99+" : badgeCount}
+                    </span>
                   )}
                 </button>
               </SidebarMenuItem>

@@ -1,8 +1,30 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { useEffect } from "react";
+
+const routeTitles: Record<string, string> = {
+  "/": "Dashboard — VS Growth Hub",
+  "/comercial": "Pipeline Comercial — VS Growth Hub",
+  "/agente-ia": "Central de Automação — VS Growth Hub",
+  "/prospeccao": "Prospecção — VS Growth Hub",
+  "/meu-vendedor": "Meu Vendedor — VS Growth Hub",
+  "/clientes": "Clientes — VS Growth Hub",
+  "/acompanhamento": "Acompanhamento — VS Growth Hub",
+  "/configuracoes": "Configurações — VS Growth Hub",
+};
 
 export default function AppLayout() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const base = "/" + location.pathname.split("/").filter(Boolean).slice(0, 1).join("/");
+    document.title = routeTitles[base] || "VS Growth Hub";
+  }, [location.pathname]);
+
+  const showBreadcrumbs = location.pathname !== "/";
+
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
@@ -17,6 +39,7 @@ export default function AppLayout() {
           {/* Content — generous padding, max-width for readability */}
           <main className="flex-1 overflow-auto">
             <div className="page-enter max-w-[1400px] mx-auto px-8 py-8">
+              {showBreadcrumbs && <Breadcrumbs />}
               <Outlet />
             </div>
           </main>
