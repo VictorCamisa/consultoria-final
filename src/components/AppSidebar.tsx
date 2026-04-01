@@ -111,13 +111,14 @@ export function AppSidebar() {
         <SidebarMenu className="space-y-0.5">
           {navItems.map((item) => {
             const active = isActive(item.url);
+            const badgeCount = item.badgeKey ? badgeCounts[item.badgeKey] ?? 0 : 0;
             return (
               <SidebarMenuItem key={item.title}>
                 <button
                   onClick={() => navigate(item.url)}
                   className={cn(
                     collapsed
-                      ? "flex items-center justify-center w-full p-2.5 rounded-lg transition-all"
+                      ? "flex items-center justify-center w-full p-2.5 rounded-lg transition-all relative"
                       : "nav-item w-full",
                     active && !collapsed && "active",
                     active && collapsed && "bg-primary/10 text-primary",
@@ -132,7 +133,15 @@ export function AppSidebar() {
                     )}
                   />
                   {!collapsed && (
-                    <span className={cn("text-[13px]", active ? "text-primary" : "")}>{item.title}</span>
+                    <span className={cn("text-[13px] flex-1 text-left", active ? "text-primary" : "")}>{item.title}</span>
+                  )}
+                  {badgeCount > 0 && (
+                    <span className={cn(
+                      "bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center",
+                      collapsed && "absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px]"
+                    )}>
+                      {badgeCount > 99 ? "99+" : badgeCount}
+                    </span>
                   )}
                 </button>
               </SidebarMenuItem>
