@@ -13,7 +13,7 @@ import ProspectingWizard from "@/components/dashboard/ProspectingWizard";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-
+  const [prospectingOpen, setProspectingOpen] = useState(false);
   const { data: prospects } = useQuery({
     queryKey: ["prospects"],
     queryFn: async () => {
