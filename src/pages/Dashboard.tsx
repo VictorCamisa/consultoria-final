@@ -426,6 +426,7 @@ export default function Dashboard() {
           </Card>
         </div>
       </div>
+      <ProspectingWizard open={prospectingOpen} onOpenChange={setProspectingOpen} />
     </div>
   );
 }
