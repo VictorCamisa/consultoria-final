@@ -137,12 +137,17 @@ export default function Dashboard() {
           <h1 className="vs-h1">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">Visão geral do pipeline e operação</p>
         </div>
-        {totalAlertas > 0 && (
-          <Badge variant="destructive" className="text-sm px-3 py-1">
-            <AlertTriangle className="h-3 w-3 mr-1" />
-            {totalAlertas} alerta{totalAlertas > 1 ? "s" : ""}
-          </Badge>
-        )}
+        <div className="flex items-center gap-3">
+          <Button onClick={() => setProspectingOpen(true)} className="gap-2">
+            <Rocket className="h-4 w-4" />
+            Prospectar Leads
+          </Button>
+          {totalAlertas > 0 && (
+            <Badge variant="destructive" className="text-sm px-3 py-1">
+              <AlertTriangle className="h-3 w-3 mr-1" />
+              {totalAlertas} alerta{totalAlertas > 1 ? "s" : ""}
+            </Badge>
+          )}
       </div>
 
       {/* KPIs */}
