@@ -2,6 +2,8 @@ import { LayoutDashboard, Megaphone, Users, CalendarCheck, Settings, LogOut, Bra
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar,
   SidebarContent,
@@ -14,14 +16,14 @@ import {
 import { useTheme } from "@/hooks/useTheme";
 
 const navItems = [
-  { title: "Dashboard",       url: "/",               icon: LayoutDashboard },
-  { title: "Comercial",       url: "/comercial",       icon: Megaphone },
-  { title: "Agente IA",       url: "/agente-ia",       icon: BrainCircuit },
-  { title: "Prospecção",      url: "/prospeccao",      icon: Search },
-  { title: "Meu Vendedor",   url: "/meu-vendedor",    icon: UserRoundCog },
-  { title: "Clientes",        url: "/clientes",        icon: Users },
-  { title: "Acompanhamento",  url: "/acompanhamento",  icon: CalendarCheck },
-  { title: "Configurações",   url: "/configuracoes",   icon: Settings },
+  { title: "Dashboard",       url: "/",               icon: LayoutDashboard, badgeKey: null },
+  { title: "Comercial",       url: "/comercial",       icon: Megaphone, badgeKey: "unread" as const },
+  { title: "Agente IA",       url: "/agente-ia",       icon: BrainCircuit, badgeKey: null },
+  { title: "Prospecção",      url: "/prospeccao",      icon: Search, badgeKey: null },
+  { title: "Meu Vendedor",   url: "/meu-vendedor",    icon: UserRoundCog, badgeKey: null },
+  { title: "Clientes",        url: "/clientes",        icon: Users, badgeKey: null },
+  { title: "Acompanhamento",  url: "/acompanhamento",  icon: CalendarCheck, badgeKey: "pendentes" as const },
+  { title: "Configurações",   url: "/configuracoes",   icon: Settings, badgeKey: null },
 ];
 
 function getInitials(name: string | null) {
