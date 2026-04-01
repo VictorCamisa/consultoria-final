@@ -20,11 +20,9 @@ export default function AgenteIA() {
   const [loadingCadencia, setLoadingCadencia] = useState(false);
   const [progresso, setProgresso] = useState(0);
 
-  // AbortControllers
   const abortClassificar = useRef<AbortController | null>(null);
   const abortAbordar = useRef<AbortController | null>(null);
 
-  // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean; title: string; description: string; onConfirm: () => void;
   }>({ open: false, title: "", description: "", onConfirm: () => {} });
@@ -33,7 +31,6 @@ export default function AgenteIA() {
     setLogs(prev => [{ id: crypto.randomUUID(), agent, status, msg, ts: new Date() }, ...prev.slice(0, 49)]);
   }, []);
 
-  // Optimized query — only fetch columns needed for stats
   const { data: prospects, isLoading } = useQuery({
     queryKey: ["prospects-stats"],
     queryFn: async () => {
@@ -63,7 +60,7 @@ export default function AgenteIA() {
       icon: BrainCircuit,
       gradient: "from-primary/10 to-accent/10",
       title: "Classificador IA",
-      description: "Analisa conversas e atribui score (0–100) + classificação via GPT-4o",
+      description: "Analisa conversas e atribui score (0–100) + classificação automática via GPT-4o",
       stats: [
         { label: "Classificados", value: comScore },
         { label: "Pendentes", value: semScore },
@@ -76,9 +73,9 @@ export default function AgenteIA() {
     {
       id: "abordar",
       icon: Megaphone,
-      gradient: "from-primary/10 to-primary/5",
+      gradient: "from-warning/10 to-warning/5",
       title: "Abordagem Automática",
-      description: "Envia script inicial via WhatsApp e inicia cadência de follow-up",
+      description: "Envia o script inicial via WhatsApp e inicia cadência de follow-up automático",
       stats: [
         { label: "Novos", value: novos },
         { label: "Em cadência", value: emCadencia },
@@ -92,20 +89,20 @@ export default function AgenteIA() {
       icon: RefreshCw,
       gradient: "from-success/10 to-success/5",
       title: "Follow-up Automático",
-      description: "Dispara follow-ups vencidos (D1 → D3 → D7 → D14 → D30)",
+      description: "Dispara follow-ups vencidos na sequência D1 → D3 → D7 → D14 → D30",
       stats: [
         { label: "Em cadência", value: emCadencia },
       ],
-      action: "Processar agora",
+      action: "Processar follow-ups agora",
       disabled: loadingCadencia,
       loading: loadingCadencia,
     },
     {
       id: "suggest",
       icon: MessageSquare,
-      gradient: "from-warning/10 to-warning/5",
+      gradient: "from-accent/10 to-accent/5",
       title: "Sugestor de Respostas",
-      description: "Gera respostas contextualizadas para prospects que responderam",
+      description: "Gera respostas contextualizadas para prospects que responderam à abordagem",
       stats: [
         { label: "Responderam", value: responderam },
       ],
@@ -115,7 +112,7 @@ export default function AgenteIA() {
     },
   ];
 
-  // --- Handlers with AbortController ---
+  // --- Handlers ---
   async function handleClassificar() {
     const pendentes = prospects?.filter(p => !p.score_qualificacao) ?? [];
     if (!pendentes.length) return;
@@ -212,19 +209,18 @@ export default function AgenteIA() {
     else if (id === "abordar") abortAbordar.current?.abort();
   }
 
-  // Actions with confirmation for destructive bulk ops
   function handleAction(id: string) {
     if (id === "classify") {
       setConfirmDialog({
         open: true,
-        title: "Classificar prospects",
+        title: "Classificar prospects pendentes",
         description: `Isso vai classificar ${semScore} prospect${semScore !== 1 ? "s" : ""} pendente${semScore !== 1 ? "s" : ""} usando GPT-4o. Cada chamada consome tokens da API. Deseja continuar?`,
         onConfirm: handleClassificar,
       });
     } else if (id === "abordar") {
       setConfirmDialog({
         open: true,
-        title: "Abordar prospects",
+        title: "Abordar prospects novos",
         description: `Isso vai enviar mensagens via WhatsApp para ${novos} prospect${novos !== 1 ? "s" : ""} novo${novos !== 1 ? "s" : ""}. Essa ação não pode ser desfeita. Deseja continuar?`,
         onConfirm: handleAbordar,
       });
@@ -235,45 +231,48 @@ export default function AgenteIA() {
 
   return (
     <div className="space-y-8 page-enter">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
-          <div className="p-2.5 rounded-lg bg-primary">
-            <BrainCircuit className="h-5 w-5 text-primary-foreground" />
-          </div>
-          Central de Automação IA
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1.5">
-          Controle seus agentes inteligentes de prospecção e cadência
-        </p>
+      {/* Page Header */}
+      <div className="flex items-center gap-4">
+        <div className="p-3 rounded-xl bg-primary">
+          <BrainCircuit className="h-6 w-6 text-primary-foreground" />
+        </div>
+        <div>
+          <h1>Central de Automação IA</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Controle e monitore seus agentes de prospecção e cadência
+          </p>
+        </div>
       </div>
 
-      {/* KPI Row */}
+      {/* KPIs */}
       <KPICards
         cobertura={cobertura} quentes={quentes} mornos={mornos} frios={frios}
         emCadencia={emCadencia} novos={novos} responderam={responderam}
         total={total} isLoading={isLoading}
       />
 
-      {/* Agents Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {agents.map(agent => (
-          <AgentCard
-            key={agent.id}
-            agent={agent}
-            onAction={handleAction}
-            onCancel={handleCancel}
-            progresso={progresso}
-            showProgress={agent.id === "classify" || agent.id === "abordar"}
-            cancellable={agent.id === "classify" || agent.id === "abordar"}
-          />
-        ))}
+      {/* Agents */}
+      <div>
+        <h2 className="mb-4">Agentes</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {agents.map(agent => (
+            <AgentCard
+              key={agent.id}
+              agent={agent}
+              onAction={handleAction}
+              onCancel={handleCancel}
+              progresso={progresso}
+              showProgress={agent.id === "classify" || agent.id === "abordar"}
+              cancellable={agent.id === "classify" || agent.id === "abordar"}
+            />
+          ))}
+        </div>
       </div>
 
-      {/* Execution Log */}
+      {/* Log */}
       <ExecutionLog logs={logs} />
 
-      {/* Confirmation Dialog */}
+      {/* Confirmation */}
       <ConfirmActionDialog
         open={confirmDialog.open}
         onOpenChange={(open) => setConfirmDialog(prev => ({ ...prev, open }))}
