@@ -18,7 +18,6 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Busca prospect
     const { data: prospect, error: pErr } = await supabase
       .from("consultoria_prospects")
       .select("*")
@@ -26,7 +25,6 @@ serve(async (req) => {
       .single();
     if (pErr) throw pErr;
 
-    // Busca conversas (últimas 20 mensagens)
     const { data: conversas } = await supabase
       .from("consultoria_conversas")
       .select("direcao, conteudo, created_at")
@@ -34,28 +32,42 @@ serve(async (req) => {
       .order("created_at", { ascending: false })
       .limit(20);
 
-    // Busca config do nicho (scripts + system prompt)
-    const { data: config } = await supabase
+    // Match seguro de config por nicho
+    let config: Record<string, unknown> | null = null;
+    const { data: exactConfig } = await supabase
       .from("consultoria_config")
-      .select(
-        "system_prompt, script_a, script_b, script_c, followup_d1, followup_d3, followup_d7, followup_d14, followup_d30"
-      )
-      .eq("nicho", prospect.nicho)
+      .select("system_prompt, script_a, script_b, script_c, followup_d1, followup_d3, followup_d7, followup_d14, followup_d30, nicho")
+      .ilike("nicho", prospect.nicho)
       .maybeSingle();
 
-    // Monta histórico em ordem cronológica
+    if (exactConfig) {
+      config = exactConfig;
+    } else {
+      const { data: allConfigs } = await supabase
+        .from("consultoria_config")
+        .select("system_prompt, script_a, script_b, script_c, followup_d1, followup_d3, followup_d7, followup_d14, followup_d30, nicho");
+
+      if (allConfigs?.length) {
+        const nichoLower = prospect.nicho.toLowerCase().trim();
+        config = allConfigs.find((c: Record<string, unknown>) => {
+          const cn = (c.nicho as string).toLowerCase().trim();
+          return nichoLower.includes(cn) || cn.includes(nichoLower);
+        }) ?? null;
+      }
+    }
+
+    if (config) {
+      console.log(`[suggest] Prospect "${prospect.nome_negocio}" (${prospect.nicho}) → config "${config.nicho}"`);
+    }
+
     const historico =
       conversas && conversas.length > 0
         ? [...conversas]
             .reverse()
-            .map(
-              (m) =>
-                `[${m.direcao === "saida" ? "VS" : "Prospect"}] ${m.conteudo}`
-            )
+            .map((m) => `[${m.direcao === "saida" ? "VS" : "Prospect"}] ${m.conteudo}`)
             .join("\n")
         : "Nenhuma conversa anterior.";
 
-    // Detecta em qual dia de cadência está para sugerir o script correto
     let scriptSugerido = "";
     if (config) {
       const dia = prospect.dia_cadencia ?? 0;
@@ -64,12 +76,13 @@ serve(async (req) => {
       else if (dia <= 1) scriptSugerido = `Follow-up D1: ${config.followup_d1}`;
       else if (dia <= 3) scriptSugerido = `Follow-up D3: ${config.followup_d3}`;
       else if (dia <= 7) scriptSugerido = `Follow-up D7: ${config.followup_d7}`;
-      else if (dia <= 14)
-        scriptSugerido = `Follow-up D14: ${config.followup_d14}`;
+      else if (dia <= 14) scriptSugerido = `Follow-up D14: ${config.followup_d14}`;
       else scriptSugerido = `Follow-up D30: ${config.followup_d30}`;
     }
 
-    const systemPrompt = `${config?.system_prompt ?? "Você é um especialista em vendas consultivas para o mercado brasileiro de saúde e serviços profissionais."}
+    const systemPrompt = `${config?.system_prompt ?? "Você é um especialista em vendas consultivas para o mercado brasileiro."}
+
+IMPORTANTE: Este prospect é do nicho "${prospect.nicho}". Adapte completamente sua linguagem e referências ao contexto deste nicho específico. NÃO misture referências de outros nichos.
 
 Sua tarefa é sugerir a próxima mensagem de WhatsApp para enviar ao prospect.
 
@@ -78,9 +91,12 @@ Regras:
 - Seja direto, sem enrolação e sem emojis excessivos (no máximo 1-2 por mensagem)
 - Máximo 3 parágrafos curtos
 - O objetivo é avançar o prospect no pipeline (marcar call, gerar interesse, reativar conversa)
-- Adapte ao contexto da conversa — não envie mensagem genérica se já houve troca de mensagens
+- Adapte ao contexto da conversa — se o prospect respondeu, CONTINUE a conversa de forma natural
+- Se o prospect fez uma pergunta, RESPONDA a pergunta antes de tentar avançar
+- Se o prospect demonstrou interesse, proponha um próximo passo concreto (call, reunião)
+- Se o prospect mostrou objeção, trate a objeção com empatia
 
-${scriptSugerido ? `\nReferência de scripts:\n${scriptSugerido}` : ""}
+${scriptSugerido ? `\nReferência de scripts (use como base, mas adapte ao contexto):\n${scriptSugerido}` : ""}
 
 Responda APENAS com o texto da mensagem sugerida, sem aspas, sem explicações.`;
 
@@ -123,10 +139,7 @@ ${historico}`;
   } catch (err) {
     return new Response(
       JSON.stringify({ error: (err as Error).message }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

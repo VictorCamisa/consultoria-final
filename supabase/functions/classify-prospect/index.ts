@@ -18,7 +18,6 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Busca prospect
     const { data: prospect, error: pErr } = await supabase
       .from("consultoria_prospects")
       .select("*")
@@ -26,7 +25,6 @@ serve(async (req) => {
       .single();
     if (pErr) throw pErr;
 
-    // Busca conversas (últimas 30 mensagens)
     const { data: conversas } = await supabase
       .from("consultoria_conversas")
       .select("direcao, conteudo, created_at")
@@ -34,28 +32,50 @@ serve(async (req) => {
       .order("created_at", { ascending: true })
       .limit(30);
 
-    // Busca system prompt do nicho
-    const { data: config } = await supabase
+    // Match seguro de config por nicho (sem fallback cross-nicho)
+    let config: Record<string, unknown> | null = null;
+    const { data: exactConfig } = await supabase
       .from("consultoria_config")
-      .select("system_prompt, criterios_qualificacao")
-      .eq("nicho", prospect.nicho)
+      .select("system_prompt, criterios_qualificacao, nicho")
+      .ilike("nicho", prospect.nicho)
       .maybeSingle();
+
+    if (exactConfig) {
+      config = exactConfig;
+    } else {
+      // Match parcial seguro
+      const { data: allConfigs } = await supabase
+        .from("consultoria_config")
+        .select("system_prompt, criterios_qualificacao, nicho");
+
+      if (allConfigs?.length) {
+        const nichoLower = prospect.nicho.toLowerCase().trim();
+        config = allConfigs.find((c: Record<string, unknown>) => {
+          const cn = (c.nicho as string).toLowerCase().trim();
+          return nichoLower.includes(cn) || cn.includes(nichoLower);
+        }) ?? null;
+      }
+    }
+
+    if (config) {
+      console.log(`[classify] Prospect "${prospect.nome_negocio}" (${prospect.nicho}) → config "${config.nicho}"`);
+    } else {
+      console.warn(`[classify] Nenhuma config para nicho "${prospect.nicho}" — usando prompt genérico`);
+    }
 
     const historico =
       conversas && conversas.length > 0
         ? conversas
-            .map(
-              (m) =>
-                `[${m.direcao === "saida" ? "VS" : "Prospect"}] ${m.conteudo}`
-            )
+            .map((m) => `[${m.direcao === "saida" ? "VS" : "Prospect"}] ${m.conteudo}`)
             .join("\n")
         : "Nenhuma conversa registrada ainda.";
 
-    const systemPrompt = `Você é um especialista em qualificação de vendas para a empresa VS Consultoria, especializada em consultoria para clínicas estéticas, odontológicas e advocacia no Brasil.
+    const systemPrompt = `Você é um especialista em qualificação de vendas para a empresa VS Consultoria.
+
+IMPORTANTE: Classifique este prospect EXCLUSIVAMENTE com base no nicho "${prospect.nicho}".
+${config?.system_prompt ? `\nContexto específico do nicho "${config.nicho}":\n${config.system_prompt}` : ""}
 
 Sua função é analisar dados de um prospect e classificá-lo com base no nível de interesse e potencial de fechamento.
-
-${config?.system_prompt ? `Contexto do nicho:\n${config.system_prompt}` : ""}
 
 Responda APENAS com um JSON válido no seguinte formato:
 {
@@ -102,7 +122,6 @@ ${historico}`;
     const openaiData = await openaiRes.json();
     const result = JSON.parse(openaiData.choices[0].message.content);
 
-    // Atualiza prospect
     await supabase
       .from("consultoria_prospects")
       .update({
@@ -113,7 +132,6 @@ ${historico}`;
       })
       .eq("id", prospect_id);
 
-    // Marca mensagens como processadas
     if (conversas && conversas.length > 0) {
       await supabase
         .from("consultoria_conversas")
@@ -127,10 +145,7 @@ ${historico}`;
   } catch (err) {
     return new Response(
       JSON.stringify({ error: (err as Error).message }),
-      {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

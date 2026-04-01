@@ -1,21 +1,19 @@
 /**
  * Processa a fila de cadência automática.
  *
- * Pode ser chamado:
- *   1. Manualmente pelo front (botão "Processar Cadência")
- *   2. Por um cron externo a cada hora (ex: pg_cron, GitHub Actions, Render cron)
- *
  * Fluxo por prospect em `em_cadencia`:
  *   D1 → D3 → D7 → D14 → D30 → frio
  *
- * Variáveis de ambiente:
- *   EVOLUTION_API_URL, EVOLUTION_API_KEY (mesmas do send-whatsapp)
+ * Melhorias:
+ *   - Delay entre envios (3-8s) para evitar bloqueio WhatsApp
+ *   - Match de nicho seguro (sem cross-contamination)
+ *   - Pula prospects que já responderam
+ *   - Substitui variáveis {{nome}}, {{decisor}}, {{cidade}}
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-// Sequência da cadência: dia atual → próximo dia → dias até o próximo
 const CADENCIA: Array<{ dia: number; next: number | null; next_days: number }> = [
   { dia: 1, next: 3, next_days: 2 },
   { dia: 3, next: 7, next_days: 4 },
@@ -41,6 +39,40 @@ function addDays(days: number): string {
   return d.toISOString();
 }
 
+/** Match seguro de config por nicho — sem fallback genérico */
+function findConfigForNicho(
+  configs: Record<string, unknown>[],
+  nicho: string
+): Record<string, unknown> | null {
+  const nichoLower = nicho.toLowerCase().trim();
+
+  // 1) Match exato
+  const exact = configs.find(
+    (c) => (c.nicho as string).toLowerCase().trim() === nichoLower
+  );
+  if (exact) return exact;
+
+  // 2) Match parcial seguro
+  const partial = configs.find((c) => {
+    const cn = (c.nicho as string).toLowerCase().trim();
+    return nichoLower.includes(cn) || cn.includes(nichoLower);
+  });
+
+  if (partial) {
+    console.log(`[cadencia] Match parcial: "${nicho}" → "${partial.nicho}"`);
+    return partial;
+  }
+
+  return null;
+}
+
+/** Delay aleatório entre 3-8 segundos */
+function antiBlockDelay(): Promise<void> {
+  return new Promise((resolve) =>
+    setTimeout(resolve, 3000 + Math.random() * 5000)
+  );
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -59,10 +91,11 @@ serve(async (req) => {
   const nowIso = now.toISOString();
 
   try {
-    // Busca todos os prospects em cadência com próxima ação vencida
+    // Busca prospects em cadência com próxima ação vencida
+    // IMPORTANTE: exclui prospects que já responderam
     const { data: prospects, error: pErr } = await supabase
       .from("consultoria_prospects")
-      .select("id, nome_negocio, whatsapp, nicho, status, dia_cadencia, data_proxima_acao, responsavel")
+      .select("id, nome_negocio, whatsapp, nicho, status, dia_cadencia, data_proxima_acao, decisor, cidade")
       .eq("status", "em_cadencia")
       .not("dia_cadencia", "is", null)
       .or(`data_proxima_acao.is.null,data_proxima_acao.lte.${nowIso}`)
@@ -76,23 +109,62 @@ serve(async (req) => {
       );
     }
 
-    // Busca todas as configs de uma vez
+    // Busca todas as configs
     const { data: configs } = await supabase
       .from("consultoria_config")
       .select("*");
 
+    let sendCount = 0;
+
     for (const prospect of prospects) {
       try {
-        const config = configs?.find((c) => c.nicho === prospect.nicho);
+        // Match seguro de config
+        const config = configs?.length
+          ? findConfigForNicho(configs as Record<string, unknown>[], prospect.nicho)
+          : null;
+
         if (!config) {
-          results.push({ prospect_id: prospect.id, nome: prospect.nome_negocio, status: "skip", erro: "config não encontrada" });
+          results.push({
+            prospect_id: prospect.id,
+            nome: prospect.nome_negocio,
+            status: "skip",
+            erro: `config não encontrada para nicho "${prospect.nicho}"`,
+          });
           continue;
         }
 
-        // Respeita janela de horário configurada
+        // Respeita janela de horário
         const hora = now.getHours();
-        if (hora < config.horario_inicio || hora >= config.horario_fim) {
-          results.push({ prospect_id: prospect.id, nome: prospect.nome_negocio, status: "skip", erro: "fora do horário" });
+        if (hora < (config.horario_inicio as number) || hora >= (config.horario_fim as number)) {
+          results.push({
+            prospect_id: prospect.id,
+            nome: prospect.nome_negocio,
+            status: "skip",
+            erro: "fora do horário",
+          });
+          continue;
+        }
+
+        // Verifica se prospect já respondeu (double-check)
+        const { data: lastMsg } = await supabase
+          .from("consultoria_conversas")
+          .select("direcao")
+          .eq("prospect_id", prospect.id)
+          .eq("direcao", "entrada")
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (lastMsg && lastMsg.length > 0) {
+          // Prospect já respondeu — não envia follow-up automático, muda status
+          await supabase
+            .from("consultoria_prospects")
+            .update({ status: "respondeu", updated_at: nowIso })
+            .eq("id", prospect.id);
+          results.push({
+            prospect_id: prospect.id,
+            nome: prospect.nome_negocio,
+            status: "respondeu (parou cadência)",
+          });
           continue;
         }
 
@@ -100,7 +172,6 @@ serve(async (req) => {
         const step = CADENCIA.find((s) => s.dia === diaAtual);
 
         if (!step) {
-          // Dia desconhecido — move para frio
           await supabase
             .from("consultoria_prospects")
             .update({ status: "frio", updated_at: nowIso })
@@ -109,13 +180,29 @@ serve(async (req) => {
           continue;
         }
 
-        const mensagem = getMensagem(config as Record<string, string>, diaAtual);
+        let mensagem = getMensagem(config as Record<string, string>, diaAtual);
         if (!mensagem) {
-          results.push({ prospect_id: prospect.id, nome: prospect.nome_negocio, status: "skip", erro: `followup_d${diaAtual} vazio` });
+          results.push({
+            prospect_id: prospect.id,
+            nome: prospect.nome_negocio,
+            status: "skip",
+            erro: `followup_d${diaAtual} vazio`,
+          });
           continue;
         }
 
-        // Envia via Evolution API (se configurada)
+        // Substitui variáveis
+        mensagem = mensagem
+          .replace(/\{\{nome\}\}/gi, prospect.nome_negocio)
+          .replace(/\{\{decisor\}\}/gi, prospect.decisor ?? prospect.nome_negocio)
+          .replace(/\{\{cidade\}\}/gi, prospect.cidade ?? "");
+
+        // Delay anti-bloqueio entre envios
+        if (sendCount > 0) {
+          await antiBlockDelay();
+        }
+
+        // Envia via Evolution API
         let messageId: string | null = null;
         let enviado = false;
 
@@ -136,9 +223,10 @@ serve(async (req) => {
             const evoData = await evoRes.json();
             messageId = evoData?.key?.id ?? null;
             enviado = true;
+            sendCount++;
           } else {
             const errText = await evoRes.text();
-            console.error(`Evolution error para ${prospect.nome_negocio}:`, errText);
+            console.error(`[cadencia] Evolution error para ${prospect.nome_negocio}:`, errText);
           }
         }
 
@@ -151,7 +239,7 @@ serve(async (req) => {
           processado_ia: false,
         });
 
-        // Registra na tabela de cadência
+        // Registra na cadência
         await supabase.from("consultoria_cadencia").insert({
           prospect_id: prospect.id,
           dia: diaAtual,
@@ -162,21 +250,14 @@ serve(async (req) => {
           agendado_para: nowIso,
         });
 
-        // Avança o prospect na cadência
+        // Avança na cadência
         if (step.next === null) {
-          // Última etapa → move para frio
           await supabase
             .from("consultoria_prospects")
-            .update({
-              status: "frio",
-              dia_cadencia: 30,
-              data_ultima_interacao: nowIso,
-              updated_at: nowIso,
-            })
+            .update({ status: "frio", dia_cadencia: 30, data_ultima_interacao: nowIso, updated_at: nowIso })
             .eq("id", prospect.id);
           results.push({ prospect_id: prospect.id, nome: prospect.nome_negocio, status: "frio" });
         } else {
-          // Próxima etapa
           await supabase
             .from("consultoria_prospects")
             .update({
@@ -186,10 +267,14 @@ serve(async (req) => {
               updated_at: nowIso,
             })
             .eq("id", prospect.id);
-          results.push({ prospect_id: prospect.id, nome: prospect.nome_negocio, status: `enviado_d${diaAtual}→d${step.next}` });
+          results.push({
+            prospect_id: prospect.id,
+            nome: prospect.nome_negocio,
+            status: `d${diaAtual}→d${step.next} (${config.nicho})`,
+          });
         }
       } catch (prospectErr) {
-        console.error(`Erro no prospect ${prospect.id}:`, prospectErr);
+        console.error(`[cadencia] Erro no prospect ${prospect.id}:`, prospectErr);
         results.push({
           prospect_id: prospect.id,
           nome: prospect.nome_negocio,
