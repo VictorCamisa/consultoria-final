@@ -122,11 +122,18 @@ export default function AgenteIA() {
     setLoadingClassificar(true);
     setProgresso(0);
     let ok = 0, erros = 0;
+
+    // Delay de 1-2s entre chamadas para não sobrecarregar a API
+    const classifyDelay = () => new Promise(resolve => 
+      setTimeout(resolve, 1000 + Math.random() * 1000)
+    );
+
     for (let i = 0; i < pendentes.length; i++) {
       if (controller.signal.aborted) {
         addLog("Classificador", "erro", `Cancelado (${ok} ok, ${erros} erros)`);
         break;
       }
+      if (i > 0) await classifyDelay();
       const p = pendentes[i];
       try {
         const { data, error } = await supabase.functions.invoke("classify-prospect", { body: { prospect_id: p.id } });
