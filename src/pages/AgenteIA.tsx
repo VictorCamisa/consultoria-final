@@ -6,7 +6,7 @@ import {
   BrainCircuit, Megaphone, RefreshCw, MessageSquare,
 } from "lucide-react";
 
-import KPICards from "@/components/agente-ia/KPICards";
+import KPIStrip from "@/components/agente-ia/KPIStrip";
 import AgentCard from "@/components/agente-ia/AgentCard";
 import ExecutionLog from "@/components/agente-ia/ExecutionLog";
 import ConfirmActionDialog from "@/components/agente-ia/ConfirmActionDialog";
@@ -42,7 +42,6 @@ export default function AgenteIA() {
     },
   });
 
-  // Derived stats
   const total = prospects?.length ?? 0;
   const comScore = prospects?.filter(p => p.score_qualificacao !== null).length ?? 0;
   const semScore = total - comScore;
@@ -53,6 +52,8 @@ export default function AgenteIA() {
   const novos = prospects?.filter(p => p.status === "novo").length ?? 0;
   const responderam = prospects?.filter(p => p.status === "respondeu" || p.status === "quente").length ?? 0;
   const cobertura = total > 0 ? Math.round((comScore / total) * 100) : 0;
+
+  const anyRunning = loadingClassificar || loadingAbordar || loadingCadencia;
 
   const agents: AgentConfig[] = [
     {
@@ -93,7 +94,7 @@ export default function AgenteIA() {
       stats: [
         { label: "Em cadência", value: emCadencia },
       ],
-      action: "Processar follow-ups agora",
+      action: "Processar follow-ups",
       disabled: loadingCadencia,
       loading: loadingCadencia,
     },
@@ -116,12 +117,10 @@ export default function AgenteIA() {
   async function handleClassificar() {
     const pendentes = prospects?.filter(p => !p.score_qualificacao) ?? [];
     if (!pendentes.length) return;
-
     const controller = new AbortController();
     abortClassificar.current = controller;
     setLoadingClassificar(true);
     setProgresso(0);
-
     let ok = 0, erros = 0;
     for (let i = 0; i < pendentes.length; i++) {
       if (controller.signal.aborted) {
@@ -143,7 +142,6 @@ export default function AgenteIA() {
       }
       setProgresso(Math.round(((i + 1) / pendentes.length) * 100));
     }
-
     setLoadingClassificar(false);
     abortClassificar.current = null;
     queryClient.invalidateQueries({ queryKey: ["prospects-stats"] });
@@ -153,12 +151,10 @@ export default function AgenteIA() {
   async function handleAbordar() {
     const novosP = prospects?.filter(p => p.status === "novo") ?? [];
     if (!novosP.length) return;
-
     const controller = new AbortController();
     abortAbordar.current = controller;
     setLoadingAbordar(true);
     setProgresso(0);
-
     let ok = 0, erros = 0;
     for (let i = 0; i < novosP.length; i++) {
       if (controller.signal.aborted) {
@@ -181,7 +177,6 @@ export default function AgenteIA() {
       }
       setProgresso(Math.round(((i + 1) / novosP.length) * 100));
     }
-
     setLoadingAbordar(false);
     abortAbordar.current = null;
     queryClient.invalidateQueries({ queryKey: ["prospects-stats"] });
@@ -230,47 +225,58 @@ export default function AgenteIA() {
   }
 
   return (
-    <div className="space-y-8 page-enter">
-      {/* Page Header */}
-      <div className="flex items-center gap-4">
-        <div className="p-3 rounded-xl bg-primary">
-          <BrainCircuit className="h-6 w-6 text-primary-foreground" />
-        </div>
+    <div className="space-y-6 page-enter">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1>Central de Automação IA</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Controle e monitore seus agentes de prospecção e cadência
+          <h1 className="text-2xl">Central de Automação</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Monitore e execute agentes de prospecção e cadência
           </p>
         </div>
+        {anyRunning && (
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+            </span>
+            <span className="text-xs font-medium text-primary">Executando</span>
+          </div>
+        )}
       </div>
 
-      {/* KPIs */}
-      <KPICards
+      {/* ── KPI Strip ── */}
+      <KPIStrip
         cobertura={cobertura} quentes={quentes} mornos={mornos} frios={frios}
         emCadencia={emCadencia} novos={novos} responderam={responderam}
         total={total} isLoading={isLoading}
       />
 
-      {/* Agents */}
-      <div>
-        <h2 className="mb-4">Agentes</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {agents.map(agent => (
-            <AgentCard
-              key={agent.id}
-              agent={agent}
-              onAction={handleAction}
-              onCancel={handleCancel}
-              progresso={progresso}
-              showProgress={agent.id === "classify" || agent.id === "abordar"}
-              cancellable={agent.id === "classify" || agent.id === "abordar"}
-            />
-          ))}
+      {/* ── Main: Agents (left) + Log (right) ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_380px] gap-6 items-start">
+        {/* Agents */}
+        <div className="space-y-4">
+          <h2 className="text-lg">Agentes</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {agents.map(agent => (
+              <AgentCard
+                key={agent.id}
+                agent={agent}
+                onAction={handleAction}
+                onCancel={handleCancel}
+                progresso={progresso}
+                showProgress={agent.id === "classify" || agent.id === "abordar"}
+                cancellable={agent.id === "classify" || agent.id === "abordar"}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Sidebar: Log */}
+        <div className="xl:sticky xl:top-20">
+          <ExecutionLog logs={logs} />
         </div>
       </div>
-
-      {/* Log */}
-      <ExecutionLog logs={logs} />
 
       {/* Confirmation */}
       <ConfirmActionDialog
