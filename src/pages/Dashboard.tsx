@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,8 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Users, TrendingUp, DollarSign, Target, Phone, BarChart3,
-  AlertTriangle, BrainCircuit, Flame, Thermometer, Snowflake, Clock,
+  AlertTriangle, BrainCircuit, Flame, Thermometer, Snowflake, Clock, Rocket,
 } from "lucide-react";
+import ProspectingWizard from "@/components/dashboard/ProspectingWizard";
 
 export default function Dashboard() {
   const navigate = useNavigate();
