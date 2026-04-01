@@ -155,18 +155,31 @@ export default function AgenteIA() {
     setLoadingAbordar(true);
     setProgresso(0);
     let ok = 0, erros = 0;
+
+    // Delay aleatório entre 3-8 segundos para evitar bloqueio do WhatsApp
+    const randomDelay = () => new Promise(resolve => 
+      setTimeout(resolve, 3000 + Math.random() * 5000)
+    );
+
     for (let i = 0; i < novosP.length; i++) {
       if (controller.signal.aborted) {
         addLog("Abordagem", "erro", `Cancelado (${ok} ok, ${erros} erros)`);
         break;
       }
+
+      // Aguarda delay entre disparos (exceto antes do primeiro)
+      if (i > 0) {
+        addLog("Abordagem", "ok", `Aguardando intervalo anti-bloqueio...`);
+        await randomDelay();
+      }
+
       const p = novosP[i];
       try {
         const { data, error } = await supabase.functions.invoke("abordar-prospect", { body: { prospect_id: p.id } });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         ok++;
-        addLog("Abordagem", "ok", `${p.nome_negocio} — ${data?.enviado ? "enviado" : "salvo"}`);
+        addLog("Abordagem", "ok", `${p.nome_negocio} — ${data?.enviado ? "enviado ✓" : "salvo (sem envio)"}`);
       } catch (e: unknown) {
         if (controller.signal.aborted) break;
         erros++;
