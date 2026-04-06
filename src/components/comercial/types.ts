@@ -15,6 +15,7 @@ export const PIPELINE_STAGES = [
   { key: "call_realizada", label: "Call Realizada", color: "bg-violet-500" },
   { key: "proposta_enviada", label: "Proposta Enviada", color: "bg-emerald-500" },
   { key: "fechado", label: "Fechado", color: "bg-green-600" },
+  { key: "aguardando_humano", label: "Aguardando Humano", color: "bg-orange-500" },
   { key: "frio", label: "Frio", color: "bg-cyan-500" },
   { key: "blacklist", label: "Blacklist", color: "bg-gray-500" },
 ] as const;
