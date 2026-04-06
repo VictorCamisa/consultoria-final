@@ -1,10 +1,11 @@
+/**
+ * Vendedor Chat — Simulador de treinamento de vendas.
+ * Migrado para Lovable AI Gateway.
+ */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { corsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,21 +15,14 @@ serve(async (req) => {
   try {
     const { messages, profile, scenario, knowledge } = await req.json();
 
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
 
-    // Build system prompt from profile + scenario
     const systemParts: string[] = [];
-
     systemParts.push(`Você é um cliente simulado para treino de vendas. Seu papel é agir como um potencial cliente que está sendo abordado por um vendedor.`);
 
-    if (scenario?.customer_persona) {
-      systemParts.push(`\n## Seu Perfil de Cliente:\n${scenario.customer_persona}`);
-    }
-
-    if (scenario?.description) {
-      systemParts.push(`\n## Cenário:\n${scenario.description}`);
-    }
+    if (scenario?.customer_persona) systemParts.push(`\n## Seu Perfil de Cliente:\n${scenario.customer_persona}`);
+    if (scenario?.description) systemParts.push(`\n## Cenário:\n${scenario.description}`);
 
     if (scenario?.difficulty) {
       const diffMap: Record<string, string> = {
@@ -40,7 +34,7 @@ serve(async (req) => {
     }
 
     if (profile) {
-      systemParts.push(`\n## Sobre a Empresa que está te vendendo (use para contextualizar suas respostas):`);
+      systemParts.push(`\n## Sobre a Empresa que está te vendendo:`);
       if (profile.company_name) systemParts.push(`- Empresa: ${profile.company_name}`);
       if (profile.segment) systemParts.push(`- Segmento: ${profile.segment}`);
       if (profile.products_services) systemParts.push(`- Produtos/Serviços: ${profile.products_services}`);
@@ -48,12 +42,10 @@ serve(async (req) => {
       if (profile.common_objections) systemParts.push(`\n## Objeções que você pode usar:\n${profile.common_objections}`);
     }
 
-    if (scenario?.system_prompt) {
-      systemParts.push(`\n## Instruções adicionais:\n${scenario.system_prompt}`);
-    }
+    if (scenario?.system_prompt) systemParts.push(`\n## Instruções adicionais:\n${scenario.system_prompt}`);
 
-    if (knowledge && Array.isArray(knowledge) && knowledge.length > 0) {
-      systemParts.push(`\n## Aprendizados anteriores do vendedor (use para calibrar a dificuldade e focar nos pontos fracos dele):`);
+    if (knowledge?.length) {
+      systemParts.push(`\n## Aprendizados anteriores do vendedor:`);
       knowledge.forEach((k: { title: string; content: string; category: string }, i: number) => {
         systemParts.push(`${i + 1}. [${k.category}] ${k.title}: ${k.content}`);
       });
@@ -64,21 +56,18 @@ serve(async (req) => {
     systemParts.push(`- Aja naturalmente como um cliente real por WhatsApp (mensagens curtas, informais)`);
     systemParts.push(`- NÃO revele que você é uma IA ou simulação`);
     systemParts.push(`- Reaja de acordo com o nível de dificuldade definido`);
-    systemParts.push(`- Se o vendedor fizer uma boa abordagem, reconheça internamente mas mantenha o papel`);
     systemParts.push(`- Use os aprendizados anteriores para testar os pontos fracos do vendedor`);
 
-    const systemPrompt = systemParts.join("\n");
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(AI_GATEWAY_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: systemParts.join("\n") },
           ...messages,
         ],
         stream: true,
@@ -88,21 +77,18 @@ serve(async (req) => {
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit excedido. Tente novamente em alguns segundos." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione fundos no workspace." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
       return new Response(JSON.stringify({ error: "Erro no gateway de IA" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
