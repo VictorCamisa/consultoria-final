@@ -1,51 +1,49 @@
 /**
- * Envia o script de abordagem inicial (A, B ou C) para um prospect
- * via Evolution API, salva no histórico e inicia a sequência de cadência.
- *
- * Input: { prospect_id, script?: 'a' | 'b' | 'c' }  (default: 'a')
+ * Envia script de abordagem inicial para prospect via Evolution API.
+ * Integra: máquina de estados, validador anti-eco, checkpointing.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-/**
- * Busca a config do nicho com match EXATO.
- * Se não encontrar, retorna null — sem fallback fuzzy para evitar
- * enviar script de estética para advogado.
- */
 async function findConfig(supabase: ReturnType<typeof createClient>, nicho: string) {
-  // 1) Match exato (case-insensitive via ilike)
   const { data: exactConfig } = await supabase
     .from("consultoria_config")
     .select("*")
     .ilike("nicho", nicho)
     .maybeSingle();
-
   if (exactConfig) return exactConfig;
 
-  // 2) Match parcial SEGURO: nicho da config deve estar contido no nicho do prospect
-  //    Ex: config "Estética" match prospect "Clínicas de Estética"
-  //    Mas config "Advocacia" NÃO match prospect "Estética"
   const { data: allConfigs } = await supabase
     .from("consultoria_config")
     .select("*");
-
   if (!allConfigs?.length) return null;
 
   const nichoLower = nicho.toLowerCase().trim();
-  const match = allConfigs.find((c: Record<string, unknown>) => {
-    const configNicho = (c.nicho as string).toLowerCase().trim();
-    // O nicho do prospect deve conter o nicho da config
-    return nichoLower.includes(configNicho) || configNicho.includes(nichoLower);
-  });
+  return allConfigs.find((c: Record<string, unknown>) => {
+    const cn = (c.nicho as string).toLowerCase().trim();
+    return nichoLower.includes(cn) || cn.includes(nichoLower);
+  }) ?? null;
+}
 
-  if (match) {
-    console.log(`[abordar] Match parcial: prospect "${nicho}" → config "${match.nicho}"`);
-    return match;
-  }
-
-  console.warn(`[abordar] Nenhuma config encontrada para nicho "${nicho}". Configs disponíveis: ${allConfigs.map((c: Record<string, unknown>) => c.nicho).join(', ')}`);
-  return null;
+async function upsertState(
+  supabase: ReturnType<typeof createClient>,
+  prospectId: string,
+  step: string,
+  completedSteps: string[],
+  status: string,
+  context: Record<string, unknown> = {},
+  error?: string
+) {
+  await supabase.from("prospect_execution_state").upsert({
+    prospect_id: prospectId,
+    current_step: step,
+    completed_steps: completedSteps,
+    status,
+    context_snapshot: context,
+    error: error ?? null,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "prospect_id" });
 }
 
 serve(async (req) => {
@@ -62,7 +60,9 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Busca prospect
+    // Checkpoint: draft
+    await upsertState(supabase, prospect_id, "draft", [], "in_progress");
+
     const { data: prospect, error: pErr } = await supabase
       .from("consultoria_prospects")
       .select("*")
@@ -70,30 +70,52 @@ serve(async (req) => {
       .single();
     if (pErr) throw pErr;
 
-    // Busca config com match seguro por nicho
     const config = await findConfig(supabase, prospect.nicho);
     if (!config) {
-      throw new Error(
-        `Nenhuma config encontrada para nicho "${prospect.nicho}". ` +
-        `Configure o nicho correto em Configurações.`
-      );
+      await upsertState(supabase, prospect_id, "draft", [], "error", {}, `Config não encontrada para nicho "${prospect.nicho}"`);
+      throw new Error(`Nenhuma config encontrada para nicho "${prospect.nicho}".`);
     }
-
-    console.log(`[abordar] Prospect "${prospect.nome_negocio}" (${prospect.nicho}) → config "${config.nicho}"`);
 
     const scriptMap: Record<string, string> = {
       a: (config.script_a as string) ?? "",
       b: (config.script_b as string) ?? "",
       c: (config.script_c as string) ?? "",
     };
-    const mensagem = scriptMap[script.toLowerCase()];
-    if (!mensagem) throw new Error(`Script "${script}" está vazio na configuração do nicho "${config.nicho}"`);
+    let mensagem = scriptMap[script.toLowerCase()];
+    if (!mensagem) throw new Error(`Script "${script}" vazio para nicho "${config.nicho}"`);
 
-    // Substitui variáveis
-    const mensagemFinal = mensagem
+    mensagem = mensagem
       .replace(/\{\{nome\}\}/gi, prospect.nome_negocio)
       .replace(/\{\{decisor\}\}/gi, prospect.decisor ?? prospect.nome_negocio)
       .replace(/\{\{cidade\}\}/gi, prospect.cidade ?? "");
+
+    // Checkpoint: validate
+    await upsertState(supabase, prospect_id, "validate", ["draft"], "in_progress", { script, mensagem_original: mensagem });
+
+    // Chama validador anti-eco
+    const baseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    try {
+      const validateRes = await fetch(`${baseUrl}/functions/v1/validate-message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+        body: JSON.stringify({ prospect_id, mensagem }),
+      });
+
+      if (validateRes.ok) {
+        const validation = await validateRes.json();
+        if (!validation.approved && validation.revised_message) {
+          console.log(`[abordar] Mensagem revisada pelo validador: ${validation.reason}`);
+          mensagem = validation.revised_message;
+        }
+      }
+    } catch (e) {
+      console.warn("[abordar] Validador indisponível, prosseguindo:", e);
+    }
+
+    // Checkpoint: send
+    await upsertState(supabase, prospect_id, "send", ["draft", "validate"], "in_progress", { mensagem_final: mensagem });
 
     const evolutionUrl = Deno.env.get("EVOLUTION_API_URL");
     const evolutionKey = Deno.env.get("EVOLUTION_API_KEY");
@@ -103,23 +125,17 @@ serve(async (req) => {
     let enviado = false;
 
     if (!evolutionUrl || !evolutionKey) {
-      console.log("[abordar] EVOLUTION_API_URL ou EVOLUTION_API_KEY não configurados — salvando sem enviar");
+      console.log("[abordar] Evolution não configurado — salvando sem enviar");
     } else if (!instancia) {
       console.log("[abordar] instancia_evolution vazia — salvando sem enviar");
     } else {
-      // Respeita janela de horário da config
       const hora = new Date().getHours();
       const horaInicio = (config.horario_inicio as number) ?? 8;
       const horaFim = (config.horario_fim as number) ?? 18;
       if (hora < horaInicio || hora >= horaFim) {
-        console.log(`[abordar] Fora do horário permitido (${horaInicio}h-${horaFim}h, atual: ${hora}h)`);
+        await upsertState(supabase, prospect_id, "send", ["draft", "validate"], "pending", { reason: "fora_horario" });
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            enviado: false, 
-            reason: "fora_horario",
-            message: `Fora do horário de envio (${horaInicio}h-${horaFim}h)` 
-          }),
+          JSON.stringify({ success: false, enviado: false, reason: "fora_horario", message: `Fora do horário (${horaInicio}h-${horaFim}h)` }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -127,14 +143,11 @@ serve(async (req) => {
       const rawPhone = prospect.whatsapp.replace(/\D/g, "");
       const phone = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`;
 
-      const evoRes = await fetch(
-        `${evolutionUrl}/message/sendText/${instancia}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", apikey: evolutionKey },
-          body: JSON.stringify({ number: phone, text: mensagemFinal }),
-        }
-      );
+      const evoRes = await fetch(`${evolutionUrl}/message/sendText/${instancia}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: evolutionKey },
+        body: JSON.stringify({ number: phone, text: mensagem }),
+      });
 
       if (evoRes.ok) {
         const evoData = await evoRes.json();
@@ -150,39 +163,27 @@ serve(async (req) => {
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Salva na conversa
     await supabase.from("consultoria_conversas").insert({
-      prospect_id,
-      direcao: "saida",
-      conteudo: mensagemFinal,
-      message_id: messageId,
-      processado_ia: false,
+      prospect_id, direcao: "saida", conteudo: mensagem, message_id: messageId, processado_ia: false,
     });
 
-    // Registra na cadência como D0
     await supabase.from("consultoria_cadencia").insert({
-      prospect_id,
-      dia: 0,
-      status: enviado ? "enviado" : "pendente_envio",
-      enviado_em: enviado ? now.toISOString() : null,
-      mensagem_enviada: mensagemFinal,
-      script_usado: `script_${script}`,
-      agendado_para: now.toISOString(),
+      prospect_id, dia: 0, status: enviado ? "enviado" : "pendente_envio",
+      enviado_em: enviado ? now.toISOString() : null, mensagem_enviada: mensagem,
+      script_usado: `script_${script}`, agendado_para: now.toISOString(),
     });
 
-    // Atualiza prospect: inicia cadência
-    await supabase
-      .from("consultoria_prospects")
-      .update({
-        status: "abordado",
-        script_usado: `script_${script}`,
-        data_abordagem: now.toISOString().split("T")[0],
-        dia_cadencia: 1,
-        data_proxima_acao: tomorrow.toISOString(),
-        data_ultima_interacao: now.toISOString(),
-        updated_at: now.toISOString(),
-      })
-      .eq("id", prospect_id);
+    await supabase.from("consultoria_prospects").update({
+      status: "abordado", script_usado: `script_${script}`,
+      data_abordagem: now.toISOString().split("T")[0], dia_cadencia: 1,
+      data_proxima_acao: tomorrow.toISOString(), data_ultima_interacao: now.toISOString(),
+      updated_at: now.toISOString(),
+    }).eq("id", prospect_id);
+
+    // Checkpoint: complete
+    await upsertState(supabase, prospect_id, "await_reply", ["draft", "validate", "send"], "completed", {
+      enviado, message_id: messageId, config_nicho: config.nicho
+    });
 
     return new Response(
       JSON.stringify({ success: true, enviado, message_id: messageId, config_nicho: config.nicho }),
