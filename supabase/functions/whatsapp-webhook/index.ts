@@ -1,14 +1,38 @@
 /**
  * Evolution API Webhook Handler
- *
- * Melhorias:
- *   - Quando o lead responde, gera resposta automática via suggest-reply e envia
- *   - Verifica se prospect está em cadência ativa para continuar conversa
- *   - Delay antes de auto-reply para parecer natural (5-15s)
+ * Integra: HITL com gatilhos de handoff, extração de fatos, validação anti-eco.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+
+// Gatilhos HITL
+function detectHandoffTrigger(
+  conteudo: string,
+  prospect: { status: string; classificacao_ia: string | null; score_qualificacao: number | null },
+  turnsSemResolucao: number
+): { triggered: boolean; reason: string } {
+  const lower = conteudo.toLowerCase();
+
+  // Gatilho 1: Pedido explícito de falar com humano
+  if (/falar com (alguém|pessoa|humano|responsável|dono|gerente|quem decide)/i.test(lower) ||
+      /quero (conversar|falar) com (vocês|uma pessoa)/i.test(lower) ||
+      /tem alguém (aí|real|de verdade)/i.test(lower)) {
+    return { triggered: true, reason: "prospect_pediu_humano" };
+  }
+
+  // Gatilho 2: 3+ turnos sem resolução
+  if (turnsSemResolucao >= 3) {
+    return { triggered: true, reason: "repeticao_sem_resolucao" };
+  }
+
+  // Gatilho 3: Alto valor (quente + score > 70)
+  if (prospect.classificacao_ia === "quente" && (prospect.score_qualificacao ?? 0) > 70) {
+    return { triggered: true, reason: "alto_valor_quente" };
+  }
+
+  return { triggered: false, reason: "" };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -21,8 +45,7 @@ serve(async (req) => {
       const authHeader = req.headers.get("apikey") ?? req.headers.get("x-webhook-secret");
       if (authHeader !== webhookSecret) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
@@ -59,7 +82,6 @@ serve(async (req) => {
       msgContent?.extendedTextMessage?.text ??
       msgContent?.imageMessage?.caption ??
       "[mídia não suportada]";
-
     const messageId: string = key?.id ?? null;
 
     const supabase = createClient(
@@ -67,21 +89,17 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Busca prospect pelo número
     const { data: prospects } = await supabase
       .from("consultoria_prospects")
-      .select("id, nicho, status, whatsapp, nome_negocio, dia_cadencia")
-      .or(
-        `whatsapp.eq.${rawPhone},whatsapp.eq.+${rawPhone},whatsapp.eq.55${rawPhone.slice(-11)}`
-      )
+      .select("id, nicho, status, whatsapp, nome_negocio, dia_cadencia, classificacao_ia, score_qualificacao")
+      .or(`whatsapp.eq.${rawPhone},whatsapp.eq.+${rawPhone},whatsapp.eq.55${rawPhone.slice(-11)}`)
       .limit(1);
 
-    if (!prospects || prospects.length === 0) {
+    if (!prospects?.length) {
       console.warn(`[webhook] Número desconhecido: ${rawPhone}`);
-      return new Response(
-        JSON.stringify({ skipped: true, reason: "prospect_not_found", phone: rawPhone }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ skipped: true, reason: "prospect_not_found", phone: rawPhone }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const prospect = prospects[0];
@@ -93,61 +111,97 @@ serve(async (req) => {
         .select("id")
         .eq("message_id", messageId)
         .maybeSingle();
-
       if (existente) {
-        return new Response(
-          JSON.stringify({ skipped: true, reason: "duplicate" }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ skipped: true, reason: "duplicate" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
-    // Salva mensagem recebida
+    // Salva mensagem
     await supabase.from("consultoria_conversas").insert({
-      prospect_id: prospect.id,
-      direcao: "entrada",
-      conteudo,
-      message_id: messageId,
-      processado_ia: false,
+      prospect_id: prospect.id, direcao: "entrada", conteudo, message_id: messageId, processado_ia: false,
     });
 
-    // Atualiza status: se estava em cadência/abordado → respondeu
     const now = new Date().toISOString();
     const shouldUpdateStatus = ["abordado", "em_cadencia"].includes(prospect.status);
-    await supabase
-      .from("consultoria_prospects")
-      .update({
-        data_ultima_interacao: now,
-        status: shouldUpdateStatus ? "respondeu" : prospect.status,
-        updated_at: now,
-      })
-      .eq("id", prospect.id);
 
-    // Dispara classificação IA em background
+    await supabase.from("consultoria_prospects").update({
+      data_ultima_interacao: now,
+      status: shouldUpdateStatus ? "respondeu" : prospect.status,
+      updated_at: now,
+    }).eq("id", prospect.id);
+
     const baseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+    // Dispara classificação + extração de fatos em background
     fetch(`${baseUrl}/functions/v1/classify-prospect`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${serviceKey}`,
-      },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
       body: JSON.stringify({ prospect_id: prospect.id }),
     }).catch((e) => console.error("[webhook] Classify error:", e));
 
-    // AUTO-REPLY: Se o prospect estava em cadência ativa, gera e envia resposta
-    // contextualizada automaticamente (com delay para parecer natural)
+    fetch(`${baseUrl}/functions/v1/extract-facts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+      body: JSON.stringify({ prospect_id: prospect.id, message_id: messageId }),
+    }).catch((e) => console.error("[webhook] Extract-facts error:", e));
+
+    // HITL: Verifica gatilhos de handoff
+    let handoffTriggered = false;
     if (shouldUpdateStatus && conteudo !== "[mídia não suportada]") {
+      // Conta turnos recentes sem resolução (saída VS → entrada prospect sem avanço)
+      const { data: recentMsgs } = await supabase
+        .from("consultoria_conversas")
+        .select("direcao")
+        .eq("prospect_id", prospect.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      let turnsSemResolucao = 0;
+      if (recentMsgs) {
+        let lastDir = "";
+        for (const msg of recentMsgs) {
+          if (msg.direcao === "entrada" && lastDir === "saida") turnsSemResolucao++;
+          if (msg.direcao === "entrada" && lastDir === "entrada") break;
+          lastDir = msg.direcao;
+        }
+      }
+
+      const handoff = detectHandoffTrigger(conteudo, prospect, turnsSemResolucao);
+
+      if (handoff.triggered) {
+        handoffTriggered = true;
+        console.log(`[webhook] HITL HANDOFF: ${prospect.nome_negocio} — ${handoff.reason}`);
+
+        await supabase.from("consultoria_prospects").update({
+          status: "aguardando_humano",
+          handoff_reason: handoff.reason,
+          handoff_at: now,
+          updated_at: now,
+        }).eq("id", prospect.id);
+
+        // Atualiza estado
+        await supabase.from("prospect_execution_state").upsert({
+          prospect_id: prospect.id,
+          current_step: "handoff",
+          completed_steps: ["research", "classify", "draft", "validate", "send", "await_reply", "qualify"],
+          status: "handoff",
+          context_snapshot: { reason: handoff.reason, last_message: conteudo },
+          updated_at: now,
+        }, { onConflict: "prospect_id" });
+      }
+    }
+
+    // AUTO-REPLY: Só se não houve handoff
+    if (shouldUpdateStatus && !handoffTriggered && conteudo !== "[mídia não suportada]") {
       console.log(`[webhook] Auto-reply para ${prospect.nome_negocio} (${prospect.nicho})`);
 
-      // Dispara auto-reply em background (não bloqueia o webhook)
       (async () => {
         try {
-          // Delay de 5-15 segundos para parecer natural
           await new Promise((r) => setTimeout(r, 5000 + Math.random() * 10000));
 
-          // Verifica horário permitido
           const hora = new Date().getHours();
           const { data: config } = await supabase
             .from("consultoria_config")
@@ -157,19 +211,15 @@ serve(async (req) => {
 
           const horaInicio = config?.horario_inicio ?? 8;
           const horaFim = config?.horario_fim ?? 18;
-
           if (hora < horaInicio || hora >= horaFim) {
             console.log(`[webhook] Auto-reply cancelado: fora do horário (${hora}h)`);
             return;
           }
 
-          // Gera sugestão de resposta via suggest-reply
+          // Gera sugestão
           const suggestRes = await fetch(`${baseUrl}/functions/v1/suggest-reply`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${serviceKey}`,
-            },
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
             body: JSON.stringify({ prospect_id: prospect.id }),
           });
 
@@ -178,25 +228,37 @@ serve(async (req) => {
             return;
           }
 
-          const suggestData = await suggestRes.json();
-          const resposta = suggestData?.sugestao;
+          const { sugestao: resposta } = await suggestRes.json();
+          if (!resposta) return;
 
-          if (!resposta) {
-            console.warn("[webhook] suggest-reply não retornou sugestão");
-            return;
+          // Valida com anti-eco
+          let mensagemFinal = resposta;
+          try {
+            const validateRes = await fetch(`${baseUrl}/functions/v1/validate-message`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+              body: JSON.stringify({ prospect_id: prospect.id, mensagem: resposta }),
+            });
+
+            if (validateRes.ok) {
+              const validation = await validateRes.json();
+              if (!validation.approved && validation.revised_message) {
+                mensagemFinal = validation.revised_message;
+                console.log(`[webhook] Mensagem revisada pelo validador`);
+              } else if (!validation.approved && !validation.revised_message) {
+                console.log(`[webhook] Mensagem reprovada sem revisão, cancelando auto-reply`);
+                return;
+              }
+            }
+          } catch (e) {
+            console.warn("[webhook] Validador indisponível, prosseguindo:", e);
           }
 
-          // Envia via send-whatsapp
+          // Envia
           const sendRes = await fetch(`${baseUrl}/functions/v1/send-whatsapp`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${serviceKey}`,
-            },
-            body: JSON.stringify({
-              prospect_id: prospect.id,
-              mensagem: resposta,
-            }),
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
+            body: JSON.stringify({ prospect_id: prospect.id, mensagem: mensagemFinal }),
           });
 
           if (sendRes.ok) {
@@ -211,7 +273,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, prospect_id: prospect.id, auto_reply: shouldUpdateStatus }),
+      JSON.stringify({ success: true, prospect_id: prospect.id, auto_reply: shouldUpdateStatus && !handoffTriggered, handoff: handoffTriggered }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

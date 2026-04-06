@@ -640,6 +640,8 @@ export type Database = {
           decisor: string | null
           dia_cadencia: number | null
           faturamento_estimado: string | null
+          handoff_at: string | null
+          handoff_reason: string | null
           id: string
           instagram: string | null
           nicho: string
@@ -665,6 +667,8 @@ export type Database = {
           decisor?: string | null
           dia_cadencia?: number | null
           faturamento_estimado?: string | null
+          handoff_at?: string | null
+          handoff_reason?: string | null
           id?: string
           instagram?: string | null
           nicho: string
@@ -690,6 +694,8 @@ export type Database = {
           decisor?: string | null
           dia_cadencia?: number | null
           faturamento_estimado?: string | null
+          handoff_at?: string | null
+          handoff_reason?: string | null
           id?: string
           instagram?: string | null
           nicho?: string
@@ -769,6 +775,129 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      prospect_execution_state: {
+        Row: {
+          completed_steps: string[]
+          context_snapshot: Json
+          created_at: string
+          current_step: string
+          error: string | null
+          id: string
+          prospect_id: string
+          retry_count: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          completed_steps?: string[]
+          context_snapshot?: Json
+          created_at?: string
+          current_step?: string
+          error?: string | null
+          id?: string
+          prospect_id: string
+          retry_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          completed_steps?: string[]
+          context_snapshot?: Json
+          created_at?: string
+          current_step?: string
+          error?: string | null
+          id?: string
+          prospect_id?: string
+          retry_count?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_execution_state_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: true
+            referencedRelation: "consultoria_prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_meddic: {
+        Row: {
+          confianca: number
+          evidencia_citacao: string | null
+          id: string
+          pilar: string
+          prospect_id: string
+          score: number
+          updated_at: string
+        }
+        Insert: {
+          confianca?: number
+          evidencia_citacao?: string | null
+          id?: string
+          pilar: string
+          prospect_id: string
+          score?: number
+          updated_at?: string
+        }
+        Update: {
+          confianca?: number
+          evidencia_citacao?: string | null
+          id?: string
+          pilar?: string
+          prospect_id?: string
+          score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_meddic_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "consultoria_prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospect_session_memory: {
+        Row: {
+          confidence: number
+          extracted_at: string
+          fact_key: string
+          fact_value: string
+          id: string
+          prospect_id: string
+          source_message_id: string | null
+        }
+        Insert: {
+          confidence?: number
+          extracted_at?: string
+          fact_key: string
+          fact_value: string
+          id?: string
+          prospect_id: string
+          source_message_id?: string | null
+        }
+        Update: {
+          confidence?: number
+          extracted_at?: string
+          fact_key?: string
+          fact_value?: string
+          id?: string
+          prospect_id?: string
+          source_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_session_memory_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "consultoria_prospects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vendedor_company_profiles: {
         Row: {
