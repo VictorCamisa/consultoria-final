@@ -123,7 +123,7 @@ export default function ProjetosTab({ clienteId }: Props) {
 
   const updateProjetoStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const updates: Record<string, unknown> = { status };
+      const updates: { status: string; data_conclusao?: string; data_inicio?: string } = { status };
       if (status === "concluido") updates.data_conclusao = new Date().toISOString();
       if (status === "em_andamento" && !projetos.find(p => p.id === id)?.data_inicio) updates.data_inicio = new Date().toISOString();
       const { error } = await supabase.from("consultoria_projetos").update(updates).eq("id", id);
