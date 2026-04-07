@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import ImersaoTab from "@/components/cliente/ImersaoTab";
 import DiagnosticoTab from "@/components/cliente/DiagnosticoTab";
 import DevolutivaTab from "@/components/cliente/DevolutivaTab";
+import ProjetosTab from "@/components/cliente/ProjetosTab";
 
 export default function ClienteDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -55,6 +56,7 @@ export default function ClienteDetalhe() {
           <TabsTrigger value="devolutiva" disabled={!diagnosticoConcluido}>
             Devolutiva
           </TabsTrigger>
+          <TabsTrigger value="projetos">Projetos & Tarefas</TabsTrigger>
         </TabsList>
 
         <TabsContent value="imersao" className="mt-4">
@@ -65,6 +67,9 @@ export default function ClienteDetalhe() {
         </TabsContent>
         <TabsContent value="devolutiva" className="mt-4">
           {diagnosticoConcluido && <DevolutivaTab clienteId={cliente.id} />}
+        </TabsContent>
+        <TabsContent value="projetos" className="mt-4">
+          <ProjetosTab clienteId={cliente.id} />
         </TabsContent>
       </Tabs>
     </div>

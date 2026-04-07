@@ -629,6 +629,65 @@ export type Database = {
           },
         ]
       }
+      consultoria_projetos: {
+        Row: {
+          cliente_id: string
+          created_at: string | null
+          data_conclusao: string | null
+          data_inicio: string | null
+          data_previsao: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          prioridade: string | null
+          responsavel: string | null
+          status: string
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string | null
+          data_conclusao?: string | null
+          data_inicio?: string | null
+          data_previsao?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          prioridade?: string | null
+          responsavel?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string | null
+          data_conclusao?: string | null
+          data_inicio?: string | null
+          data_previsao?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          prioridade?: string | null
+          responsavel?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultoria_projetos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "consultoria_clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consultoria_prospects: {
         Row: {
           cidade: string
@@ -712,6 +771,59 @@ export type Database = {
           whatsapp?: string
         }
         Relationships: []
+      }
+      consultoria_tarefas: {
+        Row: {
+          concluida_em: string | null
+          created_at: string | null
+          descricao: string | null
+          id: string
+          ordem: number | null
+          prazo: string | null
+          prioridade: string | null
+          projeto_id: string
+          responsavel: string | null
+          status: string
+          titulo: string
+          updated_at: string | null
+        }
+        Insert: {
+          concluida_em?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          ordem?: number | null
+          prazo?: string | null
+          prioridade?: string | null
+          projeto_id: string
+          responsavel?: string | null
+          status?: string
+          titulo: string
+          updated_at?: string | null
+        }
+        Update: {
+          concluida_em?: string | null
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          ordem?: number | null
+          prazo?: string | null
+          prioridade?: string | null
+          projeto_id?: string
+          responsavel?: string | null
+          status?: string
+          titulo?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultoria_tarefas_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "consultoria_projetos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       evolution_instances: {
         Row: {
