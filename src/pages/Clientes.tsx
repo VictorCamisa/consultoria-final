@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Eye, Search, Users } from "lucide-react";
 import { TableSkeleton } from "@/components/PageSkeleton";
 import { EmptyState } from "@/components/EmptyState";
+import NewClientDialog from "@/components/cliente/NewClientDialog";
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   aguardando_imersao: { label: "Aguardando Imersão", className: "bg-warning text-warning-foreground" },
@@ -69,6 +70,7 @@ export default function Clientes() {
             {clientes?.length ?? 0} clientes cadastrados
           </p>
         </div>
+        <NewClientDialog />
       </div>
 
       {/* Filters */}

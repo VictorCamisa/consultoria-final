@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Megaphone, Users, CalendarCheck, Settings,
-  LogOut, BrainCircuit, Search, UserRoundCog,
+  LogOut, BrainCircuit, Search, UserRoundCog, FolderKanban,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,6 +41,7 @@ const sections: NavSection[] = [
     label: "Clientes",
     items: [
       { title: "Clientes", url: "/clientes", icon: Users },
+      { title: "Operacional", url: "/operacional", icon: FolderKanban },
       { title: "Acompanhamento", url: "/acompanhamento", icon: CalendarCheck, badgeKey: "pendentes" },
     ],
   },
