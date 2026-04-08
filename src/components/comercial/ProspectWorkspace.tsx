@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -216,8 +217,8 @@ export function ProspectWorkspace({
   const classif = classificacaoConfig(prospect.classificacao_ia);
   const stageObj = PIPELINE_STAGES.find(s => s.key === prospect.status);
 
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background animate-in fade-in-0 duration-200">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex flex-col bg-background animate-in fade-in-0 duration-200">
       {/* ── Top Bar ── */}
       <div className="flex items-center gap-4 px-6 py-3 border-b border-border bg-card shrink-0">
         {/* Left: Prospect identity */}
