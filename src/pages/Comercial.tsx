@@ -12,7 +12,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { PIPELINE_STAGES, NICHOS, Prospect } from "@/components/comercial/types";
 import { PipelineStats } from "@/components/comercial/PipelineStats";
 import { ProspectCard } from "@/components/comercial/ProspectCard";
-import { ChatSheet } from "@/components/comercial/ChatSheet";
+import { ProspectWorkspace } from "@/components/comercial/ProspectWorkspace";
 import { NewProspectDialog } from "@/components/comercial/NewProspectDialog";
 import { KanbanSkeleton } from "@/components/PageSkeleton";
 
@@ -221,11 +221,17 @@ export default function Comercial() {
         </div>
       )}
 
-      {/* Chat Sheet */}
-      <ChatSheet
+      {/* Full-screen Workspace */}
+      <ProspectWorkspace
         prospect={selectedProspect}
         onClose={() => setSelectedProspect(null)}
         onProspectUpdate={updated => setSelectedProspect(prev => prev ? { ...prev, ...updated } : prev)}
+        onAbordar={handleAbordar}
+        onCadencia={handleIniciarCadencia}
+        onReativar={handleReativar}
+        loadingAbordar={loadingAbordar === selectedProspect?.id}
+        loadingCadencia={loadingCadencia === selectedProspect?.id}
+        loadingReativar={loadingReativar === selectedProspect?.id}
       />
     </div>
   );
