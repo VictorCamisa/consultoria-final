@@ -12,8 +12,9 @@ import {
   ChevronDown, ChevronRight, ExternalLink, Eye, TrendingUp,
   Flame, Snowflake, Thermometer, X, Building2, Calendar,
   ArrowUpDown, LayoutGrid, LayoutList, SlidersHorizontal,
-  Database, UserCheck, Inbox,
+  Database, UserCheck, Inbox, Rocket, Loader2, Megaphone, PlayCircle,
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Prospect = Tables<"consultoria_prospects">;
