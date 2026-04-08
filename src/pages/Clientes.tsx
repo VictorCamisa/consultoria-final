@@ -62,8 +62,8 @@ export default function Clientes() {
   }, [clientes, filterNicho, filterStatus, searchQuery]);
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="vs-h1">Clientes</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
@@ -74,8 +74,8 @@ export default function Clientes() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-2 bg-card rounded-lg border border-border p-2">
-        <div className="relative flex-1 max-w-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-card rounded-lg border border-border p-2">
+        <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Buscar cliente..."
@@ -126,8 +126,30 @@ export default function Clientes() {
           />
         )
       ) : (
-        <div className="bg-card rounded-lg border border-border">
-          <Table>
+        <div className="bg-card rounded-lg border border-border overflow-x-auto">
+          {/* Mobile: card list */}
+          <div className="sm:hidden divide-y divide-border">
+            {filtered.map((c) => {
+              const sc = statusConfig[c.status] ?? { label: c.status, className: "bg-muted text-muted-foreground" };
+              return (
+                <div key={c.id} className="p-3 space-y-2" onClick={() => navigate(`/clientes/${c.id}`)}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate">{c.nome_negocio}</p>
+                      <p className="text-xs text-muted-foreground">{c.decisor} · {c.cidade}</p>
+                    </div>
+                    <Badge className={`text-[10px] shrink-0 ${sc.className}`}>{sc.label}</Badge>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Badge variant="outline" className="text-[10px]">{c.nicho}</Badge>
+                    <span className="text-xs text-foreground font-medium">R$ {Number(c.valor_fee).toLocaleString("pt-BR")}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* Desktop: table */}
+          <Table className="hidden sm:table">
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
