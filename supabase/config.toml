@@ -1,1 +1,40 @@
 project_id = "uxqugcumsimejigxnvzz"
+
+[functions.scrape-leads]
+verify_jwt = false
+
+[functions.abordar-prospect]
+verify_jwt = false
+
+[functions.classify-prospect]
+verify_jwt = false
+
+[functions.extract-facts]
+verify_jwt = false
+
+[functions.extract-whatsapp]
+verify_jwt = false
+
+[functions.manage-evolution]
+verify_jwt = false
+
+[functions.process-cadencia]
+verify_jwt = false
+
+[functions.search-whatsapp-groups]
+verify_jwt = false
+
+[functions.send-whatsapp]
+verify_jwt = false
+
+[functions.suggest-reply]
+verify_jwt = false
+
+[functions.validate-message]
+verify_jwt = false
+
+[functions.vendedor-chat]
+verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false
