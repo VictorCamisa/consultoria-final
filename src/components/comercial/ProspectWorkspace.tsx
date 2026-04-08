@@ -585,7 +585,8 @@ export function ProspectWorkspace({
           </Tabs>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
