@@ -196,6 +196,65 @@ export default function Leads() {
 
   const isLoading = loadingProspects || loadingRaw;
 
+  /* ── Promote lead_raw → CRM prospect ───────────── */
+  const handlePromote = useCallback(async (lead: UnifiedLead) => {
+    if (lead.fonte !== "lead_raw") return;
+    if (!lead.telefone && !lead.email) {
+      toast({ title: "Lead sem contato", description: "É necessário pelo menos telefone ou email para promover.", variant: "destructive" });
+      return;
+    }
+    setPromotingId(lead.id);
+    try {
+      const { error: insertError } = await supabase.from("consultoria_prospects").insert({
+        nome_negocio: lead.nome,
+        whatsapp: lead.telefone || "",
+        cidade: lead.cidade || "Não informada",
+        nicho: lead.nicho || "Outro",
+        decisor: lead.decisor,
+        site: lead.site,
+        instagram: lead.instagram,
+        faturamento_estimado: lead.faturamento_estimado,
+        origem: lead.origem || "lista",
+        status: "novo",
+        observacoes: lead.observacoes || (lead.email ? `Email: ${lead.email}` : null),
+      });
+      if (insertError) throw insertError;
+
+      const { error: updateError } = await supabase
+        .from("leads_raw")
+        .update({ status: "promoted" })
+        .eq("id", lead.id);
+      if (updateError) throw updateError;
+
+      queryClient.invalidateQueries({ queryKey: ["all-prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leads-raw"] });
+      queryClient.invalidateQueries({ queryKey: ["prospects"] });
+      setSelectedLead(null);
+      toast({ title: `${lead.nome} promovido para o CRM!`, description: "O lead agora aparece no Pipeline Comercial." });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao promover", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    } finally {
+      setPromotingId(null);
+    }
+  }, [queryClient]);
+
+  /* ── Abordar prospect direto do módulo Leads ────── */
+  const handleAbordar = useCallback(async (lead: UnifiedLead) => {
+    if (lead.fonte !== "prospect") return;
+    setAbordandoId(lead.id);
+    try {
+      const { error } = await supabase.functions.invoke("abordar-prospect", { body: { prospect_id: lead.id } });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["all-prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["prospects"] });
+      toast({ title: `Script enviado para ${lead.nome}` });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao abordar", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    } finally {
+      setAbordandoId(null);
+    }
+  }, [queryClient]);
+
   /* ── Unified list ──────────────────────────────── */
   const allLeads = useMemo(() => {
     const fromProspects = prospects.map(prospectToUnified);
