@@ -132,27 +132,27 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="vs-h1">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">Visão geral do pipeline e operação</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={() => setProspectingOpen(true)} className="gap-2">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Button onClick={() => setProspectingOpen(true)} className="gap-2 text-sm" size="sm">
             <Rocket className="h-4 w-4" />
-            Prospectar Leads
+            <span className="hidden sm:inline">Prospectar</span> Leads
           </Button>
           {totalAlertas > 0 && (
-            <Badge variant="destructive" className="text-sm px-3 py-1">
+            <Badge variant="destructive" className="text-xs sm:text-sm px-2 sm:px-3 py-1">
               <AlertTriangle className="h-3 w-3 mr-1" />
-              {totalAlertas} alerta{totalAlertas > 1 ? "s" : ""}
+              {totalAlertas}
             </Badge>
           )}
         </div>
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
         {kpis.map((kpi) => (
           <Card key={kpi.title}>
             <CardContent className="pt-5 pb-5 px-5">
@@ -238,7 +238,7 @@ export default function Dashboard() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Funil Pipeline */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -323,7 +323,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Top prospects quentes */}
         <Card>
           <CardHeader>
