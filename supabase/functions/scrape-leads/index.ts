@@ -64,17 +64,35 @@ function buildSmartQueries(
   prospectingIntent: string
 ): string[] {
   const loc = locationStr || "";
+  const city = loc.split(",")[0]?.trim() || "";
+  const nicheLower = niche.toLowerCase();
+
+  // Queries especializadas para revendas de veículos
+  if (nicheLower.includes("revenda") || nicheLower.includes("veículo") || nicheLower.includes("seminovo") || nicheLower.includes("carro")) {
+    const queries: string[] = [
+      `revenda seminovos ${city} telefone WhatsApp`,
+      `loja de carros usados ${city} contato`,
+      `multimarcas ${city} seminovos WhatsApp`,
+      `site:olx.com.br "${city}" loja seminovos`,
+      `site:webmotors.com.br "${city}" revenda`,
+    ];
+    if (prospectingIntent?.trim()) {
+      queries.push(`revenda veículos ${loc} ${prospectingIntent.trim().slice(0, 80)}`);
+    }
+    return queries.filter(q => q.trim().length > 5);
+  }
+
+  // Queries genéricas para outros nichos
   const queries: string[] = [
     `${niche} ${loc} telefone contato`,
     `${niche} ${loc} WhatsApp celular`,
-    `"${niche}" "${loc.split(",")[0]?.trim() || ""}" site contato email`,
+    `"${niche}" "${city}" site contato email`,
   ];
 
   if (prospectingIntent?.trim()) {
     queries.push(`${niche} ${loc} ${prospectingIntent.trim().slice(0, 100)}`);
   }
 
-  // ICP-aware queries for the consultoria's target audience
   queries.push(`${niche} ${loc} endereço CNPJ`);
 
   return queries.filter(q => q.trim().length > 5);
