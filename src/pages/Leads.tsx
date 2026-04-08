@@ -951,6 +951,9 @@ function LeadDetailPanel({
           </Button>
         )}
       </div>
+
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-5">
           {/* Status + Score */}
           <div className="flex items-center gap-3">
             <Badge variant="outline" className={`${st.color}`}>{st.label}</Badge>
