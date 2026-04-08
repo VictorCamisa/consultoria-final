@@ -20,7 +20,7 @@ export const PIPELINE_STAGES = [
   { key: "blacklist", label: "Blacklist", color: "bg-gray-500" },
 ] as const;
 
-export const NICHOS = ["Estética", "Odonto", "Advocacia"] as const;
+export const NICHOS = ["Estética", "Odonto", "Advocacia", "Revendas de Veículos"] as const;
 
 export const classificacaoConfig = (c: string | null) => {
   if (c === "quente") return { label: "Quente", color: "text-red-600", bg: "bg-red-50 border-red-200 text-red-700", icon: "🔥" };

@@ -13,7 +13,7 @@ import { toast } from "@/hooks/use-toast";
 import { useEvolutionInstances } from "@/hooks/useEvolutionInstances";
 import { Save, Copy, CheckCircle, XCircle, Loader2, Wifi, Plus, Trash2, QrCode, Smartphone, RefreshCw } from "lucide-react";
 
-const NICHOS = ["Estética", "Odonto", "Advocacia"];
+const NICHOS = ["Estética", "Odonto", "Advocacia", "Revendas de Veículos"];
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const WEBHOOK_URL = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;

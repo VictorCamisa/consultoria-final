@@ -44,6 +44,7 @@ const PRESET_SEGMENTS = [
   { label: "Estética", value: "clínicas estéticas", icon: "💆", primary: true },
   { label: "Odontologia", value: "clínicas odontológicas", icon: "🦷", primary: true },
   { label: "Advocacia", value: "escritórios de advocacia", icon: "⚖️", primary: true },
+  { label: "Revendas de Veículos", value: "revendas de veículos seminovos usados", icon: "🚗", primary: true },
   { label: "Bares e Restaurantes", value: "bares restaurantes", icon: "🍽️", primary: false },
   { label: "Imobiliárias", value: "imobiliárias", icon: "🏠", primary: false },
   { label: "Clínicas Médicas", value: "clínicas médicas", icon: "🏥", primary: false },

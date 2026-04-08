@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 
-const NICHOS = ["Estética", "Odonto", "Advocacia", "Marketing", "Outro"];
+const NICHOS = ["Estética", "Odonto", "Advocacia", "Revendas de Veículos", "Marketing", "Outro"];
 const RESPONSAVEIS = ["victor", "danilo"];
 
 export default function NewClientDialog() {
