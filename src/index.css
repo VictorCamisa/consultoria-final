@@ -2,10 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── VS Growth Hub — Design System v3.0 ─────────────────────────────────
+/* ─── VS Growth Hub — Design System v3.1 ─────────────────────────────────
    Brand:     VS Blue #2E6FCC · Blue Light #4A8DE0 · Silver #D4D8E4
    Type:      Barlow Condensed (headings) · Barlow (body)
-   Mode:      Light only — high-contrast, professional canvas
+   Mode:      Dark — high-contrast, professional canvas
    ────────────────────────────────────────────────────────────────────── */
 
 @layer base {
@@ -74,6 +74,8 @@
   html {
     @apply scroll-smooth;
     font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
@@ -82,6 +84,7 @@
     font-weight: 400;
     line-height: 1.6;
     letter-spacing: 0.005em;
+    overscroll-behavior-y: none;
   }
 
   h1 {
@@ -108,6 +111,12 @@
     color: hsl(var(--foreground));
   }
 
+  /* Mobile heading sizes */
+  @media (max-width: 767px) {
+    h1 { font-size: 1.4rem; }
+    h2 { font-size: 1.15rem; }
+  }
+
   /* Scrollbar */
   ::-webkit-scrollbar        { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track  { background: transparent; }
@@ -116,6 +125,12 @@
     background: hsl(var(--border));
   }
   ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.4); }
+
+  /* Hide scrollbar on mobile for horizontal scroll */
+  @media (max-width: 767px) {
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  }
 }
 
 /* ─── VS Utilities ───────────────────────────────────────────────────── */
@@ -133,6 +148,9 @@
     font-size: 1.75rem;
     line-height: 1.15;
     letter-spacing: -0.02em;
+  }
+  @media (max-width: 767px) {
+    .vs-h1 { font-size: 1.4rem; }
   }
   .vs-h2 {
     font-family: 'Barlow Condensed', sans-serif;
@@ -185,6 +203,11 @@
   .surface-warning { background: hsl(var(--surface-warning)); color: hsl(var(--surface-warning-fg)); }
   .surface-success { background: hsl(var(--surface-success)); color: hsl(var(--surface-success-fg)); }
   .surface-info    { background: hsl(var(--surface-info));    color: hsl(var(--surface-info-fg));    }
+
+  /* Safe area for iOS bottom */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
 
 /* ─── Components ─────────────────────────────────────────────────────── */
@@ -217,12 +240,24 @@
   }
 
   .kanban-col {
-    @apply min-w-[280px] max-w-[280px] flex-shrink-0;
+    @apply min-w-[260px] max-w-[280px] flex-shrink-0;
+  }
+  @media (max-width: 767px) {
+    .kanban-col {
+      @apply min-w-[240px] max-w-[260px];
+    }
   }
 
   /* Section label for sidebar groups */
   .nav-section-label {
     @apply text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70 px-2.5 pt-5 pb-1.5;
     font-family: 'Barlow', sans-serif;
+  }
+
+  /* Mobile-friendly card touch targets */
+  @media (max-width: 767px) {
+    .mobile-touch-target {
+      min-height: 44px;
+    }
   }
 }

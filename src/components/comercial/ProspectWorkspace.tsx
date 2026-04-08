@@ -274,30 +274,24 @@ export function ProspectWorkspace({
   return createPortal(
     <div className="fixed inset-0 z-[100] flex flex-col bg-background animate-in fade-in-0 duration-200">
       {/* ── Top Bar ── */}
-      <div className="flex items-center gap-4 px-6 py-3 border-b border-border bg-card shrink-0">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
-            <span className="text-sm font-bold text-primary">
+      <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-6 py-2.5 sm:py-3 border-b border-border bg-card shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+            <span className="text-xs sm:text-sm font-bold text-primary">
               {prospect.nome_negocio.charAt(0).toUpperCase()}
             </span>
           </div>
           <div className="min-w-0">
-            <h1 className="text-base font-semibold text-foreground truncate">{prospect.nome_negocio}</h1>
-            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <MapPin className="h-3 w-3" />{prospect.cidade}
-              <span className="opacity-30">·</span>
-              {prospect.nicho}
-              {prospect.decisor && (
-                <>
-                  <span className="opacity-30">·</span>
-                  <User className="h-3 w-3" />{prospect.decisor}
-                </>
-              )}
+            <h1 className="text-sm sm:text-base font-semibold text-foreground truncate">{prospect.nome_negocio}</h1>
+            <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 truncate">
+              <MapPin className="h-3 w-3 shrink-0" />{prospect.cidade}
+              <span className="opacity-30 hidden sm:inline">·</span>
+              <span className="hidden sm:inline">{prospect.nicho}</span>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="hidden sm:flex items-center gap-3">
           {prospect.classificacao_ia ? (
             <Badge className={`text-xs ${classif.bg}`}>
               {classif.icon} {classif.label}
@@ -313,7 +307,6 @@ export function ProspectWorkspace({
 
           <div className="h-5 w-px bg-border" />
 
-          {/* Stage buttons instead of Select dropdown */}
           <div className="flex items-center gap-1">
             <span className={`w-2 h-2 rounded-full ${stageObj?.color}`} />
             <span className="text-xs font-medium text-foreground">{stageObj?.label}</span>
@@ -325,38 +318,56 @@ export function ProspectWorkspace({
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <a
             href={`https://wa.me/${prospect.whatsapp.replace(/\D/g, "")}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors"
           >
-            <Phone className="h-3.5 w-3.5" />WhatsApp
+            <Phone className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">WhatsApp</span>
           </a>
           {prospect.instagram && (
-            <a href={`https://instagram.com/${prospect.instagram.replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
+            <a href={`https://instagram.com/${prospect.instagram.replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors hidden sm:inline-flex">
               <Instagram className="h-3.5 w-3.5" />
             </a>
           )}
-          {prospect.site && (
-            <a href={prospect.site} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors">
-              <Globe className="h-3.5 w-3.5" />
-            </a>
-          )}
-          <div className="h-5 w-px bg-border ml-1" />
+          <div className="h-5 w-px bg-border ml-0.5 sm:ml-1" />
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* ── Main Content: 2 columns ── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      {/* Mobile: info strip */}
+      <div className="sm:hidden flex items-center gap-2 px-3 py-2 border-b border-border bg-card/50 overflow-x-auto hide-scrollbar">
+        {prospect.classificacao_ia && (
+          <Badge className={`text-[10px] shrink-0 ${classif.bg}`}>
+            {classif.icon} {classif.label}
+          </Badge>
+        )}
+        {prospect.score_qualificacao !== null && (
+          <span className={`text-xs font-bold tabular shrink-0 ${scoreColor(prospect.score_qualificacao)}`}>
+            {prospect.score_qualificacao}/100
+          </span>
+        )}
+        <div className="flex items-center gap-1 shrink-0">
+          <span className={`w-2 h-2 rounded-full ${stageObj?.color}`} />
+          <span className="text-[10px] font-medium text-foreground">{stageObj?.label}</span>
+        </div>
+        <Badge variant="outline" className="text-[10px] shrink-0">{prospect.nicho}</Badge>
+        <Button size="sm" variant="outline" className="text-[10px] h-6 px-2 ml-auto shrink-0" onClick={handleClassify} disabled={loadingClassify}>
+          {loadingClassify ? <Loader2 className="h-3 w-3 animate-spin" /> : <BrainCircuit className="h-3 w-3" />}
+        </Button>
+      </div>
+
+      {/* ── Main Content: 2 columns on desktop, tabbed on mobile ── */}
+      <div className="flex flex-col sm:flex-row flex-1 min-h-0 overflow-hidden">
         {/* LEFT: Chat */}
-        <div className="flex-1 flex flex-col border-r border-border min-w-0">
+        <div className="flex-1 flex flex-col border-b sm:border-b-0 sm:border-r border-border min-w-0 min-h-0">
           {/* Messages */}
-          <ScrollArea className="flex-1 px-6 py-4" ref={scrollRef}>
+          <ScrollArea className="flex-1 px-3 sm:px-6 py-3 sm:py-4" ref={scrollRef}>
             <div className="max-w-2xl mx-auto space-y-3">
               {conversas?.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -425,7 +436,7 @@ export function ProspectWorkspace({
           )}
 
           {/* Input area */}
-          <div className="border-t border-border px-6 py-3 bg-card/50">
+          <div className="border-t border-border px-3 sm:px-6 py-2.5 sm:py-3 bg-card/50">
             <div className="max-w-2xl mx-auto space-y-2">
               <Textarea
                 value={mensagem}
@@ -449,7 +460,7 @@ export function ProspectWorkspace({
         </div>
 
         {/* RIGHT: Intelligence Panel */}
-        <div className="w-[380px] shrink-0 flex flex-col min-h-0 overflow-hidden bg-card/30">
+        <div className="w-full sm:w-[380px] shrink-0 flex flex-col min-h-0 overflow-hidden bg-card/30 max-h-[40vh] sm:max-h-none">
           <Tabs defaultValue="acoes" className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <TabsList className="mx-4 mt-3 w-auto self-start h-8 shrink-0">
               <TabsTrigger value="acoes" className="text-xs h-7">Ações</TabsTrigger>

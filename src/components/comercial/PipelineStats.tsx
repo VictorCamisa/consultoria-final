@@ -25,14 +25,14 @@ export function PipelineStats({ prospects }: Props) {
   ];
 
   return (
-    <div className="grid grid-cols-7 gap-2">
+    <div className="flex gap-2 overflow-x-auto pb-1 hide-scrollbar sm:grid sm:grid-cols-7 sm:overflow-visible">
       {stats.map(s => (
-        <div key={s.label} className="bg-background rounded-lg border border-border p-3 text-center">
-          <div className={`w-7 h-7 rounded-md flex items-center justify-center mx-auto mb-2 ${s.accent}`}>
-            <s.icon className="h-3.5 w-3.5" />
+        <div key={s.label} className="bg-background rounded-lg border border-border p-2.5 sm:p-3 text-center min-w-[90px] sm:min-w-0 shrink-0">
+          <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center mx-auto mb-1.5 sm:mb-2 ${s.accent}`}>
+            <s.icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
           </div>
-          <p className="text-xl font-bold tabular text-foreground">{s.value}</p>
-          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">{s.label}</p>
+          <p className="text-lg sm:text-xl font-bold tabular text-foreground">{s.value}</p>
+          <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">{s.label}</p>
         </div>
       ))}
     </div>
