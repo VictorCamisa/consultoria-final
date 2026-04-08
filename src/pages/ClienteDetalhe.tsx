@@ -41,22 +41,22 @@ export default function ClienteDetalhe() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-bold">{cliente.nome_negocio}</h1>
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <h1 className="text-xl sm:text-2xl font-bold">{cliente.nome_negocio}</h1>
         <Badge variant="outline">{cliente.nicho}</Badge>
         <Badge variant="outline">{cliente.cidade}</Badge>
       </div>
 
       <Tabs defaultValue="imersao">
-        <TabsList>
-          <TabsTrigger value="imersao">Imersão</TabsTrigger>
-          <TabsTrigger value="diagnostico" disabled={!imersaoRealizada}>
+        <TabsList className="w-full flex overflow-x-auto hide-scrollbar">
+          <TabsTrigger value="imersao" className="flex-1 min-w-0 text-xs sm:text-sm">Imersão</TabsTrigger>
+          <TabsTrigger value="diagnostico" disabled={!imersaoRealizada} className="flex-1 min-w-0 text-xs sm:text-sm">
             Diagnóstico
           </TabsTrigger>
-          <TabsTrigger value="devolutiva" disabled={!diagnosticoConcluido}>
+          <TabsTrigger value="devolutiva" disabled={!diagnosticoConcluido} className="flex-1 min-w-0 text-xs sm:text-sm">
             Devolutiva
           </TabsTrigger>
-          <TabsTrigger value="projetos">Projetos & Tarefas</TabsTrigger>
+          <TabsTrigger value="projetos" className="flex-1 min-w-0 text-xs sm:text-sm">Projetos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="imersao" className="mt-4">

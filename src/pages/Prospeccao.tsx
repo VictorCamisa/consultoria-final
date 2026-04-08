@@ -519,7 +519,7 @@ export default function Prospeccao() {
       </div>
 
       {/* KPI BAR */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="border rounded-lg p-4 bg-card">
           <div className="flex items-center gap-2 mb-1">
             <div className="h-7 w-7 rounded-md bg-primary/10 flex items-center justify-center">
@@ -565,7 +565,7 @@ export default function Prospeccao() {
       {/* SMART QUEUE */}
       {smartQueue.length > 0 && (
         <div className="border rounded-lg p-4 bg-primary/[0.02] border-primary/20">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
               <Flame className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-semibold">Fila Inteligente</h3>
@@ -575,7 +575,7 @@ export default function Prospeccao() {
             </div>
             <Button
               size="sm"
-              className="gap-1.5 text-xs"
+              className="gap-1.5 text-xs w-full sm:w-auto"
               onClick={() => openPromoteDialog(smartQueue.slice(0, 10).map(l => l.id))}
             >
               <Send className="h-3.5 w-3.5" /> Enviar Top {Math.min(10, smartQueue.length)} ao Pipeline
@@ -690,7 +690,7 @@ export default function Prospeccao() {
               </Button>
             </div>
           ) : (
-            <ScrollArea className="h-[calc(100vh-480px)] border rounded-lg">
+            <ScrollArea className="h-[calc(100vh-480px)] min-h-[300px] border rounded-lg">
               <div className="divide-y">
                 {filteredLeads.map(lead => {
                   const enrichment = (lead.enrichment_data as any) || {};
@@ -698,7 +698,7 @@ export default function Prospeccao() {
                   const isPromoted = lead.status === "promoted";
                   const isHighIcp = (icpScore ?? 0) >= 60;
                   return (
-                    <div key={lead.id} className={`flex items-center gap-3 px-4 py-3 transition-colors ${isPromoted ? "opacity-40 bg-muted/30" : isHighIcp ? "bg-primary/[0.02] hover:bg-primary/[0.04]" : "hover:bg-secondary/30"}`}>
+                    <div key={lead.id} className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 transition-colors ${isPromoted ? "opacity-40 bg-muted/30" : isHighIcp ? "bg-primary/[0.02] hover:bg-primary/[0.04]" : "hover:bg-secondary/30"}`}>
                       {!isPromoted && (
                         <Checkbox
                           checked={selectedLeadIds.has(lead.id)}
@@ -724,7 +724,7 @@ export default function Prospeccao() {
                           {enrichment.company && enrichment.company !== lead.name && <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{enrichment.company}</span>}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center gap-2 shrink-0 flex-wrap">
                         {icpScore !== null && (
                           <Badge variant="outline" className={`text-[10px] font-bold ${icpScoreColor(icpScore)}`}>ICP {icpScore}</Badge>
                         )}

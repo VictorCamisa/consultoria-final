@@ -639,15 +639,15 @@ Responda APENAS em JSON válido:
       </div>
 
       <Tabs defaultValue="simulador" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="simulador" className="gap-2">
-            <MessageSquare className="h-4 w-4" /> Simulador
+        <TabsList className="w-full flex overflow-x-auto hide-scrollbar">
+          <TabsTrigger value="simulador" className="flex-1 min-w-0 gap-1.5 text-xs sm:text-sm">
+            <MessageSquare className="h-4 w-4 hidden sm:block" /> Simulador
           </TabsTrigger>
-          <TabsTrigger value="cenarios" className="gap-2">
-            <Sparkles className="h-4 w-4" /> Cenários
+          <TabsTrigger value="cenarios" className="flex-1 min-w-0 gap-1.5 text-xs sm:text-sm">
+            <Sparkles className="h-4 w-4 hidden sm:block" /> Cenários
           </TabsTrigger>
-          <TabsTrigger value="perfil" className="gap-2">
-            <Building2 className="h-4 w-4" /> Perfil
+          <TabsTrigger value="perfil" className="flex-1 min-w-0 gap-1.5 text-xs sm:text-sm">
+            <Building2 className="h-4 w-4 hidden sm:block" /> Perfil
           </TabsTrigger>
         </TabsList>
 
@@ -839,7 +839,7 @@ Responda APENAS em JSON válido:
               </div>
 
               {/* Chat */}
-              <Card className="flex flex-col" style={{ height: "calc(100vh - 220px)" }}>
+              <Card className="flex flex-col" style={{ height: "calc(100vh - 260px)", minHeight: "400px" }}>
                 <CardHeader className="pb-2 flex-shrink-0">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">

@@ -141,10 +141,10 @@ export default function Configuracoes() {
       <h1 className="text-2xl font-bold">Configurações</h1>
 
       <Tabs defaultValue="scripts">
-        <TabsList>
-          <TabsTrigger value="scripts">Scripts por Nicho</TabsTrigger>
-          <TabsTrigger value="whatsapp">WhatsApp (Evolution)</TabsTrigger>
-          <TabsTrigger value="integracoes">Cadência & Webhook</TabsTrigger>
+        <TabsList className="w-full flex overflow-x-auto hide-scrollbar">
+          <TabsTrigger value="scripts" className="flex-1 min-w-0 text-xs sm:text-sm">Scripts por Nicho</TabsTrigger>
+          <TabsTrigger value="whatsapp" className="flex-1 min-w-0 text-xs sm:text-sm">WhatsApp</TabsTrigger>
+          <TabsTrigger value="integracoes" className="flex-1 min-w-0 text-xs sm:text-sm">Cadência</TabsTrigger>
         </TabsList>
 
         {/* Scripts por Nicho */}
@@ -169,7 +169,7 @@ export default function Configuracoes() {
 
                     <div>
                       <p className="text-sm font-medium mb-2 text-muted-foreground">Scripts de abordagem inicial</p>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div><Label>Script A</Label><Textarea name="script_a" defaultValue={existing?.script_a ?? ""} rows={3} className="text-xs" /></div>
                         <div><Label>Script B</Label><Textarea name="script_b" defaultValue={existing?.script_b ?? ""} rows={3} className="text-xs" /></div>
                         <div><Label>Script C</Label><Textarea name="script_c" defaultValue={existing?.script_c ?? ""} rows={3} className="text-xs" /></div>
@@ -178,7 +178,7 @@ export default function Configuracoes() {
 
                     <div>
                       <p className="text-sm font-medium mb-2 text-muted-foreground">Follow-ups automáticos de cadência</p>
-                      <div className="grid grid-cols-5 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                         <div><Label>D1</Label><Textarea name="followup_d1" defaultValue={existing?.followup_d1 ?? ""} rows={2} className="text-xs" /></div>
                         <div><Label>D3</Label><Textarea name="followup_d3" defaultValue={existing?.followup_d3 ?? ""} rows={2} className="text-xs" /></div>
                         <div><Label>D7</Label><Textarea name="followup_d7" defaultValue={existing?.followup_d7 ?? ""} rows={2} className="text-xs" /></div>
@@ -244,14 +244,14 @@ export default function Configuracoes() {
         <TabsContent value="whatsapp" className="mt-4 space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <CardTitle className="text-lg flex items-center gap-2">
+                  <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                     <Smartphone className="h-5 w-5" /> Instâncias WhatsApp
                   </CardTitle>
-                  <CardDescription>Crie, conecte e gerencie suas instâncias da Evolution API — tudo aqui dentro.</CardDescription>
+                  <CardDescription className="text-xs">Crie, conecte e gerencie suas instâncias da Evolution API.</CardDescription>
                 </div>
-                <Button variant="outline" size="sm" onClick={evo.fetchInstances} disabled={evo.instancesLoading}>
+                <Button variant="outline" size="sm" onClick={evo.fetchInstances} disabled={evo.instancesLoading} className="self-start">
                   <RefreshCw className={`h-4 w-4 mr-1 ${evo.instancesLoading ? "animate-spin" : ""}`} /> Atualizar
                 </Button>
               </div>
@@ -282,7 +282,7 @@ export default function Configuracoes() {
               )}
 
               {/* Create new instance */}
-              <div className="flex gap-2 items-end">
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
                 <div className="flex-1">
                   <Label>Nome da nova instância</Label>
                   <Input
@@ -293,7 +293,7 @@ export default function Configuracoes() {
                   />
                   <p className="text-xs text-muted-foreground mt-1">Use letras, números, - ou _. O webhook será configurado automaticamente.</p>
                 </div>
-                <Button onClick={evo.createInstance} disabled={evo.creatingInstance || !evo.newInstanceName.trim()}>
+                <Button onClick={evo.createInstance} disabled={evo.creatingInstance || !evo.newInstanceName.trim()} className="w-full sm:w-auto">
                   {evo.creatingInstance ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
                   Criar Instância
                 </Button>
@@ -309,7 +309,7 @@ export default function Configuracoes() {
               ) : (
                 <div className="space-y-3">
                   {evo.instances.map((inst) => (
-                    <div key={inst.name} className="flex items-center justify-between p-4 rounded-lg border bg-card">
+                    <div key={inst.name} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-lg border bg-card">
                       <div className="flex items-center gap-3">
                         <Smartphone className="h-5 w-5 text-muted-foreground" />
                         <div>
@@ -377,9 +377,9 @@ export default function Configuracoes() {
             <CardContent className="space-y-4">
               <div>
                 <Label>URL do Webhook</Label>
-                <div className="flex gap-2 mt-1">
-                  <Input value={WEBHOOK_URL} readOnly className="font-mono text-xs" />
-                  <Button variant="outline" size="sm" onClick={handleCopyWebhook} className="shrink-0">
+                <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                  <Input value={WEBHOOK_URL} readOnly className="font-mono text-xs flex-1 truncate" />
+                  <Button variant="outline" size="sm" onClick={handleCopyWebhook} className="shrink-0 w-full sm:w-auto">
                     {copiedWebhook ? (
                       <><CheckCircle className="h-4 w-4 mr-1 text-green-400" />Copiado</>
                     ) : (
