@@ -41,7 +41,7 @@ EMPRESA VENDEDORA (quem vai abordar os leads):
 - Nome: VS Growth Hub — Consultoria de Crescimento
 - Segmento: Consultoria em gestão comercial, marketing e atendimento para negócios locais
 - Modelo de negócio: B2B (vende para donos de empresas locais)
-- Nichos principais de atuação: Clínicas de Estética, Clínicas Odontológicas e Escritórios de Advocacia
+- Nichos principais de atuação: Clínicas de Estética, Clínicas Odontológicas, Escritórios de Advocacia e Revendas de Veículos Seminovos (VS AUTO)
 - Serviços: Diagnóstico empresarial, imersão, devolutiva com plano estratégico, acompanhamento mensal, automação comercial via WhatsApp
 - Público-alvo ideal: Donos/decisores de negócios locais que faturam acima de R$ 30k/mês, têm equipe de pelo menos 3 pessoas, investem ou querem investir em marketing digital/tráfego pago, e precisam melhorar processos de atendimento, comercial e retenção de clientes
 - Diferenciais: Metodologia proprietária de diagnóstico com scoring em 4 dimensões (Marketing, Comercial, Atendimento, Operação), plano de ação personalizado, acompanhamento com métricas
