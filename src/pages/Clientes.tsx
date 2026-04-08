@@ -133,7 +133,8 @@ export default function Clientes() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Nicho</TableHead>
                 <TableHead>Cidade</TableHead>
-                <TableHead>Valor Fee</TableHead>
+                <TableHead>Valor</TableHead>
+                <TableHead>Tipo</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Data Imersão</TableHead>
                 <TableHead>Responsável</TableHead>
@@ -149,6 +150,11 @@ export default function Clientes() {
                     <TableCell><Badge variant="outline">{c.nicho}</Badge></TableCell>
                     <TableCell>{c.cidade}</TableCell>
                     <TableCell>R$ {Number(c.valor_fee).toLocaleString("pt-BR")}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {(c as any).tipo_cobranca === "projeto_fechado" ? "Projeto" : "Fee"}
+                      </Badge>
+                    </TableCell>
                     <TableCell><Badge className={sc.className}>{sc.label}</Badge></TableCell>
                     <TableCell>
                       {c.data_imersao ? new Date(c.data_imersao).toLocaleDateString("pt-BR") : "—"}
