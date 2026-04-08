@@ -130,6 +130,7 @@ export type Database = {
           prospect_id: string | null
           responsavel_imersao: string | null
           status: string
+          tipo_cobranca: string
           updated_at: string | null
           valor_fee: number
           whatsapp: string
@@ -149,6 +150,7 @@ export type Database = {
           prospect_id?: string | null
           responsavel_imersao?: string | null
           status?: string
+          tipo_cobranca?: string
           updated_at?: string | null
           valor_fee: number
           whatsapp: string
@@ -168,6 +170,7 @@ export type Database = {
           prospect_id?: string | null
           responsavel_imersao?: string | null
           status?: string
+          tipo_cobranca?: string
           updated_at?: string | null
           valor_fee?: number
           whatsapp?: string
