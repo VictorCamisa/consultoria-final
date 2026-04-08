@@ -12,10 +12,116 @@ import {
   ChevronDown, ChevronRight, ExternalLink, Eye, TrendingUp,
   Flame, Snowflake, Thermometer, X, Building2, Calendar,
   ArrowUpDown, LayoutGrid, LayoutList, SlidersHorizontal,
+  Database, UserCheck, Inbox,
 } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Prospect = Tables<"consultoria_prospects">;
+type LeadRaw = Tables<"leads_raw">;
+
+/* ── Unified Lead type ─────────────────────────── */
+type UnifiedLead = {
+  id: string;
+  nome: string;
+  telefone: string | null;
+  email: string | null;
+  cidade: string | null;
+  nicho: string | null;
+  site: string | null;
+  instagram: string | null;
+  decisor: string | null;
+  status: string;
+  classificacao_ia: string | null;
+  score: number | null;
+  origem: string | null;
+  created_at: string | null;
+  data_abordagem: string | null;
+  data_ultima_interacao: string | null;
+  data_proxima_acao: string | null;
+  dia_cadencia: number | null;
+  observacoes: string | null;
+  resumo_conversa: string | null;
+  handoff_reason: string | null;
+  handoff_at: string | null;
+  faturamento_estimado: string | null;
+  responsavel: string | null;
+  script_usado: string | null;
+  tags: string[] | null;
+  enrichment_data: Record<string, any> | null;
+  fonte: "prospect" | "lead_raw";
+  raw_status: string;
+};
+
+function prospectToUnified(p: Prospect): UnifiedLead {
+  return {
+    id: p.id,
+    nome: p.nome_negocio,
+    telefone: p.whatsapp,
+    email: null,
+    cidade: p.cidade,
+    nicho: p.nicho,
+    site: p.site,
+    instagram: p.instagram,
+    decisor: p.decisor,
+    status: p.status,
+    classificacao_ia: p.classificacao_ia,
+    score: p.score_qualificacao,
+    origem: p.origem,
+    created_at: p.created_at,
+    data_abordagem: p.data_abordagem,
+    data_ultima_interacao: p.data_ultima_interacao,
+    data_proxima_acao: p.data_proxima_acao,
+    dia_cadencia: p.dia_cadencia,
+    observacoes: p.observacoes,
+    resumo_conversa: p.resumo_conversa,
+    handoff_reason: p.handoff_reason,
+    handoff_at: p.handoff_at,
+    faturamento_estimado: p.faturamento_estimado,
+    responsavel: p.responsavel,
+    script_usado: p.script_usado,
+    tags: null,
+    enrichment_data: null,
+    fonte: "prospect",
+    raw_status: p.status,
+  };
+}
+
+function leadRawToUnified(l: LeadRaw): UnifiedLead {
+  const enrichment = (l.enrichment_data && typeof l.enrichment_data === "object" && !Array.isArray(l.enrichment_data))
+    ? l.enrichment_data as Record<string, any>
+    : null;
+  return {
+    id: l.id,
+    nome: l.name || "Sem nome",
+    telefone: l.phone,
+    email: l.email,
+    cidade: enrichment?.cidade || enrichment?.city || null,
+    nicho: enrichment?.nicho || enrichment?.segment || null,
+    site: enrichment?.site || enrichment?.website || null,
+    instagram: enrichment?.instagram || null,
+    decisor: enrichment?.decisor || enrichment?.contact_name || null,
+    status: l.status === "promoted" ? "promovido" : l.status,
+    classificacao_ia: null,
+    score: enrichment?.score ?? null,
+    origem: l.source === "web" ? "prospecção_web" : l.source,
+    created_at: l.created_at,
+    data_abordagem: null,
+    data_ultima_interacao: null,
+    data_proxima_acao: null,
+    dia_cadencia: null,
+    observacoes: null,
+    resumo_conversa: null,
+    handoff_reason: null,
+    handoff_at: null,
+    faturamento_estimado: null,
+    responsavel: null,
+    script_usado: null,
+    tags: l.tags,
+    enrichment_data: enrichment,
+    fonte: "lead_raw",
+    raw_status: l.status,
+  };
+}
 
 /* ── Status config ────────────────────────────── */
 const STATUS_MAP: Record<string, { label: string; color: string; icon: React.ElementType }> = {
@@ -26,6 +132,13 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: React.Ele
   fechado: { label: "Fechado", color: "bg-green-100 text-green-800 border-green-200", icon: TrendingUp },
   perdido: { label: "Perdido", color: "bg-red-100 text-red-700 border-red-200", icon: X },
   follow_up: { label: "Follow-up", color: "bg-cyan-100 text-cyan-700 border-cyan-200", icon: Calendar },
+  em_cadencia: { label: "Em Cadência", color: "bg-indigo-100 text-indigo-700 border-indigo-200", icon: Calendar },
+  quente: { label: "Quente", color: "bg-red-100 text-red-700 border-red-200", icon: Flame },
+  call_agendada: { label: "Call Agendada", color: "bg-purple-100 text-purple-700 border-purple-200", icon: Calendar },
+  proposta_enviada: { label: "Proposta Enviada", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: TrendingUp },
+  pending: { label: "Pendente", color: "bg-slate-100 text-slate-700 border-slate-200", icon: Inbox },
+  promovido: { label: "No CRM", color: "bg-green-100 text-green-700 border-green-200", icon: UserCheck },
+  aguardando_humano: { label: "Aguardando", color: "bg-orange-100 text-orange-700 border-orange-200", icon: Eye },
 };
 
 const CLASSIFICACAO_MAP: Record<string, { label: string; icon: React.ElementType; color: string }> = {
@@ -34,11 +147,13 @@ const CLASSIFICACAO_MAP: Record<string, { label: string; icon: React.ElementType
   frio: { label: "Frio", icon: Snowflake, color: "text-blue-400" },
 };
 
-type SortField = "created_at" | "score_qualificacao" | "nome_negocio" | "data_ultima_interacao";
+type SortField = "created_at" | "score" | "nome" | "data_ultima_interacao";
 type ViewMode = "grid" | "list";
+type FonteFilter = "todos" | "lead_raw" | "prospect";
 
 export default function Leads() {
   const [search, setSearch] = useState("");
+  const [fonteFilter, setFonteFilter] = useState<FonteFilter>("todos");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [nichoFilter, setNichoFilter] = useState<string>("todos");
   const [cidadeFilter, setCidadeFilter] = useState<string>("todos");
@@ -48,10 +163,11 @@ export default function Leads() {
   const [sortAsc, setSortAsc] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [filtersOpen, setFiltersOpen] = useState(true);
-  const [selectedLead, setSelectedLead] = useState<Prospect | null>(null);
+  const [selectedLead, setSelectedLead] = useState<UnifiedLead | null>(null);
 
-  const { data: leads = [], isLoading } = useQuery({
-    queryKey: ["all-leads"],
+  /* ── Fetch both tables ─────────────────────────── */
+  const { data: prospects = [], isLoading: loadingProspects } = useQuery({
+    queryKey: ["all-prospects"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("consultoria_prospects")
@@ -62,12 +178,33 @@ export default function Leads() {
     },
   });
 
+  const { data: leadsRaw = [], isLoading: loadingRaw } = useQuery({
+    queryKey: ["all-leads-raw"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("leads_raw")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as LeadRaw[];
+    },
+  });
+
+  const isLoading = loadingProspects || loadingRaw;
+
+  /* ── Unified list ──────────────────────────────── */
+  const allLeads = useMemo(() => {
+    const fromProspects = prospects.map(prospectToUnified);
+    const fromRaw = leadsRaw.map(leadRawToUnified);
+    return [...fromRaw, ...fromProspects];
+  }, [prospects, leadsRaw]);
+
   /* ── Derived filter options ────────────────────── */
   const filterOptions = useMemo(() => {
     const nichos = new Set<string>();
     const cidades = new Set<string>();
     const origens = new Set<string>();
-    leads.forEach((l) => {
+    allLeads.forEach((l) => {
       if (l.nicho) nichos.add(l.nicho);
       if (l.cidade) cidades.add(l.cidade);
       if (l.origem) origens.add(l.origem);
@@ -77,23 +214,25 @@ export default function Leads() {
       cidades: Array.from(cidades).sort(),
       origens: Array.from(origens).sort(),
     };
-  }, [leads]);
+  }, [allLeads]);
 
   /* ── Filtering + sorting ───────────────────────── */
   const filtered = useMemo(() => {
-    let result = [...leads];
+    let result = [...allLeads];
+    if (fonteFilter !== "todos") result = result.filter((l) => l.fonte === fonteFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
         (l) =>
-          l.nome_negocio.toLowerCase().includes(q) ||
+          l.nome.toLowerCase().includes(q) ||
           l.decisor?.toLowerCase().includes(q) ||
-          l.whatsapp?.includes(q) ||
+          l.telefone?.includes(q) ||
+          l.email?.toLowerCase().includes(q) ||
           l.cidade?.toLowerCase().includes(q) ||
           l.nicho?.toLowerCase().includes(q)
       );
     }
-    if (statusFilter !== "todos") result = result.filter((l) => l.status === statusFilter);
+    if (statusFilter !== "todos") result = result.filter((l) => l.status === statusFilter || l.raw_status === statusFilter);
     if (nichoFilter !== "todos") result = result.filter((l) => l.nicho === nichoFilter);
     if (cidadeFilter !== "todos") result = result.filter((l) => l.cidade === cidadeFilter);
     if (origemFilter !== "todos") result = result.filter((l) => l.origem === origemFilter);
@@ -102,13 +241,13 @@ export default function Leads() {
     result.sort((a, b) => {
       let valA: any, valB: any;
       switch (sortField) {
-        case "score_qualificacao":
-          valA = a.score_qualificacao ?? 0;
-          valB = b.score_qualificacao ?? 0;
+        case "score":
+          valA = a.score ?? 0;
+          valB = b.score ?? 0;
           break;
-        case "nome_negocio":
-          valA = a.nome_negocio.toLowerCase();
-          valB = b.nome_negocio.toLowerCase();
+        case "nome":
+          valA = a.nome.toLowerCase();
+          valB = b.nome.toLowerCase();
           break;
         case "data_ultima_interacao":
           valA = a.data_ultima_interacao ?? "";
@@ -123,29 +262,24 @@ export default function Leads() {
       return 0;
     });
     return result;
-  }, [leads, search, statusFilter, nichoFilter, cidadeFilter, origemFilter, classificacaoFilter, sortField, sortAsc]);
+  }, [allLeads, fonteFilter, search, statusFilter, nichoFilter, cidadeFilter, origemFilter, classificacaoFilter, sortField, sortAsc]);
 
   /* ── Stats ─────────────────────────────────────── */
   const stats = useMemo(() => {
-    const total = leads.length;
-    const byStatus: Record<string, number> = {};
-    let withScore = 0;
-    let scoreSum = 0;
-    leads.forEach((l) => {
-      byStatus[l.status] = (byStatus[l.status] || 0) + 1;
-      if (l.score_qualificacao != null) {
-        withScore++;
-        scoreSum += l.score_qualificacao;
-      }
-    });
-    return { total, byStatus, avgScore: withScore > 0 ? Math.round(scoreSum / withScore) : 0 };
-  }, [leads]);
+    const total = allLeads.length;
+    const rawCount = allLeads.filter((l) => l.fonte === "lead_raw").length;
+    const prospectCount = allLeads.filter((l) => l.fonte === "prospect").length;
+    const pendingCount = allLeads.filter((l) => l.raw_status === "pending").length;
+    const promotedCount = allLeads.filter((l) => l.raw_status === "promoted" && l.fonte === "lead_raw").length;
+    return { total, rawCount, prospectCount, pendingCount, promotedCount };
+  }, [allLeads]);
 
-  const activeFiltersCount = [statusFilter, nichoFilter, cidadeFilter, origemFilter, classificacaoFilter].filter(
+  const activeFiltersCount = [fonteFilter, statusFilter, nichoFilter, cidadeFilter, origemFilter, classificacaoFilter].filter(
     (f) => f !== "todos"
   ).length;
 
   const clearFilters = () => {
+    setFonteFilter("todos");
     setStatusFilter("todos");
     setNichoFilter("todos");
     setCidadeFilter("todos");
@@ -159,7 +293,8 @@ export default function Leads() {
     return new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
   };
 
-  const formatPhone = (phone: string) => {
+  const formatPhone = (phone: string | null) => {
+    if (!phone) return "—";
     const clean = phone.replace(/\D/g, "");
     if (clean.length === 13) return `+${clean.slice(0, 2)} (${clean.slice(2, 4)}) ${clean.slice(4, 9)}-${clean.slice(9)}`;
     if (clean.length === 11) return `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
@@ -174,9 +309,15 @@ export default function Leads() {
     return "text-red-500";
   };
 
-  const getNichoShort = (nicho: string) => {
+  const getNichoShort = (nicho: string | null) => {
+    if (!nicho) return "—";
     if (nicho.length <= 30) return nicho;
     return nicho.split(",")[0].trim().slice(0, 28) + "…";
+  };
+
+  const getFonteBadge = (fonte: "prospect" | "lead_raw") => {
+    if (fonte === "prospect") return { label: "CRM", color: "bg-primary/10 text-primary border-primary/20" };
+    return { label: "Lista", color: "bg-amber-50 text-amber-700 border-amber-200" };
   };
 
   return (
@@ -189,7 +330,7 @@ export default function Leads() {
             Leads
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Visualize e gerencie todos os leads prospectados
+            Todos os leads — listas de prospecção e CRM
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -215,11 +356,11 @@ export default function Leads() {
       {/* ── KPI Strip ── */}
       <div className="grid grid-cols-5 gap-3">
         {[
-          { label: "Total de Leads", value: stats.total, color: "text-primary" },
-          { label: "Novos", value: stats.byStatus["novo"] || 0, color: "text-blue-600" },
-          { label: "Abordados", value: stats.byStatus["abordado"] || 0, color: "text-amber-600" },
-          { label: "Responderam", value: stats.byStatus["respondeu"] || 0, color: "text-emerald-600" },
-          { label: "Score Médio", value: stats.avgScore, color: "text-purple-600" },
+          { label: "Total", value: stats.total, color: "text-primary" },
+          { label: "Da Lista", value: stats.rawCount, color: "text-amber-600" },
+          { label: "No CRM", value: stats.prospectCount, color: "text-blue-600" },
+          { label: "Pendentes", value: stats.pendingCount, color: "text-slate-600" },
+          { label: "Promovidos", value: stats.promotedCount, color: "text-green-600" },
         ].map((kpi) => (
           <div key={kpi.label} className="bg-card border border-border rounded-lg p-3.5 text-center">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{kpi.label}</p>
@@ -230,12 +371,35 @@ export default function Leads() {
         ))}
       </div>
 
+      {/* ── Fonte tabs ── */}
+      <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1 w-fit">
+        {([
+          { key: "todos" as FonteFilter, label: "Todos", icon: Users2, count: stats.total },
+          { key: "lead_raw" as FonteFilter, label: "Listas", icon: Database, count: stats.rawCount },
+          { key: "prospect" as FonteFilter, label: "CRM", icon: UserCheck, count: stats.prospectCount },
+        ]).map((tab) => (
+          <Button
+            key={tab.key}
+            variant={fonteFilter === tab.key ? "default" : "ghost"}
+            size="sm"
+            className="h-8 gap-1.5 text-xs"
+            onClick={() => setFonteFilter(tab.key)}
+          >
+            <tab.icon className="h-3.5 w-3.5" />
+            {tab.label}
+            <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${fonteFilter === tab.key ? "bg-primary-foreground/20" : "bg-muted"}`}>
+              {tab.count}
+            </span>
+          </Button>
+        ))}
+      </div>
+
       {/* ── Search + Filter bar ── */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome, decisor, WhatsApp, cidade ou nicho…"
+            placeholder="Buscar por nome, decisor, telefone, email, cidade…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-9"
@@ -261,7 +425,6 @@ export default function Leads() {
           </CollapsibleTrigger>
         </Collapsible>
 
-        {/* Sort */}
         <Select value={sortField} onValueChange={(v) => setSortField(v as SortField)}>
           <SelectTrigger className="w-[180px] h-9">
             <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
@@ -269,8 +432,8 @@ export default function Leads() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="created_at">Data de criação</SelectItem>
-            <SelectItem value="score_qualificacao">Score ICP</SelectItem>
-            <SelectItem value="nome_negocio">Nome A-Z</SelectItem>
+            <SelectItem value="score">Score</SelectItem>
+            <SelectItem value="nome">Nome A-Z</SelectItem>
             <SelectItem value="data_ultima_interacao">Última interação</SelectItem>
           </SelectContent>
         </Select>
@@ -285,7 +448,7 @@ export default function Leads() {
         )}
 
         <span className="text-xs text-muted-foreground ml-auto">
-          {filtered.length} de {leads.length} leads
+          {filtered.length} de {allLeads.length} leads
         </span>
       </div>
 
@@ -336,7 +499,7 @@ export default function Leads() {
                 <SelectContent>
                   <SelectItem value="todos">Todas</SelectItem>
                   {filterOptions.origens.map((o) => (
-                    <SelectItem key={o} value={o}>{o === "prospeccao_web" ? "Web" : o === "manual" ? "Manual" : o}</SelectItem>
+                    <SelectItem key={o} value={o}>{o === "prospecção_web" ? "Web" : o === "manual" ? "Manual" : o === "whatsapp" ? "WhatsApp" : o}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -372,14 +535,15 @@ export default function Leads() {
         <div className="grid grid-cols-3 gap-3">
           {filtered.map((lead) => (
             <LeadCard
-              key={lead.id}
+              key={`${lead.fonte}-${lead.id}`}
               lead={lead}
               formatDate={formatDate}
               formatPhone={formatPhone}
               getScoreColor={getScoreColor}
               getNichoShort={getNichoShort}
-              onSelect={() => setSelectedLead(selectedLead?.id === lead.id ? null : lead)}
-              isSelected={selectedLead?.id === lead.id}
+              getFonteBadge={getFonteBadge}
+              onSelect={() => setSelectedLead(selectedLead?.id === lead.id && selectedLead?.fonte === lead.fonte ? null : lead)}
+              isSelected={selectedLead?.id === lead.id && selectedLead?.fonte === lead.fonte}
             />
           ))}
         </div>
@@ -388,43 +552,51 @@ export default function Leads() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                <th className="text-left p-3 font-medium text-muted-foreground text-xs">Empresa</th>
+                <th className="text-left p-3 font-medium text-muted-foreground text-xs">Fonte</th>
+                <th className="text-left p-3 font-medium text-muted-foreground text-xs">Nome</th>
+                <th className="text-left p-3 font-medium text-muted-foreground text-xs">Contato</th>
                 <th className="text-left p-3 font-medium text-muted-foreground text-xs">Nicho</th>
                 <th className="text-left p-3 font-medium text-muted-foreground text-xs">Cidade</th>
-                <th className="text-left p-3 font-medium text-muted-foreground text-xs">WhatsApp</th>
                 <th className="text-center p-3 font-medium text-muted-foreground text-xs">Score</th>
                 <th className="text-center p-3 font-medium text-muted-foreground text-xs">Status</th>
-                <th className="text-center p-3 font-medium text-muted-foreground text-xs">IA</th>
                 <th className="text-right p-3 font-medium text-muted-foreground text-xs">Criado em</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((lead) => {
                 const st = STATUS_MAP[lead.status] || { label: lead.status, color: "bg-muted text-muted-foreground border-border" };
-                const cl = lead.classificacao_ia ? CLASSIFICACAO_MAP[lead.classificacao_ia] : null;
+                const fb = getFonteBadge(lead.fonte);
                 return (
                   <tr
-                    key={lead.id}
+                    key={`${lead.fonte}-${lead.id}`}
                     className="border-b border-border/50 hover:bg-muted/20 cursor-pointer transition-colors"
-                    onClick={() => setSelectedLead(selectedLead?.id === lead.id ? null : lead)}
+                    onClick={() => setSelectedLead(selectedLead?.id === lead.id && selectedLead?.fonte === lead.fonte ? null : lead)}
                   >
                     <td className="p-3">
-                      <p className="font-semibold text-foreground truncate max-w-[200px]">{lead.nome_negocio}</p>
+                      <Badge variant="outline" className={`text-[9px] ${fb.color}`}>{fb.label}</Badge>
+                    </td>
+                    <td className="p-3">
+                      <p className="font-semibold text-foreground truncate max-w-[200px]">{lead.nome}</p>
                       {lead.decisor && <p className="text-xs text-muted-foreground">{lead.decisor}</p>}
                     </td>
-                    <td className="p-3 text-xs text-muted-foreground max-w-[150px] truncate">{getNichoShort(lead.nicho)}</td>
-                    <td className="p-3 text-xs">{lead.cidade}</td>
-                    <td className="p-3 text-xs font-mono">{formatPhone(lead.whatsapp)}</td>
+                    <td className="p-3 text-xs">
+                      {lead.telefone ? (
+                        <span className="font-mono">{formatPhone(lead.telefone)}</span>
+                      ) : lead.email ? (
+                        <span>{lead.email}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-xs text-muted-foreground max-w-[120px] truncate">{getNichoShort(lead.nicho)}</td>
+                    <td className="p-3 text-xs">{lead.cidade || "—"}</td>
                     <td className="p-3 text-center">
-                      <span className={`font-bold text-sm ${getScoreColor(lead.score_qualificacao)}`}>
-                        {lead.score_qualificacao ?? "—"}
+                      <span className={`font-bold text-sm ${getScoreColor(lead.score)}`}>
+                        {lead.score ?? "—"}
                       </span>
                     </td>
                     <td className="p-3 text-center">
                       <Badge variant="outline" className={`text-[10px] ${st.color}`}>{st.label}</Badge>
-                    </td>
-                    <td className="p-3 text-center">
-                      {cl ? <cl.icon className={`h-4 w-4 mx-auto ${cl.color}`} /> : <span className="text-muted-foreground">—</span>}
                     </td>
                     <td className="p-3 text-right text-xs text-muted-foreground">{formatDate(lead.created_at)}</td>
                   </tr>
@@ -443,6 +615,7 @@ export default function Leads() {
           formatDate={formatDate}
           formatPhone={formatPhone}
           getScoreColor={getScoreColor}
+          getFonteBadge={getFonteBadge}
         />
       )}
     </div>
@@ -456,19 +629,22 @@ function LeadCard({
   formatPhone,
   getScoreColor,
   getNichoShort,
+  getFonteBadge,
   onSelect,
   isSelected,
 }: {
-  lead: Prospect;
+  lead: UnifiedLead;
   formatDate: (d: string | null) => string;
-  formatPhone: (p: string) => string;
+  formatPhone: (p: string | null) => string;
   getScoreColor: (s: number | null) => string;
-  getNichoShort: (n: string) => string;
+  getNichoShort: (n: string | null) => string;
+  getFonteBadge: (f: "prospect" | "lead_raw") => { label: string; color: string };
   onSelect: () => void;
   isSelected: boolean;
 }) {
   const st = STATUS_MAP[lead.status] || { label: lead.status, color: "bg-muted text-muted-foreground border-border", icon: Eye };
   const cl = lead.classificacao_ia ? CLASSIFICACAO_MAP[lead.classificacao_ia] : null;
+  const fb = getFonteBadge(lead.fonte);
 
   return (
     <div
@@ -481,13 +657,14 @@ function LeadCard({
       <div className="flex items-start justify-between mb-2.5">
         <div className="flex-1 min-w-0 mr-2">
           <h3 className="font-semibold text-foreground text-sm truncate" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-            {lead.nome_negocio}
+            {lead.nome}
           </h3>
           {lead.decisor && (
             <p className="text-xs text-muted-foreground truncate mt-0.5">{lead.decisor}</p>
           )}
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
+          <Badge variant="outline" className={`text-[9px] leading-none ${fb.color}`}>{fb.label}</Badge>
           {cl && <cl.icon className={`h-3.5 w-3.5 ${cl.color}`} />}
           <Badge variant="outline" className={`text-[10px] leading-none ${st.color}`}>
             {st.label}
@@ -497,18 +674,30 @@ function LeadCard({
 
       {/* Info rows */}
       <div className="space-y-1.5 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <Tag className="h-3 w-3 flex-shrink-0" />
-          <span className="truncate">{getNichoShort(lead.nicho)}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <MapPin className="h-3 w-3 flex-shrink-0" />
-          <span>{lead.cidade}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Phone className="h-3 w-3 flex-shrink-0" />
-          <span className="font-mono text-[11px]">{formatPhone(lead.whatsapp)}</span>
-        </div>
+        {lead.nicho && (
+          <div className="flex items-center gap-1.5">
+            <Tag className="h-3 w-3 flex-shrink-0" />
+            <span className="truncate">{getNichoShort(lead.nicho)}</span>
+          </div>
+        )}
+        {lead.cidade && (
+          <div className="flex items-center gap-1.5">
+            <MapPin className="h-3 w-3 flex-shrink-0" />
+            <span>{lead.cidade}</span>
+          </div>
+        )}
+        {lead.telefone && (
+          <div className="flex items-center gap-1.5">
+            <Phone className="h-3 w-3 flex-shrink-0" />
+            <span className="font-mono text-[11px]">{formatPhone(lead.telefone)}</span>
+          </div>
+        )}
+        {lead.email && (
+          <div className="flex items-center gap-1.5">
+            <Mail className="h-3 w-3 flex-shrink-0" />
+            <span className="truncate">{lead.email}</span>
+          </div>
+        )}
         {lead.site && (
           <div className="flex items-center gap-1.5">
             <Globe className="h-3 w-3 flex-shrink-0" />
@@ -525,19 +714,31 @@ function LeadCard({
         )}
       </div>
 
+      {/* Tags */}
+      {lead.tags && lead.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {lead.tags.slice(0, 3).map((tag) => (
+            <span key={tag} className="text-[9px] bg-muted px-1.5 py-0.5 rounded-full text-muted-foreground">{tag}</span>
+          ))}
+          {lead.tags.length > 3 && (
+            <span className="text-[9px] text-muted-foreground">+{lead.tags.length - 3}</span>
+          )}
+        </div>
+      )}
+
       {/* Footer */}
       <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-border/50">
         <div className="flex items-center gap-1">
           <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Score</span>
-          <span className={`font-bold text-sm ${getScoreColor(lead.score_qualificacao)}`}>
-            {lead.score_qualificacao ?? "—"}
+          <span className={`font-bold text-sm ${getScoreColor(lead.score)}`}>
+            {lead.score ?? "—"}
           </span>
         </div>
         <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-          {lead.origem === "prospeccao_web" ? (
-            <Badge variant="secondary" className="text-[9px] py-0 px-1.5">Web</Badge>
-          ) : (
-            <Badge variant="secondary" className="text-[9px] py-0 px-1.5">Manual</Badge>
+          {lead.origem && (
+            <Badge variant="secondary" className="text-[9px] py-0 px-1.5">
+              {lead.origem === "prospecção_web" ? "Web" : lead.origem === "whatsapp" ? "WA" : lead.origem}
+            </Badge>
           )}
           <span>{formatDate(lead.created_at)}</span>
         </div>
@@ -553,26 +754,32 @@ function LeadDetailPanel({
   formatDate,
   formatPhone,
   getScoreColor,
+  getFonteBadge,
 }: {
-  lead: Prospect;
+  lead: UnifiedLead;
   onClose: () => void;
   formatDate: (d: string | null) => string;
-  formatPhone: (p: string) => string;
+  formatPhone: (p: string | null) => string;
   getScoreColor: (s: number | null) => string;
+  getFonteBadge: (f: "prospect" | "lead_raw") => { label: string; color: string };
 }) {
   const st = STATUS_MAP[lead.status] || { label: lead.status, color: "bg-muted text-muted-foreground border-border" };
   const cl = lead.classificacao_ia ? CLASSIFICACAO_MAP[lead.classificacao_ia] : null;
+  const fb = getFonteBadge(lead.fonte);
 
   return (
     <div className="fixed inset-y-0 right-0 w-[420px] bg-card border-l border-border shadow-2xl z-50 flex flex-col animate-in slide-in-from-right-10 duration-200">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
-        <h2
-          className="text-lg font-bold text-foreground truncate"
-          style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
-        >
-          {lead.nome_negocio}
-        </h2>
+        <div className="flex items-center gap-2 min-w-0">
+          <Badge variant="outline" className={`text-[9px] flex-shrink-0 ${fb.color}`}>{fb.label}</Badge>
+          <h2
+            className="text-lg font-bold text-foreground truncate"
+            style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
+          >
+            {lead.nome}
+          </h2>
+        </div>
         <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0">
           <X className="h-4 w-4" />
         </Button>
@@ -590,9 +797,9 @@ function LeadDetailPanel({
               </div>
             )}
             <div className="ml-auto flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">Score ICP:</span>
-              <span className={`text-lg font-bold ${getScoreColor(lead.score_qualificacao)}`}>
-                {lead.score_qualificacao ?? "—"}
+              <span className="text-xs text-muted-foreground">Score:</span>
+              <span className={`text-lg font-bold ${getScoreColor(lead.score)}`}>
+                {lead.score ?? "—"}
               </span>
             </div>
           </div>
@@ -606,18 +813,26 @@ function LeadDetailPanel({
                 <span>{lead.decisor}</span>
               </div>
             )}
-            <div className="flex items-center gap-2 text-sm">
-              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-              <a
-                href={`https://wa.me/${lead.whatsapp.replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono hover:text-primary transition-colors"
-              >
-                {formatPhone(lead.whatsapp)}
-              </a>
-              <ExternalLink className="h-3 w-3 text-muted-foreground" />
-            </div>
+            {lead.telefone && (
+              <div className="flex items-center gap-2 text-sm">
+                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                <a
+                  href={`https://wa.me/${lead.telefone.replace(/\D/g, "")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-mono hover:text-primary transition-colors"
+                >
+                  {formatPhone(lead.telefone)}
+                </a>
+                <ExternalLink className="h-3 w-3 text-muted-foreground" />
+              </div>
+            )}
+            {lead.email && (
+              <div className="flex items-center gap-2 text-sm">
+                <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                <a href={`mailto:${lead.email}`} className="hover:text-primary transition-colors">{lead.email}</a>
+              </div>
+            )}
             {lead.site && (
               <div className="flex items-center gap-2 text-sm">
                 <Globe className="h-3.5 w-3.5 text-muted-foreground" />
@@ -634,26 +849,59 @@ function LeadDetailPanel({
             )}
           </div>
 
+          {/* Tags */}
+          {lead.tags && lead.tags.length > 0 && (
+            <div className="space-y-1.5">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Tags</h3>
+              <div className="flex flex-wrap gap-1.5">
+                {lead.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Enrichment data */}
+          {lead.enrichment_data && Object.keys(lead.enrichment_data).length > 0 && (
+            <div className="space-y-1.5">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dados Enriquecidos</h3>
+              <div className="bg-muted/30 rounded-lg p-3 space-y-1.5 text-sm">
+                {Object.entries(lead.enrichment_data).map(([key, value]) => (
+                  <div key={key} className="flex justify-between">
+                    <span className="text-muted-foreground text-xs capitalize">{key.replace(/_/g, " ")}</span>
+                    <span className="text-xs font-medium max-w-[200px] truncate">{String(value)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Details */}
           <div className="space-y-2.5">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Detalhes</h3>
             <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <span className="text-xs text-muted-foreground block">Nicho</span>
-                <span className="font-medium">{lead.nicho}</span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Cidade</span>
-                <span className="font-medium">{lead.cidade}</span>
-              </div>
+              {lead.nicho && (
+                <div>
+                  <span className="text-xs text-muted-foreground block">Nicho</span>
+                  <span className="font-medium">{lead.nicho}</span>
+                </div>
+              )}
+              {lead.cidade && (
+                <div>
+                  <span className="text-xs text-muted-foreground block">Cidade</span>
+                  <span className="font-medium">{lead.cidade}</span>
+                </div>
+              )}
               <div>
                 <span className="text-xs text-muted-foreground block">Origem</span>
-                <span className="font-medium">{lead.origem === "prospeccao_web" ? "Prospecção Web" : lead.origem || "—"}</span>
+                <span className="font-medium">{lead.origem || "—"}</span>
               </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Responsável</span>
-                <span className="font-medium capitalize">{lead.responsavel}</span>
-              </div>
+              {lead.responsavel && (
+                <div>
+                  <span className="text-xs text-muted-foreground block">Responsável</span>
+                  <span className="font-medium capitalize">{lead.responsavel}</span>
+                </div>
+              )}
               {lead.faturamento_estimado && (
                 <div>
                   <span className="text-xs text-muted-foreground block">Faturamento</span>
