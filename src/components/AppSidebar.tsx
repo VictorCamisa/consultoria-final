@@ -3,6 +3,7 @@ import {
   LogOut, BrainCircuit, Search, UserRoundCog, FolderKanban, Users2,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import vsLogo from "@/assets/vs-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -111,12 +112,7 @@ export function AppSidebar() {
           className={cn("flex items-center cursor-pointer", collapsed ? "justify-center" : "gap-2.5")}
           onClick={() => navigate("/")}
         >
-          <div className="rounded-md w-8 h-8 flex-shrink-0 flex items-center justify-center bg-primary">
-            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 14, letterSpacing: "-0.03em", lineHeight: 1 }}>
-              <span className="text-primary-foreground/70">V</span>
-              <span className="text-primary-foreground">S</span>
-            </span>
-          </div>
+          <img src={vsLogo} alt="VS Ecossistemas Digitais" className={cn("flex-shrink-0 object-contain", collapsed ? "w-8 h-8" : "w-9 h-9")} />
           {!collapsed && (
             <div className="min-w-0">
               <p

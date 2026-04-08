@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, ArrowRight } from "lucide-react";
+import vsLogo from "@/assets/vs-logo.png";
 
 export default function Login() {
   const { signIn, session, loading: authLoading } = useAuth();
@@ -39,9 +40,7 @@ export default function Login() {
         <div className="rounded-2xl border border-border bg-background p-8 shadow-xl">
           {/* Brand */}
           <div className="flex flex-col items-center gap-3 mb-8">
-            <div className="bg-primary rounded-xl w-12 h-12 flex items-center justify-center shadow-lg shadow-primary/20">
-              <span className="text-primary-foreground text-base font-bold tracking-tight">VS</span>
-            </div>
+            <img src={vsLogo} alt="VS Ecossistemas Digitais" className="w-20 h-20 object-contain" />
             <div className="text-center">
               <h1 className="text-lg font-semibold text-foreground tracking-tight">VS Growth Hub</h1>
               <p className="text-sm text-muted-foreground mt-0.5">Acesse seu painel de crescimento</p>
