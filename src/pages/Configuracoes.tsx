@@ -223,7 +223,7 @@ export default function Configuracoes() {
                           {testingEvolution === nicho ? (
                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
                           ) : testResults[nicho] === "ok" ? (
-                            <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                            <CheckCircle className="h-4 w-4 mr-2 text-green-400" />
                           ) : testResults[nicho] === "erro" ? (
                             <XCircle className="h-4 w-4 mr-2 text-destructive" />
                           ) : (
