@@ -904,8 +904,53 @@ function LeadDetailPanel({
         </Button>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-5">
+      {/* Action bar */}
+      <div className="px-4 py-3 border-b border-border flex gap-2">
+        {lead.fonte === "lead_raw" && lead.raw_status !== "promoted" && (
+          <Button
+            className="flex-1 gap-1.5"
+            size="sm"
+            onClick={() => onPromote(lead)}
+            disabled={promotingId === lead.id}
+          >
+            {promotingId === lead.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
+            Enviar para o CRM
+          </Button>
+        )}
+        {lead.fonte === "lead_raw" && lead.raw_status === "promoted" && (
+          <Badge variant="secondary" className="text-xs py-1.5 px-3">
+            <UserCheck className="h-3.5 w-3.5 mr-1.5" /> Já promovido para o CRM
+          </Badge>
+        )}
+        {lead.fonte === "prospect" && lead.status === "novo" && (
+          <Button
+            className="flex-1 gap-1.5"
+            size="sm"
+            onClick={() => onAbordar(lead)}
+            disabled={abordandoId === lead.id}
+          >
+            {abordandoId === lead.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Megaphone className="h-3.5 w-3.5" />}
+            Abordar via WhatsApp
+          </Button>
+        )}
+        {lead.fonte === "prospect" && lead.telefone && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            asChild
+          >
+            <a
+              href={`https://wa.me/${lead.telefone.replace(/\D/g, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Phone className="h-3.5 w-3.5" />
+              WhatsApp
+            </a>
+          </Button>
+        )}
+      </div>
           {/* Status + Score */}
           <div className="flex items-center gap-3">
             <Badge variant="outline" className={`${st.color}`}>{st.label}</Badge>
