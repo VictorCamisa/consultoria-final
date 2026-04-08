@@ -41,7 +41,7 @@ EMPRESA VENDEDORA (quem vai abordar os leads):
 - Nome: VS Growth Hub — Consultoria de Crescimento
 - Segmento: Consultoria em gestão comercial, marketing e atendimento para negócios locais
 - Modelo de negócio: B2B (vende para donos de empresas locais)
-- Nichos principais de atuação: Clínicas de Estética, Clínicas Odontológicas e Escritórios de Advocacia
+- Nichos principais de atuação: Clínicas de Estética, Clínicas Odontológicas, Escritórios de Advocacia e Revendas de Veículos Seminovos (VS AUTO)
 - Serviços: Diagnóstico empresarial, imersão, devolutiva com plano estratégico, acompanhamento mensal, automação comercial via WhatsApp
 - Público-alvo ideal: Donos/decisores de negócios locais que faturam acima de R$ 30k/mês, têm equipe de pelo menos 3 pessoas, investem ou querem investir em marketing digital/tráfego pago, e precisam melhorar processos de atendimento, comercial e retenção de clientes
 - Diferenciais: Metodologia proprietária de diagnóstico com scoring em 4 dimensões (Marketing, Comercial, Atendimento, Operação), plano de ação personalizado, acompanhamento com métricas
@@ -49,7 +49,7 @@ EMPRESA VENDEDORA (quem vai abordar os leads):
 
 CRITÉRIOS DE QUALIFICAÇÃO ICP (Ideal Customer Profile):
 Com base no perfil da consultoria acima, avalie cada lead e atribua um icp_score de 0 a 100:
-- 80-100: Lead PERFEITO — é exatamente o perfil ideal (clínica estética/odonto/advocacia com faturamento bom, equipe, presença digital)
+- 80-100: Lead PERFEITO — é exatamente o perfil ideal (clínica estética/odonto/advocacia com faturamento bom OU revenda de veículos 10-80 carros, interior SP/MG/PR)
 - 60-79: Lead BOM — tem bom fit (nicho correto, indícios de estrutura e faturamento razoável)
 - 40-59: Lead MÉDIO — fit razoável (nicho adjacente, pouca informação para qualificar, ou empresa muito pequena)
 - 20-39: Lead FRACO — pouco alinhado (nicho errado, freelancer sem equipe, sem presença)
@@ -64,17 +64,35 @@ function buildSmartQueries(
   prospectingIntent: string
 ): string[] {
   const loc = locationStr || "";
+  const city = loc.split(",")[0]?.trim() || "";
+  const nicheLower = niche.toLowerCase();
+
+  // Queries especializadas para revendas de veículos
+  if (nicheLower.includes("revenda") || nicheLower.includes("veículo") || nicheLower.includes("seminovo") || nicheLower.includes("carro")) {
+    const queries: string[] = [
+      `revenda seminovos ${city} telefone WhatsApp`,
+      `loja de carros usados ${city} contato`,
+      `multimarcas ${city} seminovos WhatsApp`,
+      `site:olx.com.br "${city}" loja seminovos`,
+      `site:webmotors.com.br "${city}" revenda`,
+    ];
+    if (prospectingIntent?.trim()) {
+      queries.push(`revenda veículos ${loc} ${prospectingIntent.trim().slice(0, 80)}`);
+    }
+    return queries.filter(q => q.trim().length > 5);
+  }
+
+  // Queries genéricas para outros nichos
   const queries: string[] = [
     `${niche} ${loc} telefone contato`,
     `${niche} ${loc} WhatsApp celular`,
-    `"${niche}" "${loc.split(",")[0]?.trim() || ""}" site contato email`,
+    `"${niche}" "${city}" site contato email`,
   ];
 
   if (prospectingIntent?.trim()) {
     queries.push(`${niche} ${loc} ${prospectingIntent.trim().slice(0, 100)}`);
   }
 
-  // ICP-aware queries for the consultoria's target audience
   queries.push(`${niche} ${loc} endereço CNPJ`);
 
   return queries.filter(q => q.trim().length > 5);
