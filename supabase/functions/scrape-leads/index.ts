@@ -1,7 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-async function firecrawlSearch(apiKey: string, query: string, limit: number): Promise<any[]> {
+type FirecrawlResult = { results: any[]; error?: string; status?: number };
+
+async function firecrawlSearch(apiKey: string, query: string, limit: number): Promise<FirecrawlResult> {
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const resp = await fetch("https://api.firecrawl.dev/v1/search", {
@@ -9,15 +11,33 @@ async function firecrawlSearch(apiKey: string, query: string, limit: number): Pr
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({ query, limit, lang: "pt-br", country: "br", scrapeOptions: { formats: ["markdown"], onlyMainContent: false } }),
       });
-      if (resp.ok) { const data = await resp.json(); return data?.data || data?.results || []; }
-      if (resp.status < 500) return [];
-      if (attempt < 3) await new Promise(r => setTimeout(r, 2000 * attempt));
+      if (resp.ok) {
+        const data = await resp.json();
+        return { results: data?.data || data?.results || [] };
+      }
+      const errorText = await resp.text();
+      console.error(`Firecrawl search error (${resp.status}) attempt ${attempt}: ${errorText.substring(0, 300)}`);
+      // Auth/billing errors — don't retry, surface immediately
+      if (resp.status === 401 || resp.status === 402 || resp.status === 403) {
+        return { results: [], error: `Firecrawl API error ${resp.status}: ${errorText.substring(0, 200)}`, status: resp.status };
+      }
+      // Rate limit — retry with backoff
+      if (resp.status === 429) {
+        if (attempt < 3) { await new Promise(r => setTimeout(r, 3000 * attempt)); continue; }
+        return { results: [], error: "Firecrawl rate limit (429). Tente novamente em 1 minuto.", status: 429 };
+      }
+      // Server errors — retry
+      if (resp.status >= 500 && attempt < 3) {
+        await new Promise(r => setTimeout(r, 2000 * attempt));
+        continue;
+      }
+      return { results: [], error: `Firecrawl error ${resp.status}`, status: resp.status };
     } catch (e) {
-      console.error(`Firecrawl search error attempt ${attempt}:`, e);
+      console.error(`Firecrawl search network error attempt ${attempt}:`, e);
       if (attempt < 3) await new Promise(r => setTimeout(r, 2000 * attempt));
     }
   }
-  return [];
+  return { results: [], error: "Firecrawl indisponível após 3 tentativas" };
 }
 
 async function firecrawlScrape(apiKey: string, url: string): Promise<string> {
