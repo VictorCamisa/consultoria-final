@@ -22,6 +22,7 @@ export default function NewClientDialog() {
     cidade: "",
     whatsapp: "",
     decisor: "",
+    tipo_cobranca: "fee_mensal",
     valor_fee: "",
     faturamento_estimado: "",
     responsavel_imersao: "victor",
@@ -37,6 +38,7 @@ export default function NewClientDialog() {
         cidade: form.cidade.trim(),
         whatsapp: form.whatsapp.trim(),
         decisor: form.decisor.trim(),
+        tipo_cobranca: form.tipo_cobranca,
         valor_fee: Number(form.valor_fee) || 0,
         faturamento_estimado: form.faturamento_estimado || null,
         responsavel_imersao: form.responsavel_imersao,
@@ -51,7 +53,7 @@ export default function NewClientDialog() {
       setOpen(false);
       setForm({
         nome_negocio: "", nicho: "Estética", cidade: "", whatsapp: "",
-        decisor: "", valor_fee: "", faturamento_estimado: "", responsavel_imersao: "victor",
+        decisor: "", tipo_cobranca: "fee_mensal", valor_fee: "", faturamento_estimado: "", responsavel_imersao: "victor",
       });
     },
     onError: () => toast.error("Erro ao criar cliente."),
@@ -103,15 +105,27 @@ export default function NewClientDialog() {
               <Input value={form.decisor} onChange={e => set("decisor", e.target.value)} placeholder="Nome do decisor" />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Valor Fee (R$)</Label>
-              <Input type="number" value={form.valor_fee} onChange={e => set("valor_fee", e.target.value)} placeholder="2000" />
+              <Label className="text-xs">Tipo de Cobrança</Label>
+              <Select value={form.tipo_cobranca} onValueChange={v => set("tipo_cobranca", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fee_mensal">Fee Mensal</SelectItem>
+                  <SelectItem value="projeto_fechado">Projeto Fechado</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
+              <Label className="text-xs">Valor (R$) *</Label>
+              <Input type="number" value={form.valor_fee} onChange={e => set("valor_fee", e.target.value)} placeholder="2000" />
+            </div>
+            <div className="space-y-1">
               <Label className="text-xs">Faturamento Estimado</Label>
               <Input value={form.faturamento_estimado} onChange={e => set("faturamento_estimado", e.target.value)} placeholder="Ex: R$ 50k/mês" />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Responsável</Label>
               <Select value={form.responsavel_imersao} onValueChange={v => set("responsavel_imersao", v)}>
