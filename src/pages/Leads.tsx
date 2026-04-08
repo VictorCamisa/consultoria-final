@@ -703,6 +703,10 @@ function LeadCard({
   getFonteBadge,
   onSelect,
   isSelected,
+  onPromote,
+  onAbordar,
+  promotingId,
+  abordandoId,
 }: {
   lead: UnifiedLead;
   formatDate: (d: string | null) => string;
@@ -712,6 +716,10 @@ function LeadCard({
   getFonteBadge: (f: "prospect" | "lead_raw") => { label: string; color: string };
   onSelect: () => void;
   isSelected: boolean;
+  onPromote: (lead: UnifiedLead) => void;
+  onAbordar: (lead: UnifiedLead) => void;
+  promotingId: string | null;
+  abordandoId: string | null;
 }) {
   const st = STATUS_MAP[lead.status] || { label: lead.status, color: "bg-muted text-muted-foreground border-border", icon: Eye };
   const cl = lead.classificacao_ia ? CLASSIFICACAO_MAP[lead.classificacao_ia] : null;
@@ -813,6 +821,38 @@ function LeadCard({
           )}
           <span>{formatDate(lead.created_at)}</span>
         </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
+        {lead.fonte === "lead_raw" && lead.raw_status !== "promoted" && (
+          <Button
+            size="sm"
+            className="text-[11px] h-7 px-2.5 flex-1 gap-1"
+            onClick={() => onPromote(lead)}
+            disabled={promotingId === lead.id}
+          >
+            {promotingId === lead.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3 w-3" />}
+            Enviar pro CRM
+          </Button>
+        )}
+        {lead.fonte === "prospect" && lead.status === "novo" && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-[11px] h-7 px-2.5 flex-1 gap-1"
+            onClick={() => onAbordar(lead)}
+            disabled={abordandoId === lead.id}
+          >
+            {abordandoId === lead.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Megaphone className="h-3 w-3" />}
+            Abordar
+          </Button>
+        )}
+        {lead.fonte === "lead_raw" && lead.raw_status === "promoted" && (
+          <Badge variant="secondary" className="text-[10px]">
+            <UserCheck className="h-3 w-3 mr-1" /> Já no CRM
+          </Badge>
+        )}
       </div>
     </div>
   );
