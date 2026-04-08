@@ -153,6 +153,7 @@ type ViewMode = "grid" | "list";
 type FonteFilter = "todos" | "lead_raw" | "prospect";
 
 export default function Leads() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [fonteFilter, setFonteFilter] = useState<FonteFilter>("todos");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
@@ -165,6 +166,8 @@ export default function Leads() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [selectedLead, setSelectedLead] = useState<UnifiedLead | null>(null);
+  const [promotingId, setPromotingId] = useState<string | null>(null);
+  const [abordandoId, setAbordandoId] = useState<string | null>(null);
 
   /* ── Fetch both tables ─────────────────────────── */
   const { data: prospects = [], isLoading: loadingProspects } = useQuery({
