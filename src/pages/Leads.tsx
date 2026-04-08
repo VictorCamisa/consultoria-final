@@ -607,6 +607,10 @@ export default function Leads() {
               getFonteBadge={getFonteBadge}
               onSelect={() => setSelectedLead(selectedLead?.id === lead.id && selectedLead?.fonte === lead.fonte ? null : lead)}
               isSelected={selectedLead?.id === lead.id && selectedLead?.fonte === lead.fonte}
+              onPromote={handlePromote}
+              onAbordar={handleAbordar}
+              promotingId={promotingId}
+              abordandoId={abordandoId}
             />
           ))}
         </div>
@@ -679,6 +683,10 @@ export default function Leads() {
           formatPhone={formatPhone}
           getScoreColor={getScoreColor}
           getFonteBadge={getFonteBadge}
+          onPromote={handlePromote}
+          onAbordar={handleAbordar}
+          promotingId={promotingId}
+          abordandoId={abordandoId}
         />
       )}
     </div>
