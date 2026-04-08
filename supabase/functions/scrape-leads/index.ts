@@ -49,7 +49,7 @@ EMPRESA VENDEDORA (quem vai abordar os leads):
 
 CRITÉRIOS DE QUALIFICAÇÃO ICP (Ideal Customer Profile):
 Com base no perfil da consultoria acima, avalie cada lead e atribua um icp_score de 0 a 100:
-- 80-100: Lead PERFEITO — é exatamente o perfil ideal (clínica estética/odonto/advocacia com faturamento bom, equipe, presença digital)
+- 80-100: Lead PERFEITO — é exatamente o perfil ideal (clínica estética/odonto/advocacia com faturamento bom OU revenda de veículos 10-80 carros, interior SP/MG/PR)
 - 60-79: Lead BOM — tem bom fit (nicho correto, indícios de estrutura e faturamento razoável)
 - 40-59: Lead MÉDIO — fit razoável (nicho adjacente, pouca informação para qualificar, ou empresa muito pequena)
 - 20-39: Lead FRACO — pouco alinhado (nicho errado, freelancer sem equipe, sem presença)
