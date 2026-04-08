@@ -357,10 +357,10 @@ export default function Leads() {
       <div className="grid grid-cols-5 gap-3">
         {[
           { label: "Total", value: stats.total, color: "text-primary" },
-          { label: "Da Lista", value: stats.rawCount, color: "text-amber-600" },
-          { label: "No CRM", value: stats.prospectCount, color: "text-blue-600" },
-          { label: "Pendentes", value: stats.pendingCount, color: "text-slate-600" },
-          { label: "Promovidos", value: stats.promotedCount, color: "text-green-600" },
+          { label: "Da Lista", value: stats.rawCount, color: "text-amber-400" },
+          { label: "No CRM", value: stats.prospectCount, color: "text-blue-400" },
+          { label: "Pendentes", value: stats.pendingCount, color: "text-muted-foreground" },
+          { label: "Promovidos", value: stats.promotedCount, color: "text-green-400" },
         ].map((kpi) => (
           <div key={kpi.label} className="bg-card border border-border rounded-lg p-3.5 text-center">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{kpi.label}</p>
