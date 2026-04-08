@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Megaphone, Users, CalendarCheck, Settings,
-  LogOut, BrainCircuit, Search, UserRoundCog, FolderKanban,
+  LogOut, BrainCircuit, Search, UserRoundCog, FolderKanban, Users2,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +34,7 @@ const sections: NavSection[] = [
     items: [
       { title: "Comercial", url: "/comercial", icon: Megaphone, badgeKey: "unread" },
       { title: "Prospecção", url: "/prospeccao", icon: Search },
+      { title: "Leads", url: "/leads", icon: Users2 },
       { title: "Meu Vendedor", url: "/meu-vendedor", icon: UserRoundCog },
     ],
   },

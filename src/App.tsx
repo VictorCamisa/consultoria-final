@@ -18,6 +18,7 @@ import AgenteIA from "@/pages/AgenteIA";
 import Prospeccao from "@/pages/Prospeccao";
 import MeuVendedor from "@/pages/MeuVendedor";
 import Operacional from "@/pages/Operacional";
+import Leads from "@/pages/Leads";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -52,6 +53,7 @@ const App = () => (
                 <Route path="/comercial" element={<Comercial />} />
                 <Route path="/agente-ia" element={<AgenteIA />} />
                 <Route path="/prospeccao" element={<Prospeccao />} />
+                <Route path="/leads" element={<Leads />} />
                 <Route path="/meu-vendedor" element={<MeuVendedor />} />
                 <Route path="/clientes" element={<Clientes />} />
                 <Route path="/clientes/:id" element={<ClienteDetalhe />} />
