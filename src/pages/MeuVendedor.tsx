@@ -134,9 +134,9 @@ async function streamChat({
 // ─── Difficulty config ───────────────────────────────────────────────────────
 
 const DIFFICULTIES = [
-  { value: "facil", label: "Fácil", icon: Zap, color: "text-green-600" },
-  { value: "medio", label: "Médio", icon: Target, color: "text-amber-600" },
-  { value: "dificil", label: "Difícil", icon: Shield, color: "text-red-600" },
+  { value: "facil", label: "Fácil", icon: Zap, color: "text-green-400" },
+  { value: "medio", label: "Médio", icon: Target, color: "text-amber-400" },
+  { value: "dificil", label: "Difícil", icon: Shield, color: "text-red-400" },
 ];
 
 const PRESET_SCENARIOS = [
@@ -609,9 +609,9 @@ Responda APENAS em JSON válido:
 
 
   const scoreColor = (score: number) => {
-    if (score >= 80) return "text-green-600";
-    if (score >= 60) return "text-amber-600";
-    return "text-red-600";
+    if (score >= 80) return "text-green-400";
+    if (score >= 60) return "text-amber-400";
+    return "text-red-400";
   };
 
   const scoreBarColor = (score: number) => {
@@ -761,7 +761,7 @@ Responda APENAS em JSON válido:
                       {evaluation.pontos_fortes.length > 0 && (
                         <div>
                           <p className="text-xs font-medium flex items-center gap-1 mb-1">
-                            <CheckCircle2 className="h-3 w-3 text-green-600" /> Pontos fortes
+                            <CheckCircle2 className="h-3 w-3 text-green-400" /> Pontos fortes
                           </p>
                           <ul className="text-xs text-muted-foreground space-y-0.5">
                             {evaluation.pontos_fortes.map((p, i) => (
@@ -774,7 +774,7 @@ Responda APENAS em JSON válido:
                       {evaluation.pontos_fracos.length > 0 && (
                         <div>
                           <p className="text-xs font-medium flex items-center gap-1 mb-1">
-                            <AlertTriangle className="h-3 w-3 text-amber-600" /> A melhorar
+                            <AlertTriangle className="h-3 w-3 text-amber-400" /> A melhorar
                           </p>
                           <ul className="text-xs text-muted-foreground space-y-0.5">
                             {evaluation.pontos_fracos.map((p, i) => (

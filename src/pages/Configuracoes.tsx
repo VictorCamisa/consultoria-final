@@ -381,7 +381,7 @@ export default function Configuracoes() {
                   <Input value={WEBHOOK_URL} readOnly className="font-mono text-xs" />
                   <Button variant="outline" size="sm" onClick={handleCopyWebhook} className="shrink-0">
                     {copiedWebhook ? (
-                      <><CheckCircle className="h-4 w-4 mr-1 text-green-600" />Copiado</>
+                      <><CheckCircle className="h-4 w-4 mr-1 text-green-400" />Copiado</>
                     ) : (
                       <><Copy className="h-4 w-4 mr-1" />Copiar</>
                     )}
@@ -450,8 +450,8 @@ export default function Configuracoes() {
           <div className="flex flex-col items-center gap-4 py-4">
             {evo.connectionStatus === "connected" ? (
               <div className="flex flex-col items-center gap-3 py-8">
-                <CheckCircle className="h-16 w-16 text-green-600" />
-                <p className="text-lg font-medium text-green-600">WhatsApp conectado!</p>
+                <CheckCircle className="h-16 w-16 text-green-400" />
+                <p className="text-lg font-medium text-green-400">WhatsApp conectado!</p>
                 <p className="text-sm text-muted-foreground">Webhook configurado automaticamente.</p>
               </div>
             ) : evo.qrLoading ? (

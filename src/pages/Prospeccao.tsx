@@ -310,9 +310,9 @@ export default function Prospeccao() {
   });
 
   const icpScoreColor = (score: number) => {
-    if (score >= 80) return "text-green-600 bg-green-500/10 border-green-500/30";
+    if (score >= 80) return "text-green-400 bg-green-500/10 border-green-500/30";
     if (score >= 60) return "text-primary bg-primary/10 border-primary/30";
-    if (score >= 40) return "text-yellow-600 bg-yellow-500/10 border-yellow-500/30";
+    if (score >= 40) return "text-yellow-400 bg-yellow-500/10 border-yellow-500/30";
     return "text-muted-foreground bg-secondary border-border";
   };
 
@@ -473,14 +473,14 @@ export default function Prospeccao() {
   };
 
   const instanceState = (state: string) => {
-    if (state === "open") return <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px]" variant="outline"><Wifi className="h-3 w-3 mr-1" />Online</Badge>;
+    if (state === "open") return <Badge className="bg-green-500/10 text-green-400 border-green-500/30 text-[10px]" variant="outline"><Wifi className="h-3 w-3 mr-1" />Online</Badge>;
     if (state === "close" || state === "closed") return <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-[10px]" variant="outline"><WifiOff className="h-3 w-3 mr-1" />Offline</Badge>;
     return <Badge variant="outline" className="text-muted-foreground text-[10px]">Aguardando</Badge>;
   };
 
   const statusConfig: Record<string, { color: string; label: string }> = {
-    running: { color: "bg-yellow-500/15 text-yellow-600", label: "Raspando..." },
-    completed: { color: "bg-green-500/15 text-green-600", label: "Concluído" },
+    running: { color: "bg-yellow-500/15 text-yellow-400", label: "Raspando..." },
+    completed: { color: "bg-green-500/15 text-green-400", label: "Concluído" },
     failed: { color: "bg-destructive/15 text-destructive", label: "Falhou" },
   };
 
@@ -533,7 +533,7 @@ export default function Prospeccao() {
         <div className="border rounded-lg p-4 bg-card">
           <div className="flex items-center gap-2 mb-1">
             <div className="h-7 w-7 rounded-md bg-green-500/10 flex items-center justify-center">
-              <BarChart3 className="h-3.5 w-3.5 text-green-600" />
+              <BarChart3 className="h-3.5 w-3.5 text-green-400" />
             </div>
             <span className="text-xs text-muted-foreground">Taxa de promoção</span>
           </div>
@@ -543,7 +543,7 @@ export default function Prospeccao() {
         <div className="border rounded-lg p-4 bg-card">
           <div className="flex items-center gap-2 mb-1">
             <div className="h-7 w-7 rounded-md bg-yellow-500/10 flex items-center justify-center">
-              <Target className="h-3.5 w-3.5 text-yellow-600" />
+              <Target className="h-3.5 w-3.5 text-yellow-400" />
             </div>
             <span className="text-xs text-muted-foreground">ICP médio</span>
           </div>
@@ -553,7 +553,7 @@ export default function Prospeccao() {
         <div className="border rounded-lg p-4 bg-card">
           <div className="flex items-center gap-2 mb-1">
             <div className="h-7 w-7 rounded-md bg-purple-500/10 flex items-center justify-center">
-              <Zap className="h-3.5 w-3.5 text-purple-600" />
+              <Zap className="h-3.5 w-3.5 text-purple-400" />
             </div>
             <span className="text-xs text-muted-foreground">Melhor fonte</span>
           </div>
