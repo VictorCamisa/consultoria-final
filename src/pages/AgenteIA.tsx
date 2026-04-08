@@ -244,7 +244,7 @@ export default function AgenteIA() {
   return (
     <div className="space-y-8 page-enter">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="space-y-1">
           <h1>Central de Automação</h1>
           <p className="vs-body text-muted-foreground">
@@ -270,7 +270,7 @@ export default function AgenteIA() {
       />
 
       {/* ── Main content ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-8 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-5 sm:gap-8 items-start">
         {/* Agents grid */}
         <div className="space-y-5">
           <h2>Agentes</h2>

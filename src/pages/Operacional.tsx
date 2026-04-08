@@ -99,7 +99,7 @@ export default function Operacional() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           { label: "Projetos Ativos", value: projetosAtivos, icon: FolderKanban, color: "text-primary" },
           { label: "Projetos Concluídos", value: projetosConcluidos, icon: CheckCircle2, color: "text-success" },
@@ -119,7 +119,7 @@ export default function Operacional() {
       </div>
 
       {/* Filters */}
-      <div className="flex items-center gap-2 bg-card rounded-lg border border-border p-2">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-card rounded-lg border border-border p-2">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
           <Input placeholder="Buscar projeto ou cliente..." value={search} onChange={e => setSearch(e.target.value)} className="h-9 pl-8 text-sm bg-background" />
