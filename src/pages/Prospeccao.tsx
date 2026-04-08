@@ -352,8 +352,14 @@ export default function Prospeccao() {
         }
         throw new Error(errMsg);
       }
-      setScrapeJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "completed" as const, results_count: data?.count || 0, total_found: data?.total_found || 0, duplicates_skipped: data?.duplicates_skipped || 0, pages_searched: data?.pages_searched || 0, results: data?.results || [], avg_icp_score: data?.avg_icp_score || 0 } : j));
-      toast({ title: "Prospecção concluída! 🎯", description: `${data?.count || 0} novos leads salvos` });
+      // Surface Firecrawl errors even when count=0 (no hard error thrown)
+      const firecrawlMsg = data?.firecrawl_error ? ` (Firecrawl: ${data.firecrawl_error})` : "";
+      setScrapeJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "completed" as const, results_count: data?.count || 0, total_found: data?.total_found || 0, duplicates_skipped: data?.duplicates_skipped || 0, pages_searched: data?.pages_searched || 0, results: data?.results || [], avg_icp_score: data?.avg_icp_score || 0, error_message: data?.firecrawl_error || undefined } : j));
+      if (data?.count === 0 && data?.firecrawl_error) {
+        toast({ title: "Prospecção com erro ⚠️", description: data.message || data.firecrawl_error, variant: "destructive" });
+      } else {
+        toast({ title: "Prospecção concluída! 🎯", description: `${data?.count || 0} novos leads salvos${firecrawlMsg}` });
+      }
       refetchLeads();
       resetWizard();
     } catch (error: any) {
