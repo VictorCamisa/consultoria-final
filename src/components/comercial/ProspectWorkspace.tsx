@@ -12,8 +12,10 @@ import {
   Send, Sparkles, Loader2, BrainCircuit, CheckCircle2, XCircle,
   X, Phone, MapPin, Instagram, Globe, User,
   Megaphone, PlayCircle, RotateCcw, ChevronRight, Copy,
+  AlertTriangle, Target, Lightbulb, ArrowRight, Zap, MessageSquare,
 } from "lucide-react";
 import { Prospect, PIPELINE_STAGES, classificacaoConfig, scoreColor, timeAgo } from "./types";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Props {
   prospect: Prospect | null;
@@ -27,18 +29,34 @@ interface Props {
   loadingReativar?: boolean;
 }
 
+interface AiCoaching {
+  sugestao: string;
+  intent: string;
+  phase: string;
+  phase_label: string;
+  phase_desc: string;
+  active_script: string;
+  script_content: string;
+  insights: string[];
+  proximo_passo: string;
+  alerta: string;
+  tom_recomendado: string;
+}
+
 export function ProspectWorkspace({
   prospect, onClose, onProspectUpdate,
   onAbordar, onCadencia, onReativar,
   loadingAbordar, loadingCadencia, loadingReativar,
 }: Props) {
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [mensagem, setMensagem] = useState("");
   const [loadingSuggest, setLoadingSuggest] = useState(false);
   const [loadingClassify, setLoadingClassify] = useState(false);
   const [loadingSend, setLoadingSend] = useState(false);
-  const [aiSuggestion, setAiSuggestion] = useState<{ text: string; intent: string } | null>(null);
+  const [coaching, setCoaching] = useState<AiCoaching | null>(null);
   const [lastInboundId, setLastInboundId] = useState<string | null>(null);
+  const [mobileTab, setMobileTab] = useState<"chat" | "ai" | "acoes">("chat");
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: conversas, refetch: refetchConversas } = useQuery({
@@ -46,10 +64,8 @@ export function ProspectWorkspace({
     enabled: !!prospect?.id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("consultoria_conversas")
-        .select("*")
-        .eq("prospect_id", prospect!.id)
-        .order("created_at", { ascending: true });
+        .from("consultoria_conversas").select("*")
+        .eq("prospect_id", prospect!.id).order("created_at", { ascending: true });
       if (error) throw error;
       return data;
     },
@@ -61,10 +77,8 @@ export function ProspectWorkspace({
     enabled: !!prospect?.id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("consultoria_cadencia")
-        .select("*")
-        .eq("prospect_id", prospect!.id)
-        .order("created_at", { ascending: false });
+        .from("consultoria_cadencia").select("*")
+        .eq("prospect_id", prospect!.id).order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -75,10 +89,8 @@ export function ProspectWorkspace({
     enabled: !!prospect?.id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("prospect_session_memory")
-        .select("*")
-        .eq("prospect_id", prospect!.id)
-        .order("extracted_at", { ascending: false });
+        .from("prospect_session_memory").select("*")
+        .eq("prospect_id", prospect!.id).order("extracted_at", { ascending: false });
       if (error) throw error;
       return data;
     },
@@ -89,16 +101,14 @@ export function ProspectWorkspace({
     enabled: !!prospect?.id,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("prospect_meddic")
-        .select("*")
-        .eq("prospect_id", prospect!.id)
-        .order("pilar");
+        .from("prospect_meddic").select("*")
+        .eq("prospect_id", prospect!.id).order("pilar");
       if (error) throw error;
       return data;
     },
   });
 
-  // Auto-suggest when new inbound message arrives
+  // Auto-suggest
   const triggerAutoSuggest = useCallback(async () => {
     if (!prospect) return;
     setLoadingSuggest(true);
@@ -108,7 +118,19 @@ export function ProspectWorkspace({
       });
       if (error) throw error;
       if (data?.sugestao) {
-        setAiSuggestion({ text: data.sugestao, intent: data.intent ?? "padrao" });
+        setCoaching({
+          sugestao: data.sugestao,
+          intent: data.intent ?? "padrao",
+          phase: data.phase ?? "unknown",
+          phase_label: data.phase_label ?? "—",
+          phase_desc: data.phase_desc ?? "",
+          active_script: data.active_script ?? "",
+          script_content: data.script_content ?? "",
+          insights: data.insights ?? [],
+          proximo_passo: data.proximo_passo ?? "",
+          alerta: data.alerta ?? "",
+          tom_recomendado: data.tom_recomendado ?? "",
+        });
       }
     } catch {
       // Silent fail for auto-suggest
@@ -128,7 +150,6 @@ export function ProspectWorkspace({
       }, (payload) => {
         refetchConversas();
         queryClient.invalidateQueries({ queryKey: ["unread-counts"] });
-        // Auto-suggest when lead responds
         const newMsg = payload.new as { direcao?: string; id?: string };
         if (newMsg.direcao === "entrada" && newMsg.id !== lastInboundId) {
           setLastInboundId(newMsg.id ?? null);
@@ -139,7 +160,6 @@ export function ProspectWorkspace({
     return () => { supabase.removeChannel(channel); };
   }, [prospect?.id, refetchConversas, queryClient, triggerAutoSuggest, lastInboundId]);
 
-  // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [conversas]);
@@ -155,21 +175,20 @@ export function ProspectWorkspace({
       .then(() => queryClient.invalidateQueries({ queryKey: ["unread-counts"] }));
   }, [prospect?.id, queryClient]);
 
-  // ESC to close
+  // ESC
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  // Initial auto-suggest on open if there are inbound messages
+  // Initial auto-suggest
   useEffect(() => {
     if (!prospect?.id || !conversas) return;
     const lastInbound = [...conversas].reverse().find(m => m.direcao === "entrada");
-    if (lastInbound && !aiSuggestion && !loadingSuggest) {
+    if (lastInbound && !coaching && !loadingSuggest) {
       triggerAutoSuggest();
     }
-    // Only run once on initial load
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prospect?.id, conversas?.length]);
 
@@ -182,8 +201,20 @@ export function ProspectWorkspace({
       });
       if (error) throw error;
       if (data?.sugestao) {
-        setAiSuggestion({ text: data.sugestao, intent: data.intent ?? "padrao" });
-        toast({ title: "Sugestão gerada pela IA" });
+        setCoaching({
+          sugestao: data.sugestao,
+          intent: data.intent ?? "padrao",
+          phase: data.phase ?? "unknown",
+          phase_label: data.phase_label ?? "—",
+          phase_desc: data.phase_desc ?? "",
+          active_script: data.active_script ?? "",
+          script_content: data.script_content ?? "",
+          insights: data.insights ?? [],
+          proximo_passo: data.proximo_passo ?? "",
+          alerta: data.alerta ?? "",
+          tom_recomendado: data.tom_recomendado ?? "",
+        });
+        toast({ title: "Coaching IA atualizado" });
       }
     } catch (err: unknown) {
       toast({ title: "Erro ao gerar sugestão", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
@@ -193,9 +224,8 @@ export function ProspectWorkspace({
   };
 
   const handleUseSuggestion = () => {
-    if (aiSuggestion) {
-      setMensagem(aiSuggestion.text);
-      setAiSuggestion(null);
+    if (coaching) {
+      setMensagem(coaching.sugestao);
     }
   };
 
@@ -214,10 +244,7 @@ export function ProspectWorkspace({
           score_qualificacao: data.result.score,
           resumo_conversa: data.result.resumo,
         });
-        toast({
-          title: `${data.result.classificacao.toUpperCase()} — Score ${data.result.score}/100`,
-          description: data.result.motivo,
-        });
+        toast({ title: `${data.result.classificacao.toUpperCase()} — Score ${data.result.score}/100`, description: data.result.motivo });
       }
     } catch (err: unknown) {
       toast({ title: "Erro ao classificar", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
@@ -236,9 +263,10 @@ export function ProspectWorkspace({
       if (error) throw error;
       if (data?.success) {
         setMensagem("");
-        setAiSuggestion(null);
         refetchConversas();
         toast({ title: "Mensagem enviada!" });
+        // Auto re-suggest after sending
+        setTimeout(triggerAutoSuggest, 2000);
       }
     } catch (err: unknown) {
       toast({ title: "Erro ao enviar", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
@@ -263,111 +291,90 @@ export function ProspectWorkspace({
   const stageObj = PIPELINE_STAGES.find(s => s.key === prospect.status);
 
   const INTENT_LABELS: Record<string, string> = {
-    preco: "💰 Objeção de preço",
-    concorrente: "🏢 Comparando concorrente",
-    ceticismo: "🤔 Ceticismo / quer provas",
-    objecao: "🛑 Objeção geral",
-    interesse: "🟢 Demonstrou interesse",
-    padrao: "💬 Conversa padrão",
+    preco: "💰 Preço", concorrente: "🏢 Concorrente", ceticismo: "🤔 Ceticismo",
+    objecao: "🛑 Objeção", interesse: "🟢 Interesse", padrao: "💬 Padrão",
   };
 
+  const PHASE_ICONS: Record<string, React.ReactNode> = {
+    abordagem: <Megaphone className="h-3.5 w-3.5" />,
+    abertura: <Send className="h-3.5 w-3.5" />,
+    diagnostico: <BrainCircuit className="h-3.5 w-3.5" />,
+    proposta: <Target className="h-3.5 w-3.5" />,
+    pre_call: <Phone className="h-3.5 w-3.5" />,
+    fechamento: <CheckCircle2 className="h-3.5 w-3.5" />,
+    follow_up: <ArrowRight className="h-3.5 w-3.5" />,
+    reativacao: <RotateCcw className="h-3.5 w-3.5" />,
+    ultimo_contato: <XCircle className="h-3.5 w-3.5" />,
+  };
+
+  // ─── Render ────────────────────────────────────────────────────────
   return createPortal(
     <div className="fixed inset-0 z-[100] flex flex-col bg-background animate-in fade-in-0 duration-200">
       {/* ── Top Bar ── */}
-      <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-6 py-2.5 sm:py-3 border-b border-border bg-card shrink-0">
+      <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-5 py-2 sm:py-2.5 border-b border-border bg-card shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
-            <span className="text-xs sm:text-sm font-bold text-primary">
-              {prospect.nome_negocio.charAt(0).toUpperCase()}
-            </span>
+          <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
+            <span className="text-xs font-bold text-primary">{prospect.nome_negocio.charAt(0).toUpperCase()}</span>
           </div>
           <div className="min-w-0">
-            <h1 className="text-sm sm:text-base font-semibold text-foreground truncate">{prospect.nome_negocio}</h1>
-            <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1 truncate">
+            <h1 className="text-sm font-semibold text-foreground truncate">{prospect.nome_negocio}</h1>
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1 truncate">
               <MapPin className="h-3 w-3 shrink-0" />{prospect.cidade}
-              <span className="opacity-30 hidden sm:inline">·</span>
+              <span className="hidden sm:inline opacity-30">·</span>
               <span className="hidden sm:inline">{prospect.nicho}</span>
             </p>
           </div>
         </div>
 
-        <div className="hidden sm:flex items-center gap-3">
-          {prospect.classificacao_ia ? (
-            <Badge className={`text-xs ${classif.bg}`}>
-              {classif.icon} {classif.label}
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-xs">Não classificado</Badge>
+        <div className="hidden md:flex items-center gap-2">
+          {prospect.classificacao_ia && (
+            <Badge className={`text-[10px] ${classif.bg}`}>{classif.icon} {classif.label}</Badge>
           )}
           {prospect.score_qualificacao !== null && (
-            <span className={`text-sm font-bold tabular ${scoreColor(prospect.score_qualificacao)}`}>
-              {prospect.score_qualificacao}/100
-            </span>
+            <span className={`text-xs font-bold tabular ${scoreColor(prospect.score_qualificacao)}`}>{prospect.score_qualificacao}/100</span>
           )}
-
-          <div className="h-5 w-px bg-border" />
-
+          <div className="h-4 w-px bg-border" />
           <div className="flex items-center gap-1">
             <span className={`w-2 h-2 rounded-full ${stageObj?.color}`} />
-            <span className="text-xs font-medium text-foreground">{stageObj?.label}</span>
+            <span className="text-[10px] font-medium">{stageObj?.label}</span>
           </div>
-
-          <Button size="sm" variant="outline" className="text-xs h-8" onClick={handleClassify} disabled={loadingClassify}>
-            {loadingClassify ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BrainCircuit className="h-3.5 w-3.5 mr-1" />}
-            Classificar
-          </Button>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          <a
-            href={`https://wa.me/${prospect.whatsapp.replace(/\D/g, "")}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300 transition-colors"
-          >
-            <Phone className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">WhatsApp</span>
+        <div className="flex items-center gap-1.5">
+          <a href={`https://wa.me/${prospect.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300">
+            <Phone className="h-3.5 w-3.5" /><span className="hidden sm:inline">WhatsApp</span>
           </a>
-          {prospect.instagram && (
-            <a href={`https://instagram.com/${prospect.instagram.replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors hidden sm:inline-flex">
-              <Instagram className="h-3.5 w-3.5" />
-            </a>
-          )}
-          <div className="h-5 w-px bg-border ml-0.5 sm:ml-1" />
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="h-4 w-px bg-border" />
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
       </div>
 
-      {/* Mobile: info strip */}
-      <div className="sm:hidden flex items-center gap-2 px-3 py-2 border-b border-border bg-card/50 overflow-x-auto hide-scrollbar">
-        {prospect.classificacao_ia && (
-          <Badge className={`text-[10px] shrink-0 ${classif.bg}`}>
-            {classif.icon} {classif.label}
-          </Badge>
-        )}
-        {prospect.score_qualificacao !== null && (
-          <span className={`text-xs font-bold tabular shrink-0 ${scoreColor(prospect.score_qualificacao)}`}>
-            {prospect.score_qualificacao}/100
-          </span>
-        )}
-        <div className="flex items-center gap-1 shrink-0">
-          <span className={`w-2 h-2 rounded-full ${stageObj?.color}`} />
-          <span className="text-[10px] font-medium text-foreground">{stageObj?.label}</span>
+      {/* Mobile tab switcher */}
+      {isMobile && (
+        <div className="flex border-b border-border bg-card/50 shrink-0">
+          {[
+            { key: "chat" as const, label: "Chat", icon: <MessageSquare className="h-3.5 w-3.5" /> },
+            { key: "ai" as const, label: "IA Coach", icon: <Sparkles className="h-3.5 w-3.5" /> },
+            { key: "acoes" as const, label: "Ações", icon: <Zap className="h-3.5 w-3.5" /> },
+          ].map(t => (
+            <button key={t.key} onClick={() => setMobileTab(t.key)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium transition-colors border-b-2 ${
+                mobileTab === t.key ? "border-primary text-primary" : "border-transparent text-muted-foreground"
+              }`}>
+              {t.icon}{t.label}
+              {t.key === "ai" && loadingSuggest && <Loader2 className="h-3 w-3 animate-spin" />}
+            </button>
+          ))}
         </div>
-        <Badge variant="outline" className="text-[10px] shrink-0">{prospect.nicho}</Badge>
-        <Button size="sm" variant="outline" className="text-[10px] h-6 px-2 ml-auto shrink-0" onClick={handleClassify} disabled={loadingClassify}>
-          {loadingClassify ? <Loader2 className="h-3 w-3 animate-spin" /> : <BrainCircuit className="h-3 w-3" />}
-        </Button>
-      </div>
+      )}
 
-      {/* ── Main Content: 2 columns on desktop, tabbed on mobile ── */}
-      <div className="flex flex-col sm:flex-row flex-1 min-h-0 overflow-hidden">
-        {/* LEFT: Chat */}
-        <div className="flex-1 flex flex-col border-b sm:border-b-0 sm:border-r border-border min-w-0 min-h-0">
-          {/* Messages */}
-          <ScrollArea className="flex-1 px-3 sm:px-6 py-3 sm:py-4" ref={scrollRef}>
+      {/* ── Main: 3 columns on desktop ── */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+
+        {/* LEFT: Chat (always visible on desktop, tab on mobile) */}
+        <div className={`flex-1 flex flex-col border-r border-border min-w-0 min-h-0 ${isMobile && mobileTab !== "chat" ? "hidden" : ""}`}>
+          <ScrollArea className="flex-1 px-3 sm:px-5 py-3" ref={scrollRef}>
             <div className="max-w-2xl mx-auto space-y-3">
               {conversas?.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -378,14 +385,13 @@ export function ProspectWorkspace({
               )}
               {conversas?.map(msg => (
                 <div key={msg.id} className={`flex ${msg.direcao === "saida" ? "justify-end" : "justify-start"}`}>
-                  <div className={`rounded-2xl px-4 py-3 text-sm max-w-[75%] ${
+                  <div className={`rounded-2xl px-4 py-3 text-sm max-w-[85%] sm:max-w-[75%] ${
                     msg.direcao === "saida"
                       ? "bg-primary text-primary-foreground rounded-br-md"
                       : "bg-card border border-border rounded-bl-md"
                   }`}>
                     <p className="text-[10px] opacity-50 mb-1">
-                      {msg.direcao === "saida" ? "Você" : prospect.nome_negocio} ·{" "}
-                      {new Date(msg.created_at!).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      {msg.direcao === "saida" ? "Você" : prospect.nome_negocio} · {new Date(msg.created_at!).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                     </p>
                     <p className="whitespace-pre-wrap leading-relaxed">{msg.conteudo}</p>
                   </div>
@@ -405,50 +411,20 @@ export function ProspectWorkspace({
             </div>
           </ScrollArea>
 
-          {/* AI Suggestion banner */}
-          {aiSuggestion && (
-            <div className="border-t border-primary/20 bg-primary/5 px-6 py-3">
-              <div className="max-w-2xl mx-auto">
-                <div className="flex items-center gap-2 mb-2">
-                  <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  <span className="text-[11px] font-semibold text-primary">Sugestão da IA</span>
-                  <Badge variant="outline" className="text-[10px] h-5 border-primary/30 text-primary">
-                    {INTENT_LABELS[aiSuggestion.intent] || aiSuggestion.intent}
-                  </Badge>
-                </div>
-                <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed mb-2">
-                  {aiSuggestion.text}
-                </p>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="default" className="text-[11px] h-7 px-3" onClick={handleUseSuggestion}>
-                    <Copy className="h-3 w-3 mr-1" />Usar esta sugestão
-                  </Button>
-                  <Button size="sm" variant="ghost" className="text-[11px] h-7 px-3" onClick={handleSuggestReply} disabled={loadingSuggest}>
-                    {loadingSuggest ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
-                    Gerar outra
-                  </Button>
-                  <Button size="sm" variant="ghost" className="text-[11px] h-7 px-2 text-muted-foreground" onClick={() => setAiSuggestion(null)}>
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Input area */}
-          <div className="border-t border-border px-3 sm:px-6 py-2.5 sm:py-3 bg-card/50">
+          {/* Input */}
+          <div className="border-t border-border px-3 sm:px-5 py-2.5 bg-card/50 shrink-0">
             <div className="max-w-2xl mx-auto space-y-2">
               <Textarea
                 value={mensagem}
                 onChange={e => setMensagem(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleSendMessage(); } }}
                 placeholder="Digite uma mensagem... (Ctrl+Enter para enviar)"
-                className="min-h-[64px] max-h-[120px] resize-none text-sm bg-background"
+                className="min-h-[56px] max-h-[100px] resize-none text-sm bg-background"
               />
               <div className="flex gap-2">
                 <Button variant="outline" className="text-xs h-8 flex-1" onClick={handleSuggestReply} disabled={loadingSuggest}>
                   {loadingSuggest ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
-                  Sugerir IA
+                  Atualizar IA
                 </Button>
                 <Button className="text-xs h-8 flex-1" onClick={handleSendMessage} disabled={loadingSend || !mensagem.trim()}>
                   {loadingSend ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
@@ -459,198 +435,256 @@ export function ProspectWorkspace({
           </div>
         </div>
 
-        {/* RIGHT: Intelligence Panel */}
-        <div className="w-full sm:w-[380px] shrink-0 flex flex-col min-h-0 overflow-hidden bg-card/30 max-h-[40vh] sm:max-h-none">
-          <Tabs defaultValue="acoes" className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            <TabsList className="mx-4 mt-3 w-auto self-start h-8 shrink-0">
-              <TabsTrigger value="acoes" className="text-xs h-7">Ações</TabsTrigger>
-              <TabsTrigger value="intel" className="text-xs h-7">Inteligência</TabsTrigger>
-              <TabsTrigger value="cadencia" className="text-xs h-7">
-                Cadência
-                {cadenciaHistory && cadenciaHistory.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-[9px] h-4 px-1">{cadenciaHistory.length}</Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
+        {/* CENTER: AI Copilot Panel */}
+        <div className={`w-full md:w-[340px] lg:w-[380px] shrink-0 flex flex-col min-h-0 overflow-hidden border-r border-border bg-gradient-to-b from-primary/[0.02] to-transparent ${isMobile && mobileTab !== "ai" ? "hidden" : ""}`}>
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-4">
+              {/* Phase indicator */}
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5">
+                <div className="flex items-center gap-2 mb-1.5">
+                  {PHASE_ICONS[coaching?.phase ?? ""] ?? <ArrowRight className="h-3.5 w-3.5" />}
+                  <span className="text-xs font-semibold text-primary">{coaching?.phase_label ?? "Analisando..."}</span>
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  {coaching?.phase_desc ?? "Clique em 'Atualizar IA' para iniciar o coaching em tempo real."}
+                </p>
+              </div>
 
-            {/* Tab: Ações */}
-            <TabsContent value="acoes" className="flex-1 overflow-hidden mt-0">
-              <ScrollArea className="h-full">
-                <div className="px-4 py-3 space-y-4">
-                  {/* Quick Actions */}
-                  <div>
-                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ações Rápidas</h3>
-                    <div className="space-y-1.5">
-                      {prospect.status === "novo" && onAbordar && (
-                        <ActionButton icon={<Megaphone className="h-4 w-4" />} label="Enviar Abordagem" desc="Envia script automático via WhatsApp" loading={loadingAbordar} onClick={() => onAbordar(prospect)} />
-                      )}
-                      {["abordado", "respondeu"].includes(prospect.status) && onCadencia && (
-                        <ActionButton icon={<PlayCircle className="h-4 w-4" />} label="Iniciar Cadência" desc="Inicia sequência de follow-ups" loading={loadingCadencia} onClick={() => onCadencia(prospect)} />
-                      )}
-                      {prospect.status === "frio" && onReativar && (
-                        <ActionButton icon={<RotateCcw className="h-4 w-4" />} label="Reativar Lead" desc="Volta para cadência D1" loading={loadingReativar} onClick={() => onReativar(prospect)} />
-                      )}
-                      <ActionButton icon={<BrainCircuit className="h-4 w-4" />} label="Classificar com IA" desc="Analisa conversas e classifica o lead" loading={loadingClassify} onClick={handleClassify} />
-                    </div>
-                  </div>
-
-                  {/* Move Stage — ALL stages as buttons */}
-                  <div>
-                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mover Etapa</h3>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {PIPELINE_STAGES.map(s => (
-                        <button
-                          key={s.key}
-                          onClick={() => handleMoveStatus(s.key)}
-                          disabled={s.key === prospect.status}
-                          className={`flex items-center gap-2 text-xs text-left rounded-lg border p-2.5 transition-colors ${
-                            s.key === prospect.status
-                              ? "border-primary/40 bg-primary/10 text-primary font-medium"
-                              : "border-border hover:border-primary/30 hover:bg-primary/5"
-                          }`}
-                        >
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${s.color}`} />
-                          <span className="truncate">{s.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Prospect Details */}
-                  <div>
-                    <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Detalhes</h3>
-                    <div className="rounded-lg border border-border divide-y divide-border">
-                      <DetailRow label="WhatsApp" value={prospect.whatsapp} />
-                      <DetailRow label="Responsável" value={prospect.responsavel} />
-                      <DetailRow label="Origem" value={prospect.origem || "—"} />
-                      <DetailRow label="Faturamento" value={prospect.faturamento_estimado || "—"} />
-                      <DetailRow label="Script Usado" value={prospect.script_usado || "—"} />
-                      <DetailRow label="Abordagem" value={prospect.data_abordagem ? new Date(prospect.data_abordagem).toLocaleDateString("pt-BR") : "—"} />
-                      <DetailRow label="Última Interação" value={timeAgo(prospect.data_ultima_interacao)} />
-                      {prospect.dia_cadencia !== null && <DetailRow label="Dia Cadência" value={`D${prospect.dia_cadencia}`} />}
-                    </div>
-                  </div>
-
-                  {prospect.resumo_conversa && (
-                    <div>
-                      <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Resumo IA</h3>
-                      <p className="text-xs text-muted-foreground leading-relaxed bg-primary/5 rounded-lg p-3 border border-primary/10">
-                        {prospect.resumo_conversa}
-                      </p>
-                    </div>
+              {/* Active script */}
+              {coaching?.active_script && (
+                <div className="rounded-xl border border-border p-3.5">
+                  <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <Megaphone className="h-3 w-3" />Script Ativo
+                  </h4>
+                  <p className="text-xs font-medium text-foreground mb-1">{coaching.active_script}</p>
+                  {coaching.script_content && (
+                    <p className="text-[10px] text-muted-foreground leading-relaxed line-clamp-4 whitespace-pre-wrap">
+                      {coaching.script_content.replace(/^(Scripts|Follow-up \w+):\n?/, "")}
+                    </p>
                   )}
+                </div>
+              )}
 
-                  {prospect.observacoes && (
-                    <div>
-                      <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Observações</h3>
-                      <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">{prospect.observacoes}</p>
+              {/* Intent + Tone */}
+              {coaching && (
+                <div className="flex gap-2">
+                  <div className="flex-1 rounded-lg border border-border p-2.5 text-center">
+                    <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Intenção</p>
+                    <p className="text-xs font-medium">{INTENT_LABELS[coaching.intent] ?? coaching.intent}</p>
+                  </div>
+                  {coaching.tom_recomendado && (
+                    <div className="flex-1 rounded-lg border border-border p-2.5 text-center">
+                      <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-0.5">Tom</p>
+                      <p className="text-[11px] font-medium truncate">{coaching.tom_recomendado}</p>
                     </div>
                   )}
                 </div>
-              </ScrollArea>
-            </TabsContent>
+              )}
 
-            {/* Tab: Inteligência */}
-            <TabsContent value="intel" className="flex-1 overflow-hidden mt-0">
-              <ScrollArea className="h-full">
-                <div className="px-4 py-3 space-y-4">
-                  {meddic && meddic.length > 0 && (
-                    <div>
-                      <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">MEDDIC Score</h3>
-                      <div className="space-y-2">
-                        {meddic.map(m => (
-                          <div key={m.id} className="rounded-lg border border-border p-3">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-xs font-medium text-foreground uppercase">{m.pilar}</span>
-                              <div className="flex items-center gap-1.5">
-                                <span className={`text-xs font-bold tabular ${m.score >= 7 ? "text-green-400" : m.score >= 4 ? "text-amber-400" : "text-red-400"}`}>
-                                  {m.score}/10
-                                </span>
-                                <span className="text-[10px] text-muted-foreground">({m.confianca}%)</span>
-                              </div>
-                            </div>
-                            {m.evidencia_citacao && (
-                              <p className="text-[11px] text-muted-foreground italic leading-relaxed">"{m.evidencia_citacao}"</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {sessionMemory && sessionMemory.length > 0 && (
-                    <div>
-                      <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Fatos Extraídos</h3>
-                      <div className="space-y-1.5">
-                        {sessionMemory.map(f => (
-                          <div key={f.id} className="flex items-start gap-2 rounded-lg border border-border p-2.5">
-                            <ChevronRight className="h-3 w-3 text-primary mt-0.5 shrink-0" />
-                            <div className="min-w-0">
-                              <span className="text-[11px] font-medium text-foreground">{f.fact_key}:</span>
-                              <span className="text-[11px] text-muted-foreground ml-1">{f.fact_value}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {(!meddic || meddic.length === 0) && (!sessionMemory || sessionMemory.length === 0) && (
-                    <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                      <BrainCircuit className="h-10 w-10 mb-3 opacity-30" />
-                      <p className="text-sm">Sem dados de inteligência</p>
-                      <p className="text-xs mt-1">Classifique o lead para gerar insights</p>
-                    </div>
-                  )}
+              {/* Alert */}
+              {coaching?.alerta && (
+                <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-amber-200/80 leading-relaxed">{coaching.alerta}</p>
                 </div>
-              </ScrollArea>
-            </TabsContent>
+              )}
 
-            {/* Tab: Cadência */}
-            <TabsContent value="cadencia" className="flex-1 overflow-hidden mt-0">
-              <ScrollArea className="h-full">
-                <div className="px-4 py-3 space-y-2.5">
-                  {(!cadenciaHistory || cadenciaHistory.length === 0) && (
-                    <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-                      <PlayCircle className="h-10 w-10 mb-3 opacity-30" />
-                      <p className="text-sm">Nenhum follow-up registrado</p>
-                      <p className="text-xs mt-1">Inicie a cadência para acompanhar</p>
-                    </div>
-                  )}
-                  {cadenciaHistory?.map(c => (
-                    <div key={c.id} className="rounded-lg border border-border p-3 space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-[10px] h-5">
-                            {c.dia === 0 ? "Abordagem" : `D${c.dia}`}
-                          </Badge>
-                          {c.script_usado && (
-                            <span className="text-[10px] text-muted-foreground">{c.script_usado}</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {c.status === "enviado" ? (
-                            <CheckCircle2 className="h-3 w-3 text-green-400" />
-                          ) : (
-                            <XCircle className="h-3 w-3 text-muted-foreground" />
-                          )}
-                          <span className="text-[10px] text-muted-foreground capitalize">{c.status}</span>
-                        </div>
+              {/* Insights */}
+              {coaching?.insights && coaching.insights.length > 0 && (
+                <div className="rounded-xl border border-border p-3.5">
+                  <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Lightbulb className="h-3 w-3" />Insights
+                  </h4>
+                  <div className="space-y-1.5">
+                    {coaching.insights.map((insight, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <ChevronRight className="h-3 w-3 text-primary mt-0.5 shrink-0" />
+                        <p className="text-[11px] text-foreground/80 leading-relaxed">{insight}</p>
                       </div>
-                      {c.enviado_em && (
-                        <p className="text-[10px] text-muted-foreground tabular">
-                          {new Date(c.enviado_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Next step */}
+              {coaching?.proximo_passo && (
+                <div className="rounded-xl border border-green-500/20 bg-green-500/5 p-3.5">
+                  <h4 className="text-[11px] font-semibold text-green-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <Target className="h-3 w-3" />Próximo Passo
+                  </h4>
+                  <p className="text-xs text-foreground/80 leading-relaxed">{coaching.proximo_passo}</p>
+                </div>
+              )}
+
+              {/* Suggested message */}
+              {coaching?.sugestao && (
+                <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-3.5">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-[11px] font-semibold text-primary uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3" />Mensagem Sugerida
+                    </h4>
+                    <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px]" onClick={handleSuggestReply} disabled={loadingSuggest}>
+                      {loadingSuggest ? <Loader2 className="h-3 w-3 animate-spin" /> : <RotateCcw className="h-3 w-3" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-foreground/90 whitespace-pre-wrap leading-relaxed mb-3">
+                    {coaching.sugestao}
+                  </p>
+                  <Button size="sm" className="w-full text-xs h-8 gap-1.5" onClick={handleUseSuggestion}>
+                    <Copy className="h-3 w-3" />Usar esta mensagem
+                  </Button>
+                </div>
+              )}
+
+              {/* Loading state */}
+              {loadingSuggest && !coaching && (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
+                  <p className="text-sm font-medium">Analisando conversa...</p>
+                  <p className="text-xs mt-1">A IA está preparando o coaching</p>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {!coaching && !loadingSuggest && (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <BrainCircuit className="h-10 w-10 mb-3 opacity-30" />
+                  <p className="text-sm font-medium">IA Coach</p>
+                  <p className="text-xs mt-1 text-center px-4">
+                    O coaching será ativado automaticamente quando o lead responder, ou clique em "Atualizar IA"
+                  </p>
+                  <Button size="sm" variant="outline" className="mt-3 text-xs gap-1.5" onClick={handleSuggestReply}>
+                    <Sparkles className="h-3.5 w-3.5" />Ativar Coaching
+                  </Button>
+                </div>
+              )}
+
+              {/* MEDDIC mini */}
+              {meddic && meddic.length > 0 && (
+                <div className="rounded-xl border border-border p-3.5">
+                  <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">MEDDIC</h4>
+                  <div className="space-y-1.5">
+                    {meddic.map(m => (
+                      <div key={m.id} className="flex items-center justify-between">
+                        <span className="text-[11px] text-foreground uppercase">{m.pilar}</span>
+                        <span className={`text-[11px] font-bold tabular ${m.score >= 7 ? "text-green-400" : m.score >= 4 ? "text-amber-400" : "text-red-400"}`}>
+                          {m.score}/10
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Session memory mini */}
+              {sessionMemory && sessionMemory.length > 0 && (
+                <div className="rounded-xl border border-border p-3.5">
+                  <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Fatos Extraídos</h4>
+                  <div className="space-y-1">
+                    {sessionMemory.slice(0, 6).map(f => (
+                      <div key={f.id} className="flex items-start gap-1.5">
+                        <ChevronRight className="h-2.5 w-2.5 text-primary mt-1 shrink-0" />
+                        <p className="text-[10px] text-muted-foreground">
+                          <span className="font-medium text-foreground">{f.fact_key}:</span> {f.fact_value}
                         </p>
-                      )}
-                      {c.mensagem_enviada && (
-                        <p className="text-[11px] bg-muted rounded-md p-2 whitespace-pre-wrap line-clamp-3">{c.mensagem_enviada}</p>
-                      )}
-                    </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+
+        {/* RIGHT: Actions Panel */}
+        <div className={`w-full md:w-[300px] lg:w-[320px] shrink-0 flex flex-col min-h-0 overflow-hidden bg-card/30 ${isMobile && mobileTab !== "acoes" ? "hidden" : ""}`}>
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-4">
+              {/* Quick Actions */}
+              <div>
+                <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ações Rápidas</h3>
+                <div className="space-y-1.5">
+                  {prospect.status === "novo" && onAbordar && (
+                    <ActionButton icon={<Megaphone className="h-4 w-4" />} label="Enviar Abordagem" desc="Script automático via WhatsApp" loading={loadingAbordar} onClick={() => onAbordar(prospect)} />
+                  )}
+                  {["abordado", "respondeu"].includes(prospect.status) && onCadencia && (
+                    <ActionButton icon={<PlayCircle className="h-4 w-4" />} label="Iniciar Cadência" desc="Sequência de follow-ups" loading={loadingCadencia} onClick={() => onCadencia(prospect)} />
+                  )}
+                  {prospect.status === "frio" && onReativar && (
+                    <ActionButton icon={<RotateCcw className="h-4 w-4" />} label="Reativar Lead" desc="Volta para cadência D1" loading={loadingReativar} onClick={() => onReativar(prospect)} />
+                  )}
+                  <ActionButton icon={<BrainCircuit className="h-4 w-4" />} label="Classificar com IA" desc="Analisa e classifica o lead" loading={loadingClassify} onClick={handleClassify} />
+                </div>
+              </div>
+
+              {/* Move Stage */}
+              <div>
+                <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mover Etapa</h3>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {PIPELINE_STAGES.map(s => (
+                    <button key={s.key} onClick={() => handleMoveStatus(s.key)} disabled={s.key === prospect.status}
+                      className={`flex items-center gap-2 text-xs text-left rounded-lg border p-2 transition-colors ${
+                        s.key === prospect.status
+                          ? "border-primary/40 bg-primary/10 text-primary font-medium"
+                          : "border-border hover:border-primary/30 hover:bg-primary/5"
+                      }`}>
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${s.color}`} />
+                      <span className="truncate text-[11px]">{s.label}</span>
+                    </button>
                   ))}
                 </div>
-              </ScrollArea>
-            </TabsContent>
-          </Tabs>
+              </div>
+
+              {/* Details */}
+              <div>
+                <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Detalhes</h3>
+                <div className="rounded-lg border border-border divide-y divide-border">
+                  <DetailRow label="WhatsApp" value={prospect.whatsapp} />
+                  <DetailRow label="Responsável" value={prospect.responsavel} />
+                  <DetailRow label="Origem" value={prospect.origem || "—"} />
+                  <DetailRow label="Faturamento" value={prospect.faturamento_estimado || "—"} />
+                  <DetailRow label="Script" value={prospect.script_usado || "—"} />
+                  <DetailRow label="Abordagem" value={prospect.data_abordagem ? new Date(prospect.data_abordagem).toLocaleDateString("pt-BR") : "—"} />
+                  <DetailRow label="Última Interação" value={timeAgo(prospect.data_ultima_interacao)} />
+                  {prospect.dia_cadencia !== null && <DetailRow label="Dia Cadência" value={`D${prospect.dia_cadencia}`} />}
+                </div>
+              </div>
+
+              {prospect.resumo_conversa && (
+                <div>
+                  <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Resumo IA</h3>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed bg-primary/5 rounded-lg p-3 border border-primary/10">
+                    {prospect.resumo_conversa}
+                  </p>
+                </div>
+              )}
+
+              {/* Cadência history */}
+              {cadenciaHistory && cadenciaHistory.length > 0 && (
+                <div>
+                  <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    Cadência <Badge variant="secondary" className="ml-1 text-[9px] h-4 px-1">{cadenciaHistory.length}</Badge>
+                  </h3>
+                  <div className="space-y-1.5">
+                    {cadenciaHistory.slice(0, 5).map(c => (
+                      <div key={c.id} className="rounded-lg border border-border p-2.5 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <Badge variant="secondary" className="text-[10px] h-5">{c.dia === 0 ? "Abordagem" : `D${c.dia}`}</Badge>
+                          <div className="flex items-center gap-1">
+                            {c.status === "enviado" ? <CheckCircle2 className="h-3 w-3 text-green-400" /> : <XCircle className="h-3 w-3 text-muted-foreground" />}
+                            <span className="text-[10px] text-muted-foreground capitalize">{c.status}</span>
+                          </div>
+                        </div>
+                        {c.mensagem_enviada && (
+                          <p className="text-[10px] bg-muted rounded-md p-1.5 whitespace-pre-wrap line-clamp-2">{c.mensagem_enviada}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </div>
       </div>
     </div>,
@@ -658,15 +692,12 @@ export function ProspectWorkspace({
   );
 }
 
-/* ── Helper components ── */
+/* ── Helpers ── */
 
 function ActionButton({ icon, label, desc, loading, onClick }: { icon: React.ReactNode; label: string; desc: string; loading?: boolean; onClick: () => void }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={loading}
-      className="w-full flex items-center gap-3 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 p-3 transition-colors text-left disabled:opacity-50"
-    >
+    <button onClick={onClick} disabled={loading}
+      className="w-full flex items-center gap-3 rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 p-2.5 transition-colors text-left disabled:opacity-50">
       <div className="shrink-0 text-primary">{loading ? <Loader2 className="h-4 w-4 animate-spin" /> : icon}</div>
       <div className="min-w-0">
         <p className="text-xs font-medium text-foreground">{label}</p>
@@ -679,9 +710,9 @@ function ActionButton({ icon, label, desc, loading, onClick }: { icon: React.Rea
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between px-3 py-2">
+    <div className="flex items-center justify-between px-3 py-1.5">
       <span className="text-[11px] text-muted-foreground">{label}</span>
-      <span className="text-[11px] text-foreground font-medium">{value}</span>
+      <span className="text-[11px] text-foreground font-medium truncate ml-2 max-w-[150px] text-right">{value}</span>
     </div>
   );
 }
