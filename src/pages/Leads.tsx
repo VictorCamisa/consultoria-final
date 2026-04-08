@@ -866,6 +866,10 @@ function LeadDetailPanel({
   formatPhone,
   getScoreColor,
   getFonteBadge,
+  onPromote,
+  onAbordar,
+  promotingId,
+  abordandoId,
 }: {
   lead: UnifiedLead;
   onClose: () => void;
@@ -873,6 +877,10 @@ function LeadDetailPanel({
   formatPhone: (p: string | null) => string;
   getScoreColor: (s: number | null) => string;
   getFonteBadge: (f: "prospect" | "lead_raw") => { label: string; color: string };
+  onPromote: (lead: UnifiedLead) => void;
+  onAbordar: (lead: UnifiedLead) => void;
+  promotingId: string | null;
+  abordandoId: string | null;
 }) {
   const st = STATUS_MAP[lead.status] || { label: lead.status, color: "bg-muted text-muted-foreground border-border" };
   const cl = lead.classificacao_ia ? CLASSIFICACAO_MAP[lead.classificacao_ia] : null;
