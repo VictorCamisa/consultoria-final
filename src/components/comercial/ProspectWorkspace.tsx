@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,12 +7,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import {
   Send, Sparkles, Loader2, BrainCircuit, CheckCircle2, XCircle,
-  ExternalLink, X, Phone, MapPin, Instagram, Globe, User,
-  Megaphone, PlayCircle, RotateCcw, ArrowRightLeft, FileText, Copy, ChevronRight,
+  X, Phone, MapPin, Instagram, Globe, User,
+  Megaphone, PlayCircle, RotateCcw, ChevronRight, Copy,
 } from "lucide-react";
 import { Prospect, PIPELINE_STAGES, classificacaoConfig, scoreColor, timeAgo } from "./types";
 
@@ -38,6 +37,8 @@ export function ProspectWorkspace({
   const [loadingSuggest, setLoadingSuggest] = useState(false);
   const [loadingClassify, setLoadingClassify] = useState(false);
   const [loadingSend, setLoadingSend] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState<{ text: string; intent: string } | null>(null);
+  const [lastInboundId, setLastInboundId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: conversas, refetch: refetchConversas } = useQuery({
@@ -97,7 +98,26 @@ export function ProspectWorkspace({
     },
   });
 
-  // Realtime
+  // Auto-suggest when new inbound message arrives
+  const triggerAutoSuggest = useCallback(async () => {
+    if (!prospect) return;
+    setLoadingSuggest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("suggest-reply", {
+        body: { prospect_id: prospect.id },
+      });
+      if (error) throw error;
+      if (data?.sugestao) {
+        setAiSuggestion({ text: data.sugestao, intent: data.intent ?? "padrao" });
+      }
+    } catch {
+      // Silent fail for auto-suggest
+    } finally {
+      setLoadingSuggest(false);
+    }
+  }, [prospect]);
+
+  // Realtime — auto-suggest on new inbound
   useEffect(() => {
     if (!prospect?.id) return;
     const channel = supabase
@@ -105,13 +125,19 @@ export function ProspectWorkspace({
       .on("postgres_changes", {
         event: "INSERT", schema: "public", table: "consultoria_conversas",
         filter: `prospect_id=eq.${prospect.id}`,
-      }, () => {
+      }, (payload) => {
         refetchConversas();
         queryClient.invalidateQueries({ queryKey: ["unread-counts"] });
+        // Auto-suggest when lead responds
+        const newMsg = payload.new as { direcao?: string; id?: string };
+        if (newMsg.direcao === "entrada" && newMsg.id !== lastInboundId) {
+          setLastInboundId(newMsg.id ?? null);
+          triggerAutoSuggest();
+        }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [prospect?.id, refetchConversas, queryClient]);
+  }, [prospect?.id, refetchConversas, queryClient, triggerAutoSuggest, lastInboundId]);
 
   // Auto-scroll
   useEffect(() => {
@@ -136,6 +162,17 @@ export function ProspectWorkspace({
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  // Initial auto-suggest on open if there are inbound messages
+  useEffect(() => {
+    if (!prospect?.id || !conversas) return;
+    const lastInbound = [...conversas].reverse().find(m => m.direcao === "entrada");
+    if (lastInbound && !aiSuggestion && !loadingSuggest) {
+      triggerAutoSuggest();
+    }
+    // Only run once on initial load
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prospect?.id, conversas?.length]);
+
   const handleSuggestReply = async () => {
     if (!prospect) return;
     setLoadingSuggest(true);
@@ -145,13 +182,20 @@ export function ProspectWorkspace({
       });
       if (error) throw error;
       if (data?.sugestao) {
-        setMensagem(data.sugestao);
+        setAiSuggestion({ text: data.sugestao, intent: data.intent ?? "padrao" });
         toast({ title: "Sugestão gerada pela IA" });
       }
     } catch (err: unknown) {
       toast({ title: "Erro ao gerar sugestão", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
       setLoadingSuggest(false);
+    }
+  };
+
+  const handleUseSuggestion = () => {
+    if (aiSuggestion) {
+      setMensagem(aiSuggestion.text);
+      setAiSuggestion(null);
     }
   };
 
@@ -192,6 +236,7 @@ export function ProspectWorkspace({
       if (error) throw error;
       if (data?.success) {
         setMensagem("");
+        setAiSuggestion(null);
         refetchConversas();
         toast({ title: "Mensagem enviada!" });
       }
@@ -217,11 +262,19 @@ export function ProspectWorkspace({
   const classif = classificacaoConfig(prospect.classificacao_ia);
   const stageObj = PIPELINE_STAGES.find(s => s.key === prospect.status);
 
+  const INTENT_LABELS: Record<string, string> = {
+    preco: "💰 Objeção de preço",
+    concorrente: "🏢 Comparando concorrente",
+    ceticismo: "🤔 Ceticismo / quer provas",
+    objecao: "🛑 Objeção geral",
+    interesse: "🟢 Demonstrou interesse",
+    padrao: "💬 Conversa padrão",
+  };
+
   return createPortal(
     <div className="fixed inset-0 z-[100] flex flex-col bg-background animate-in fade-in-0 duration-200">
       {/* ── Top Bar ── */}
       <div className="flex items-center gap-4 px-6 py-3 border-b border-border bg-card shrink-0">
-        {/* Left: Prospect identity */}
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center shrink-0">
             <span className="text-sm font-bold text-primary">
@@ -232,11 +285,11 @@ export function ProspectWorkspace({
             <h1 className="text-base font-semibold text-foreground truncate">{prospect.nome_negocio}</h1>
             <p className="text-xs text-muted-foreground flex items-center gap-1.5">
               <MapPin className="h-3 w-3" />{prospect.cidade}
-              <span className="text-border">·</span>
+              <span className="opacity-30">·</span>
               {prospect.nicho}
               {prospect.decisor && (
                 <>
-                  <span className="text-border">·</span>
+                  <span className="opacity-30">·</span>
                   <User className="h-3 w-3" />{prospect.decisor}
                 </>
               )}
@@ -244,7 +297,6 @@ export function ProspectWorkspace({
           </div>
         </div>
 
-        {/* Center: Classification + Score + Stage */}
         <div className="flex items-center gap-3">
           {prospect.classificacao_ia ? (
             <Badge className={`text-xs ${classif.bg}`}>
@@ -261,22 +313,11 @@ export function ProspectWorkspace({
 
           <div className="h-5 w-px bg-border" />
 
-          <Select value={prospect.status} onValueChange={handleMoveStatus}>
-            <SelectTrigger className="h-8 text-xs w-auto gap-1.5 border-border">
-              <div className={`w-2 h-2 rounded-full ${stageObj?.color}`} />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PIPELINE_STAGES.map(s => (
-                <SelectItem key={s.key} value={s.key}>
-                  <span className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${s.color}`} />
-                    {s.label}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Stage buttons instead of Select dropdown */}
+          <div className="flex items-center gap-1">
+            <span className={`w-2 h-2 rounded-full ${stageObj?.color}`} />
+            <span className="text-xs font-medium text-foreground">{stageObj?.label}</span>
+          </div>
 
           <Button size="sm" variant="outline" className="text-xs h-8" onClick={handleClassify} disabled={loadingClassify}>
             {loadingClassify ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BrainCircuit className="h-3.5 w-3.5 mr-1" />}
@@ -284,7 +325,6 @@ export function ProspectWorkspace({
           </Button>
         </div>
 
-        {/* Right: Links + Close */}
         <div className="flex items-center gap-2">
           <a
             href={`https://wa.me/${prospect.whatsapp.replace(/\D/g, "")}`}
@@ -312,7 +352,7 @@ export function ProspectWorkspace({
       </div>
 
       {/* ── Main Content: 2 columns ── */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* LEFT: Chat */}
         <div className="flex-1 flex flex-col border-r border-border min-w-0">
           {/* Messages */}
@@ -354,22 +394,52 @@ export function ProspectWorkspace({
             </div>
           </ScrollArea>
 
+          {/* AI Suggestion banner */}
+          {aiSuggestion && (
+            <div className="border-t border-primary/20 bg-primary/5 px-6 py-3">
+              <div className="max-w-2xl mx-auto">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-[11px] font-semibold text-primary">Sugestão da IA</span>
+                  <Badge variant="outline" className="text-[10px] h-5 border-primary/30 text-primary">
+                    {INTENT_LABELS[aiSuggestion.intent] || aiSuggestion.intent}
+                  </Badge>
+                </div>
+                <p className="text-xs text-foreground/80 whitespace-pre-wrap leading-relaxed mb-2">
+                  {aiSuggestion.text}
+                </p>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="default" className="text-[11px] h-7 px-3" onClick={handleUseSuggestion}>
+                    <Copy className="h-3 w-3 mr-1" />Usar esta sugestão
+                  </Button>
+                  <Button size="sm" variant="ghost" className="text-[11px] h-7 px-3" onClick={handleSuggestReply} disabled={loadingSuggest}>
+                    {loadingSuggest ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                    Gerar outra
+                  </Button>
+                  <Button size="sm" variant="ghost" className="text-[11px] h-7 px-2 text-muted-foreground" onClick={() => setAiSuggestion(null)}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Input area */}
-          <div className="border-t border-border px-6 py-4 bg-card/50">
-            <div className="max-w-2xl mx-auto space-y-3">
+          <div className="border-t border-border px-6 py-3 bg-card/50">
+            <div className="max-w-2xl mx-auto space-y-2">
               <Textarea
                 value={mensagem}
                 onChange={e => setMensagem(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleSendMessage(); } }}
                 placeholder="Digite uma mensagem... (Ctrl+Enter para enviar)"
-                className="min-h-[80px] max-h-[140px] resize-none text-sm bg-background"
+                className="min-h-[64px] max-h-[120px] resize-none text-sm bg-background"
               />
               <div className="flex gap-2">
-                <Button variant="outline" className="text-xs h-9 flex-1" onClick={handleSuggestReply} disabled={loadingSuggest}>
+                <Button variant="outline" className="text-xs h-8 flex-1" onClick={handleSuggestReply} disabled={loadingSuggest}>
                   {loadingSuggest ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
                   Sugerir IA
                 </Button>
-                <Button className="text-xs h-9 flex-1" onClick={handleSendMessage} disabled={loadingSend || !mensagem.trim()}>
+                <Button className="text-xs h-8 flex-1" onClick={handleSendMessage} disabled={loadingSend || !mensagem.trim()}>
                   {loadingSend ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
                   Enviar
                 </Button>
@@ -379,9 +449,9 @@ export function ProspectWorkspace({
         </div>
 
         {/* RIGHT: Intelligence Panel */}
-        <div className="w-[380px] shrink-0 flex flex-col min-h-0 bg-card/30">
-          <Tabs defaultValue="acoes" className="flex-1 flex flex-col min-h-0">
-            <TabsList className="mx-4 mt-4 w-auto self-start h-8">
+        <div className="w-[380px] shrink-0 flex flex-col min-h-0 overflow-hidden bg-card/30">
+          <Tabs defaultValue="acoes" className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <TabsList className="mx-4 mt-3 w-auto self-start h-8 shrink-0">
               <TabsTrigger value="acoes" className="text-xs h-7">Ações</TabsTrigger>
               <TabsTrigger value="intel" className="text-xs h-7">Inteligência</TabsTrigger>
               <TabsTrigger value="cadencia" className="text-xs h-7">
@@ -393,9 +463,9 @@ export function ProspectWorkspace({
             </TabsList>
 
             {/* Tab: Ações */}
-            <TabsContent value="acoes" className="flex-1 min-h-0 mt-0">
-              <ScrollArea className="h-full px-4 py-4">
-                <div className="space-y-4">
+            <TabsContent value="acoes" className="flex-1 overflow-hidden mt-0">
+              <ScrollArea className="h-full">
+                <div className="px-4 py-3 space-y-4">
                   {/* Quick Actions */}
                   <div>
                     <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ações Rápidas</h3>
@@ -413,33 +483,26 @@ export function ProspectWorkspace({
                     </div>
                   </div>
 
-                  {/* Move Stage */}
+                  {/* Move Stage — ALL stages as buttons */}
                   <div>
                     <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mover Etapa</h3>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {PIPELINE_STAGES.filter(s => s.key !== prospect.status).slice(0, 6).map(s => (
+                      {PIPELINE_STAGES.map(s => (
                         <button
                           key={s.key}
                           onClick={() => handleMoveStatus(s.key)}
-                          className="flex items-center gap-2 text-xs text-left rounded-lg border border-border hover:border-primary/30 hover:bg-primary/5 p-2.5 transition-colors"
+                          disabled={s.key === prospect.status}
+                          className={`flex items-center gap-2 text-xs text-left rounded-lg border p-2.5 transition-colors ${
+                            s.key === prospect.status
+                              ? "border-primary/40 bg-primary/10 text-primary font-medium"
+                              : "border-border hover:border-primary/30 hover:bg-primary/5"
+                          }`}
                         >
                           <span className={`w-2 h-2 rounded-full shrink-0 ${s.color}`} />
                           <span className="truncate">{s.label}</span>
                         </button>
                       ))}
                     </div>
-                    {PIPELINE_STAGES.filter(s => s.key !== prospect.status).length > 6 && (
-                      <Select value="" onValueChange={handleMoveStatus}>
-                        <SelectTrigger className="h-8 text-xs mt-1.5">
-                          <span className="text-muted-foreground">Mais etapas...</span>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PIPELINE_STAGES.filter(s => s.key !== prospect.status).slice(6).map(s => (
-                            <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
                   </div>
 
                   {/* Prospect Details */}
@@ -457,7 +520,6 @@ export function ProspectWorkspace({
                     </div>
                   </div>
 
-                  {/* Resumo */}
                   {prospect.resumo_conversa && (
                     <div>
                       <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Resumo IA</h3>
@@ -467,7 +529,6 @@ export function ProspectWorkspace({
                     </div>
                   )}
 
-                  {/* Observações */}
                   {prospect.observacoes && (
                     <div>
                       <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Observações</h3>
@@ -479,10 +540,9 @@ export function ProspectWorkspace({
             </TabsContent>
 
             {/* Tab: Inteligência */}
-            <TabsContent value="intel" className="flex-1 min-h-0 mt-0">
-              <ScrollArea className="h-full px-4 py-4">
-                <div className="space-y-4">
-                  {/* MEDDIC */}
+            <TabsContent value="intel" className="flex-1 overflow-hidden mt-0">
+              <ScrollArea className="h-full">
+                <div className="px-4 py-3 space-y-4">
                   {meddic && meddic.length > 0 && (
                     <div>
                       <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">MEDDIC Score</h3>
@@ -495,9 +555,7 @@ export function ProspectWorkspace({
                                 <span className={`text-xs font-bold tabular ${m.score >= 7 ? "text-green-400" : m.score >= 4 ? "text-amber-400" : "text-red-400"}`}>
                                   {m.score}/10
                                 </span>
-                                <span className="text-[10px] text-muted-foreground">
-                                  ({m.confianca}%)
-                                </span>
+                                <span className="text-[10px] text-muted-foreground">({m.confianca}%)</span>
                               </div>
                             </div>
                             {m.evidencia_citacao && (
@@ -509,7 +567,6 @@ export function ProspectWorkspace({
                     </div>
                   )}
 
-                  {/* Session Memory / Facts */}
                   {sessionMemory && sessionMemory.length > 0 && (
                     <div>
                       <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Fatos Extraídos</h3>
@@ -539,9 +596,9 @@ export function ProspectWorkspace({
             </TabsContent>
 
             {/* Tab: Cadência */}
-            <TabsContent value="cadencia" className="flex-1 min-h-0 mt-0">
-              <ScrollArea className="h-full px-4 py-4">
-                <div className="space-y-2.5">
+            <TabsContent value="cadencia" className="flex-1 overflow-hidden mt-0">
+              <ScrollArea className="h-full">
+                <div className="px-4 py-3 space-y-2.5">
                   {(!cadenciaHistory || cadenciaHistory.length === 0) && (
                     <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
                       <PlayCircle className="h-10 w-10 mb-3 opacity-30" />
