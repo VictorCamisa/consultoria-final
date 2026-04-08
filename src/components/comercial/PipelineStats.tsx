@@ -16,12 +16,12 @@ export function PipelineStats({ prospects }: Props) {
 
   const stats = [
     { label: "Total", value: total, icon: Users, accent: "bg-foreground/5 text-foreground" },
-    { label: "Novos", value: novos, icon: Users, accent: "bg-primary/8 text-primary" },
-    { label: "Quentes", value: quentes, icon: Flame, accent: "bg-red-50 text-red-600" },
-    { label: "Cadência", value: emCadencia, icon: RefreshCw, accent: "bg-violet-50 text-violet-600" },
-    { label: "Responderam", value: responderam, icon: MessageSquare, accent: "bg-amber-50 text-amber-600" },
-    { label: "Calls", value: callsAgendadas, icon: CalendarCheck, accent: "bg-purple-50 text-purple-600" },
-    { label: "Fechados", value: fechados, icon: Trophy, accent: "bg-emerald-50 text-emerald-600" },
+    { label: "Novos", value: novos, icon: Users, accent: "bg-primary/15 text-primary" },
+    { label: "Quentes", value: quentes, icon: Flame, accent: "bg-red-500/15 text-red-400" },
+    { label: "Cadência", value: emCadencia, icon: RefreshCw, accent: "bg-violet-500/15 text-violet-400" },
+    { label: "Responderam", value: responderam, icon: MessageSquare, accent: "bg-amber-500/15 text-amber-400" },
+    { label: "Calls", value: callsAgendadas, icon: CalendarCheck, accent: "bg-purple-500/15 text-purple-400" },
+    { label: "Fechados", value: fechados, icon: Trophy, accent: "bg-emerald-500/15 text-emerald-400" },
   ];
 
   return (
