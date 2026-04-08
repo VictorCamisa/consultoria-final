@@ -131,8 +131,8 @@ export default function Configuracoes() {
   }
 
   const getStateBadge = (state: string) => {
-    if (state === "open") return <Badge className="bg-green-600 text-white">Conectado</Badge>;
-    if (state === "connecting") return <Badge variant="outline" className="text-yellow-600 border-yellow-600">Conectando...</Badge>;
+    if (state === "open") return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Conectado</Badge>;
+    if (state === "connecting") return <Badge variant="outline" className="text-yellow-400 border-yellow-500/30">Conectando...</Badge>;
     return <Badge variant="outline" className="text-muted-foreground">Desconectado</Badge>;
   };
 
