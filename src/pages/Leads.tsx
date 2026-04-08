@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useCallback } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,8 +12,9 @@ import {
   ChevronDown, ChevronRight, ExternalLink, Eye, TrendingUp,
   Flame, Snowflake, Thermometer, X, Building2, Calendar,
   ArrowUpDown, LayoutGrid, LayoutList, SlidersHorizontal,
-  Database, UserCheck, Inbox,
+  Database, UserCheck, Inbox, Rocket, Loader2, Megaphone, PlayCircle,
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Prospect = Tables<"consultoria_prospects">;
@@ -152,6 +153,7 @@ type ViewMode = "grid" | "list";
 type FonteFilter = "todos" | "lead_raw" | "prospect";
 
 export default function Leads() {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [fonteFilter, setFonteFilter] = useState<FonteFilter>("todos");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
@@ -164,6 +166,8 @@ export default function Leads() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [selectedLead, setSelectedLead] = useState<UnifiedLead | null>(null);
+  const [promotingId, setPromotingId] = useState<string | null>(null);
+  const [abordandoId, setAbordandoId] = useState<string | null>(null);
 
   /* ── Fetch both tables ─────────────────────────── */
   const { data: prospects = [], isLoading: loadingProspects } = useQuery({
@@ -191,6 +195,65 @@ export default function Leads() {
   });
 
   const isLoading = loadingProspects || loadingRaw;
+
+  /* ── Promote lead_raw → CRM prospect ───────────── */
+  const handlePromote = useCallback(async (lead: UnifiedLead) => {
+    if (lead.fonte !== "lead_raw") return;
+    if (!lead.telefone && !lead.email) {
+      toast({ title: "Lead sem contato", description: "É necessário pelo menos telefone ou email para promover.", variant: "destructive" });
+      return;
+    }
+    setPromotingId(lead.id);
+    try {
+      const { error: insertError } = await supabase.from("consultoria_prospects").insert({
+        nome_negocio: lead.nome,
+        whatsapp: lead.telefone || "",
+        cidade: lead.cidade || "Não informada",
+        nicho: lead.nicho || "Outro",
+        decisor: lead.decisor,
+        site: lead.site,
+        instagram: lead.instagram,
+        faturamento_estimado: lead.faturamento_estimado,
+        origem: lead.origem || "lista",
+        status: "novo",
+        observacoes: lead.observacoes || (lead.email ? `Email: ${lead.email}` : null),
+      });
+      if (insertError) throw insertError;
+
+      const { error: updateError } = await supabase
+        .from("leads_raw")
+        .update({ status: "promoted" })
+        .eq("id", lead.id);
+      if (updateError) throw updateError;
+
+      queryClient.invalidateQueries({ queryKey: ["all-prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leads-raw"] });
+      queryClient.invalidateQueries({ queryKey: ["prospects"] });
+      setSelectedLead(null);
+      toast({ title: `${lead.nome} promovido para o CRM!`, description: "O lead agora aparece no Pipeline Comercial." });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao promover", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    } finally {
+      setPromotingId(null);
+    }
+  }, [queryClient]);
+
+  /* ── Abordar prospect direto do módulo Leads ────── */
+  const handleAbordar = useCallback(async (lead: UnifiedLead) => {
+    if (lead.fonte !== "prospect") return;
+    setAbordandoId(lead.id);
+    try {
+      const { error } = await supabase.functions.invoke("abordar-prospect", { body: { prospect_id: lead.id } });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["all-prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["prospects"] });
+      toast({ title: `Script enviado para ${lead.nome}` });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao abordar", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    } finally {
+      setAbordandoId(null);
+    }
+  }, [queryClient]);
 
   /* ── Unified list ──────────────────────────────── */
   const allLeads = useMemo(() => {
@@ -544,6 +607,10 @@ export default function Leads() {
               getFonteBadge={getFonteBadge}
               onSelect={() => setSelectedLead(selectedLead?.id === lead.id && selectedLead?.fonte === lead.fonte ? null : lead)}
               isSelected={selectedLead?.id === lead.id && selectedLead?.fonte === lead.fonte}
+              onPromote={handlePromote}
+              onAbordar={handleAbordar}
+              promotingId={promotingId}
+              abordandoId={abordandoId}
             />
           ))}
         </div>
@@ -616,6 +683,10 @@ export default function Leads() {
           formatPhone={formatPhone}
           getScoreColor={getScoreColor}
           getFonteBadge={getFonteBadge}
+          onPromote={handlePromote}
+          onAbordar={handleAbordar}
+          promotingId={promotingId}
+          abordandoId={abordandoId}
         />
       )}
     </div>
@@ -632,6 +703,10 @@ function LeadCard({
   getFonteBadge,
   onSelect,
   isSelected,
+  onPromote,
+  onAbordar,
+  promotingId,
+  abordandoId,
 }: {
   lead: UnifiedLead;
   formatDate: (d: string | null) => string;
@@ -641,6 +716,10 @@ function LeadCard({
   getFonteBadge: (f: "prospect" | "lead_raw") => { label: string; color: string };
   onSelect: () => void;
   isSelected: boolean;
+  onPromote: (lead: UnifiedLead) => void;
+  onAbordar: (lead: UnifiedLead) => void;
+  promotingId: string | null;
+  abordandoId: string | null;
 }) {
   const st = STATUS_MAP[lead.status] || { label: lead.status, color: "bg-muted text-muted-foreground border-border", icon: Eye };
   const cl = lead.classificacao_ia ? CLASSIFICACAO_MAP[lead.classificacao_ia] : null;
@@ -743,6 +822,38 @@ function LeadCard({
           <span>{formatDate(lead.created_at)}</span>
         </div>
       </div>
+
+      {/* Actions */}
+      <div className="flex gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
+        {lead.fonte === "lead_raw" && lead.raw_status !== "promoted" && (
+          <Button
+            size="sm"
+            className="text-[11px] h-7 px-2.5 flex-1 gap-1"
+            onClick={() => onPromote(lead)}
+            disabled={promotingId === lead.id}
+          >
+            {promotingId === lead.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3 w-3" />}
+            Enviar pro CRM
+          </Button>
+        )}
+        {lead.fonte === "prospect" && lead.status === "novo" && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-[11px] h-7 px-2.5 flex-1 gap-1"
+            onClick={() => onAbordar(lead)}
+            disabled={abordandoId === lead.id}
+          >
+            {abordandoId === lead.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Megaphone className="h-3 w-3" />}
+            Abordar
+          </Button>
+        )}
+        {lead.fonte === "lead_raw" && lead.raw_status === "promoted" && (
+          <Badge variant="secondary" className="text-[10px]">
+            <UserCheck className="h-3 w-3 mr-1" /> Já no CRM
+          </Badge>
+        )}
+      </div>
     </div>
   );
 }
@@ -755,6 +866,10 @@ function LeadDetailPanel({
   formatPhone,
   getScoreColor,
   getFonteBadge,
+  onPromote,
+  onAbordar,
+  promotingId,
+  abordandoId,
 }: {
   lead: UnifiedLead;
   onClose: () => void;
@@ -762,6 +877,10 @@ function LeadDetailPanel({
   formatPhone: (p: string | null) => string;
   getScoreColor: (s: number | null) => string;
   getFonteBadge: (f: "prospect" | "lead_raw") => { label: string; color: string };
+  onPromote: (lead: UnifiedLead) => void;
+  onAbordar: (lead: UnifiedLead) => void;
+  promotingId: string | null;
+  abordandoId: string | null;
 }) {
   const st = STATUS_MAP[lead.status] || { label: lead.status, color: "bg-muted text-muted-foreground border-border" };
   const cl = lead.classificacao_ia ? CLASSIFICACAO_MAP[lead.classificacao_ia] : null;
@@ -783,6 +902,54 @@ function LeadDetailPanel({
         <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0">
           <X className="h-4 w-4" />
         </Button>
+      </div>
+
+      {/* Action bar */}
+      <div className="px-4 py-3 border-b border-border flex gap-2">
+        {lead.fonte === "lead_raw" && lead.raw_status !== "promoted" && (
+          <Button
+            className="flex-1 gap-1.5"
+            size="sm"
+            onClick={() => onPromote(lead)}
+            disabled={promotingId === lead.id}
+          >
+            {promotingId === lead.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
+            Enviar para o CRM
+          </Button>
+        )}
+        {lead.fonte === "lead_raw" && lead.raw_status === "promoted" && (
+          <Badge variant="secondary" className="text-xs py-1.5 px-3">
+            <UserCheck className="h-3.5 w-3.5 mr-1.5" /> Já promovido para o CRM
+          </Badge>
+        )}
+        {lead.fonte === "prospect" && lead.status === "novo" && (
+          <Button
+            className="flex-1 gap-1.5"
+            size="sm"
+            onClick={() => onAbordar(lead)}
+            disabled={abordandoId === lead.id}
+          >
+            {abordandoId === lead.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Megaphone className="h-3.5 w-3.5" />}
+            Abordar via WhatsApp
+          </Button>
+        )}
+        {lead.fonte === "prospect" && lead.telefone && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            asChild
+          >
+            <a
+              href={`https://wa.me/${lead.telefone.replace(/\D/g, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Phone className="h-3.5 w-3.5" />
+              WhatsApp
+            </a>
+          </Button>
+        )}
       </div>
 
       <ScrollArea className="flex-1">
