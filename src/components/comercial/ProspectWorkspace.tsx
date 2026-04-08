@@ -362,12 +362,12 @@ export function ProspectWorkspace({
         </Button>
       </div>
 
-      {/* ── Main Content: 2 columns ── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      {/* ── Main Content: 2 columns on desktop, tabbed on mobile ── */}
+      <div className="flex flex-col sm:flex-row flex-1 min-h-0 overflow-hidden">
         {/* LEFT: Chat */}
-        <div className="flex-1 flex flex-col border-r border-border min-w-0">
+        <div className="flex-1 flex flex-col border-b sm:border-b-0 sm:border-r border-border min-w-0 min-h-0">
           {/* Messages */}
-          <ScrollArea className="flex-1 px-6 py-4" ref={scrollRef}>
+          <ScrollArea className="flex-1 px-3 sm:px-6 py-3 sm:py-4" ref={scrollRef}>
             <div className="max-w-2xl mx-auto space-y-3">
               {conversas?.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -436,7 +436,7 @@ export function ProspectWorkspace({
           )}
 
           {/* Input area */}
-          <div className="border-t border-border px-6 py-3 bg-card/50">
+          <div className="border-t border-border px-3 sm:px-6 py-2.5 sm:py-3 bg-card/50">
             <div className="max-w-2xl mx-auto space-y-2">
               <Textarea
                 value={mensagem}
@@ -460,7 +460,7 @@ export function ProspectWorkspace({
         </div>
 
         {/* RIGHT: Intelligence Panel */}
-        <div className="w-[380px] shrink-0 flex flex-col min-h-0 overflow-hidden bg-card/30">
+        <div className="w-full sm:w-[380px] shrink-0 flex flex-col min-h-0 overflow-hidden bg-card/30 max-h-[40vh] sm:max-h-none">
           <Tabs defaultValue="acoes" className="flex-1 flex flex-col min-h-0 overflow-hidden">
             <TabsList className="mx-4 mt-3 w-auto self-start h-8 shrink-0">
               <TabsTrigger value="acoes" className="text-xs h-7">Ações</TabsTrigger>
