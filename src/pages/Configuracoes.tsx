@@ -131,8 +131,8 @@ export default function Configuracoes() {
   }
 
   const getStateBadge = (state: string) => {
-    if (state === "open") return <Badge className="bg-green-600 text-white">Conectado</Badge>;
-    if (state === "connecting") return <Badge variant="outline" className="text-yellow-600 border-yellow-600">Conectando...</Badge>;
+    if (state === "open") return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Conectado</Badge>;
+    if (state === "connecting") return <Badge variant="outline" className="text-yellow-400 border-yellow-500/30">Conectando...</Badge>;
     return <Badge variant="outline" className="text-muted-foreground">Desconectado</Badge>;
   };
 
@@ -223,7 +223,7 @@ export default function Configuracoes() {
                           {testingEvolution === nicho ? (
                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
                           ) : testResults[nicho] === "ok" ? (
-                            <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                            <CheckCircle className="h-4 w-4 mr-2 text-green-400" />
                           ) : testResults[nicho] === "erro" ? (
                             <XCircle className="h-4 w-4 mr-2 text-destructive" />
                           ) : (
@@ -381,7 +381,7 @@ export default function Configuracoes() {
                   <Input value={WEBHOOK_URL} readOnly className="font-mono text-xs" />
                   <Button variant="outline" size="sm" onClick={handleCopyWebhook} className="shrink-0">
                     {copiedWebhook ? (
-                      <><CheckCircle className="h-4 w-4 mr-1 text-green-600" />Copiado</>
+                      <><CheckCircle className="h-4 w-4 mr-1 text-green-400" />Copiado</>
                     ) : (
                       <><Copy className="h-4 w-4 mr-1" />Copiar</>
                     )}
@@ -450,8 +450,8 @@ export default function Configuracoes() {
           <div className="flex flex-col items-center gap-4 py-4">
             {evo.connectionStatus === "connected" ? (
               <div className="flex flex-col items-center gap-3 py-8">
-                <CheckCircle className="h-16 w-16 text-green-600" />
-                <p className="text-lg font-medium text-green-600">WhatsApp conectado!</p>
+                <CheckCircle className="h-16 w-16 text-green-400" />
+                <p className="text-lg font-medium text-green-400">WhatsApp conectado!</p>
                 <p className="text-sm text-muted-foreground">Webhook configurado automaticamente.</p>
               </div>
             ) : evo.qrLoading ? (

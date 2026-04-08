@@ -16,9 +16,9 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   aguardando_imersao: { label: "Aguardando Imersão", className: "bg-warning text-warning-foreground" },
   imersao_realizada: { label: "Imersão Realizada", className: "bg-primary text-primary-foreground" },
   diagnostico_em_andamento: { label: "Diagnóstico em Andamento", className: "bg-primary text-primary-foreground" },
-  devolutiva_agendada: { label: "Devolutiva Agendada", className: "bg-purple-600 text-white" },
+  devolutiva_agendada: { label: "Devolutiva Agendada", className: "bg-purple-500/80 text-white" },
   devolutiva_realizada: { label: "Devolutiva Realizada", className: "bg-success text-success-foreground" },
-  convertido_recorrente: { label: "Convertido Recorrente", className: "bg-green-800 text-white" },
+  convertido_recorrente: { label: "Convertido Recorrente", className: "bg-green-600 text-white" },
   encerrado: { label: "Encerrado", className: "bg-muted text-muted-foreground" },
 };
 

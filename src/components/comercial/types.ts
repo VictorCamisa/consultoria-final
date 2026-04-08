@@ -23,9 +23,9 @@ export const PIPELINE_STAGES = [
 export const NICHOS = ["Estética", "Odonto", "Advocacia", "Revendas de Veículos"] as const;
 
 export const classificacaoConfig = (c: string | null) => {
-  if (c === "quente") return { label: "Quente", color: "text-red-600", bg: "bg-red-50 border-red-200 text-red-700", icon: "🔥" };
-  if (c === "morno") return { label: "Morno", color: "text-amber-600", bg: "bg-amber-50 border-amber-200 text-amber-700", icon: "🌡️" };
-  if (c === "frio") return { label: "Frio", color: "text-blue-600", bg: "bg-blue-50 border-blue-200 text-blue-700", icon: "❄️" };
+  if (c === "quente") return { label: "Quente", color: "text-red-400", bg: "bg-red-500/15 border-red-500/30 text-red-400", icon: "🔥" };
+  if (c === "morno") return { label: "Morno", color: "text-amber-400", bg: "bg-amber-500/15 border-amber-500/30 text-amber-400", icon: "🌡️" };
+  if (c === "frio") return { label: "Frio", color: "text-blue-400", bg: "bg-blue-500/15 border-blue-500/30 text-blue-400", icon: "❄️" };
   return { label: "—", color: "text-muted-foreground", bg: "bg-muted text-muted-foreground", icon: "" };
 };
 

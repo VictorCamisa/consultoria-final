@@ -125,25 +125,25 @@ function leadRawToUnified(l: LeadRaw): UnifiedLead {
 
 /* ── Status config ────────────────────────────── */
 const STATUS_MAP: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  novo: { label: "Novo", color: "bg-blue-100 text-blue-700 border-blue-200", icon: Eye },
-  abordado: { label: "Abordado", color: "bg-amber-100 text-amber-700 border-amber-200", icon: Phone },
-  respondeu: { label: "Respondeu", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: TrendingUp },
-  qualificado: { label: "Qualificado", color: "bg-purple-100 text-purple-700 border-purple-200", icon: Flame },
-  fechado: { label: "Fechado", color: "bg-green-100 text-green-800 border-green-200", icon: TrendingUp },
-  perdido: { label: "Perdido", color: "bg-red-100 text-red-700 border-red-200", icon: X },
-  follow_up: { label: "Follow-up", color: "bg-cyan-100 text-cyan-700 border-cyan-200", icon: Calendar },
-  em_cadencia: { label: "Em Cadência", color: "bg-indigo-100 text-indigo-700 border-indigo-200", icon: Calendar },
-  quente: { label: "Quente", color: "bg-red-100 text-red-700 border-red-200", icon: Flame },
-  call_agendada: { label: "Call Agendada", color: "bg-purple-100 text-purple-700 border-purple-200", icon: Calendar },
-  proposta_enviada: { label: "Proposta Enviada", color: "bg-emerald-100 text-emerald-700 border-emerald-200", icon: TrendingUp },
-  pending: { label: "Pendente", color: "bg-slate-100 text-slate-700 border-slate-200", icon: Inbox },
-  promovido: { label: "No CRM", color: "bg-green-100 text-green-700 border-green-200", icon: UserCheck },
-  aguardando_humano: { label: "Aguardando", color: "bg-orange-100 text-orange-700 border-orange-200", icon: Eye },
+  novo: { label: "Novo", color: "bg-blue-500/15 text-blue-400 border-blue-500/30", icon: Eye },
+  abordado: { label: "Abordado", color: "bg-amber-500/15 text-amber-400 border-amber-500/30", icon: Phone },
+  respondeu: { label: "Respondeu", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", icon: TrendingUp },
+  qualificado: { label: "Qualificado", color: "bg-purple-500/15 text-purple-400 border-purple-500/30", icon: Flame },
+  fechado: { label: "Fechado", color: "bg-green-500/15 text-green-400 border-green-500/30", icon: TrendingUp },
+  perdido: { label: "Perdido", color: "bg-red-500/15 text-red-400 border-red-500/30", icon: X },
+  follow_up: { label: "Follow-up", color: "bg-cyan-500/15 text-cyan-400 border-cyan-500/30", icon: Calendar },
+  em_cadencia: { label: "Em Cadência", color: "bg-indigo-500/15 text-indigo-400 border-indigo-500/30", icon: Calendar },
+  quente: { label: "Quente", color: "bg-red-500/15 text-red-400 border-red-500/30", icon: Flame },
+  call_agendada: { label: "Call Agendada", color: "bg-purple-500/15 text-purple-400 border-purple-500/30", icon: Calendar },
+  proposta_enviada: { label: "Proposta Enviada", color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", icon: TrendingUp },
+  pending: { label: "Pendente", color: "bg-slate-500/15 text-slate-400 border-slate-500/30", icon: Inbox },
+  promovido: { label: "No CRM", color: "bg-green-500/15 text-green-400 border-green-500/30", icon: UserCheck },
+  aguardando_humano: { label: "Aguardando", color: "bg-orange-500/15 text-orange-400 border-orange-500/30", icon: Eye },
 };
 
 const CLASSIFICACAO_MAP: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  quente: { label: "Quente", icon: Flame, color: "text-red-500" },
-  morno: { label: "Morno", icon: Thermometer, color: "text-amber-500" },
+  quente: { label: "Quente", icon: Flame, color: "text-red-400" },
+  morno: { label: "Morno", icon: Thermometer, color: "text-amber-400" },
   frio: { label: "Frio", icon: Snowflake, color: "text-blue-400" },
 };
 
@@ -303,10 +303,10 @@ export default function Leads() {
 
   const getScoreColor = (score: number | null) => {
     if (score == null) return "text-muted-foreground";
-    if (score >= 80) return "text-green-600";
-    if (score >= 60) return "text-amber-600";
-    if (score >= 40) return "text-orange-500";
-    return "text-red-500";
+    if (score >= 80) return "text-green-400";
+    if (score >= 60) return "text-amber-400";
+    if (score >= 40) return "text-orange-400";
+    return "text-red-400";
   };
 
   const getNichoShort = (nicho: string | null) => {
@@ -316,8 +316,8 @@ export default function Leads() {
   };
 
   const getFonteBadge = (fonte: "prospect" | "lead_raw") => {
-    if (fonte === "prospect") return { label: "CRM", color: "bg-primary/10 text-primary border-primary/20" };
-    return { label: "Lista", color: "bg-amber-50 text-amber-700 border-amber-200" };
+    if (fonte === "prospect") return { label: "CRM", color: "bg-primary/15 text-primary border-primary/30" };
+    return { label: "Lista", color: "bg-amber-500/15 text-amber-400 border-amber-500/30" };
   };
 
   return (
@@ -357,10 +357,10 @@ export default function Leads() {
       <div className="grid grid-cols-5 gap-3">
         {[
           { label: "Total", value: stats.total, color: "text-primary" },
-          { label: "Da Lista", value: stats.rawCount, color: "text-amber-600" },
-          { label: "No CRM", value: stats.prospectCount, color: "text-blue-600" },
-          { label: "Pendentes", value: stats.pendingCount, color: "text-slate-600" },
-          { label: "Promovidos", value: stats.promotedCount, color: "text-green-600" },
+          { label: "Da Lista", value: stats.rawCount, color: "text-amber-400" },
+          { label: "No CRM", value: stats.prospectCount, color: "text-blue-400" },
+          { label: "Pendentes", value: stats.pendingCount, color: "text-muted-foreground" },
+          { label: "Promovidos", value: stats.promotedCount, color: "text-green-400" },
         ].map((kpi) => (
           <div key={kpi.label} className="bg-card border border-border rounded-lg p-3.5 text-center">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{kpi.label}</p>
