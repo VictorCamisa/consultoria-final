@@ -3,6 +3,8 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Outlet, useLocation } from "react-router-dom";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { useEffect } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 
 const routeTitles: Record<string, string> = {
   "/": "Dashboard — VS Growth Hub",
@@ -17,6 +19,7 @@ const routeTitles: Record<string, string> = {
 
 export default function AppLayout() {
   const location = useLocation();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const base = "/" + location.pathname.split("/").filter(Boolean).slice(0, 1).join("/");
@@ -25,6 +28,21 @@ export default function AppLayout() {
 
   const showBreadcrumbs = location.pathname !== "/";
 
+  // Mobile layout
+  if (isMobile) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <main className="flex-1 overflow-auto pb-16">
+          <div className="page-enter px-4 py-4">
+            <Outlet />
+          </div>
+        </main>
+        <MobileBottomNav />
+      </div>
+    );
+  }
+
+  // Desktop layout
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
