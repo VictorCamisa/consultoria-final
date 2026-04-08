@@ -384,15 +384,15 @@ export default function Leads() {
   };
 
   return (
-    <div className="p-6 space-y-5">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-5">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="vs-h1 flex items-center gap-2.5">
-            <Users2 className="h-6 w-6 text-primary" />
+          <h1 className="vs-h1 flex items-center gap-2">
+            <Users2 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             Leads
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Todos os leads — listas de prospecção e CRM
           </p>
         </div>
@@ -417,7 +417,7 @@ export default function Leads() {
       </div>
 
       {/* ── KPI Strip ── */}
-      <div className="grid grid-cols-5 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
         {[
           { label: "Total", value: stats.total, color: "text-primary" },
           { label: "Da Lista", value: stats.rawCount, color: "text-amber-400" },
@@ -435,7 +435,7 @@ export default function Leads() {
       </div>
 
       {/* ── Fonte tabs ── */}
-      <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1 w-fit">
+      <div className="flex items-center gap-1 bg-muted/40 rounded-lg p-1 w-fit overflow-x-auto hide-scrollbar">
         {([
           { key: "todos" as FonteFilter, label: "Todos", icon: Users2, count: stats.total },
           { key: "lead_raw" as FonteFilter, label: "Listas", icon: Database, count: stats.rawCount },
@@ -458,8 +458,8 @@ export default function Leads() {
       </div>
 
       {/* ── Search + Filter bar ── */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por nome, decisor, telefone, email, cidade…"
@@ -518,7 +518,7 @@ export default function Leads() {
       {/* ── Filters panel ── */}
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
         <CollapsibleContent>
-          <div className="grid grid-cols-5 gap-3 bg-card border border-border rounded-lg p-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 bg-card border border-border rounded-lg p-3 sm:p-4">
             <div>
               <label className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">Status</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -595,7 +595,7 @@ export default function Leads() {
           <p className="text-sm mt-1">Ajuste os filtros ou inicie uma prospecção</p>
         </div>
       ) : viewMode === "grid" ? (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((lead) => (
             <LeadCard
               key={`${lead.fonte}-${lead.id}`}
