@@ -125,17 +125,17 @@ export default function Comercial() {
   return (
     <div className="space-y-5 page-enter">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Pipeline Comercial</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">Pipeline Comercial</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
             {prospects?.length ?? 0} prospects no pipeline
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleProcessarCadencia} disabled={loadingProcessar}>
+          <Button variant="outline" size="sm" onClick={handleProcessarCadencia} disabled={loadingProcessar} className="text-xs">
             {loadingProcessar ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
-            Processar Cadência
+            <span className="hidden sm:inline">Processar</span> Cadência
           </Button>
           <NewProspectDialog />
         </div>
@@ -145,8 +145,8 @@ export default function Comercial() {
       <PipelineStats prospects={prospects} />
 
       {/* Filters */}
-      <div className="flex items-center gap-2 bg-card rounded-lg border border-border p-2">
-        <div className="relative flex-1 max-w-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-card rounded-lg border border-border p-2">
+        <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder="Buscar prospect..."
@@ -155,29 +155,31 @@ export default function Comercial() {
             className="h-9 pl-8 text-sm bg-background"
           />
         </div>
-        <Select value={filterNicho} onValueChange={setFilterNicho}>
-          <SelectTrigger className="w-32 h-9 text-xs bg-background"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todos nichos</SelectItem>
-            {NICHOS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={filterClassificacao} onValueChange={setFilterClassificacao}>
-          <SelectTrigger className="w-36 h-9 text-xs bg-background"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="todos">Todas class.</SelectItem>
-            <SelectItem value="quente">🔥 Quente</SelectItem>
-            <SelectItem value="morno">🌡️ Morno</SelectItem>
-            <SelectItem value="frio">❄️ Frio</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={filterNicho} onValueChange={setFilterNicho}>
+            <SelectTrigger className="w-full sm:w-32 h-9 text-xs bg-background"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos nichos</SelectItem>
+              {NICHOS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={filterClassificacao} onValueChange={setFilterClassificacao}>
+            <SelectTrigger className="w-full sm:w-36 h-9 text-xs bg-background"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todas class.</SelectItem>
+              <SelectItem value="quente">🔥 Quente</SelectItem>
+              <SelectItem value="morno">🌡️ Morno</SelectItem>
+              <SelectItem value="frio">❄️ Frio</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Kanban */}
       {isLoading ? (
         <KanbanSkeleton />
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1">
+        <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1 hide-scrollbar">
           {PIPELINE_STAGES.map(col => {
             const items = filtered?.filter(p => p.status === col.key) ?? [];
             return (
