@@ -976,6 +976,44 @@ export type Database = {
           },
         ]
       }
+      prospect_notas: {
+        Row: {
+          autor: string | null
+          conteudo: string
+          created_at: string
+          id: string
+          prospect_id: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          autor?: string | null
+          conteudo: string
+          created_at?: string
+          id?: string
+          prospect_id: string
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          autor?: string | null
+          conteudo?: string
+          created_at?: string
+          id?: string
+          prospect_id?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_notas_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "consultoria_prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prospect_session_memory: {
         Row: {
           confidence: number
