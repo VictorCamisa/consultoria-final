@@ -6,8 +6,14 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-// Inline: resolve instance by responsavel
-async function resolveInstance(supabase: ReturnType<typeof createClient>, responsavel: string) {
+async function resolveInstanceByUserId(supabase: ReturnType<typeof createClient>, userId: string) {
+  const { data: inst } = await supabase
+    .from("evolution_instances").select("instance_name")
+    .eq("created_by", userId).eq("state", "open").limit(1).maybeSingle();
+  return (inst?.instance_name as string | undefined) ?? null;
+}
+
+async function resolveInstanceByResponsavel(supabase: ReturnType<typeof createClient>, responsavel: string) {
   const { data: vsUser } = await supabase
     .from("vs_users").select("id, email").eq("role", responsavel).maybeSingle();
   if (vsUser) {
@@ -27,6 +33,21 @@ async function resolveInstance(supabase: ReturnType<typeof createClient>, respon
     }
   }
   return null;
+}
+
+async function getAuthenticatedUserId(req: Request) {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+
+  const supabaseUser = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: authHeader } } }
+  );
+
+  const { data: { user }, error } = await supabaseUser.auth.getUser();
+  if (error || !user) return null;
+  return user.id;
 }
 
 async function findConfig(supabase: ReturnType<typeof createClient>, nicho: string) {
@@ -82,6 +103,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+    const authUserId = await getAuthenticatedUserId(req);
 
     // Checkpoint: draft
     await upsertState(supabase, prospect_id, "draft", [], "in_progress");
@@ -175,14 +197,23 @@ serve(async (req) => {
     const evolutionUrl = Deno.env.get("EVOLUTION_API_URL");
     const evolutionKey = Deno.env.get("EVOLUTION_API_KEY");
 
-    // Resolve instância pelo responsável do prospect (cada sócio usa seu próprio WhatsApp)
-    const responsavel = prospect.responsavel ?? "danilo";
-    let instancia = await resolveInstance(supabase, responsavel);
+    let instancia: string | null = null;
 
-    // Fallback: config do nicho → qualquer config
-    if (!instancia) {
-      instancia = config ? (config.instancia_evolution as string) : fallbackInstancia;
-      console.log(`[abordar] Fallback para instância da config: ${instancia}`);
+    if (authUserId) {
+      instancia = await resolveInstanceByUserId(supabase, authUserId);
+      if (!instancia) {
+        throw new Error("Nenhuma instância Evolution conectada para seu usuário. Vá em Configurações > WhatsApp e conecte sua instância.");
+      }
+      console.log(`[abordar] usando instância do usuário autenticado ${authUserId}`);
+    } else {
+      const responsavel = prospect.responsavel ?? "danilo";
+      instancia = await resolveInstanceByResponsavel(supabase, responsavel);
+
+      // Fallback: config do nicho → qualquer config
+      if (!instancia) {
+        instancia = config ? (config.instancia_evolution as string) : fallbackInstancia;
+        console.log(`[abordar] fallback para instância da config: ${instancia}`);
+      }
     }
 
     let messageId: string | null = null;
