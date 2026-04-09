@@ -65,7 +65,7 @@ serve(async (req) => {
   try {
     const { data: prospects, error: pErr } = await supabase
       .from("consultoria_prospects")
-      .select("id, nome_negocio, whatsapp, nicho, status, dia_cadencia, data_proxima_acao, decisor, cidade")
+      .select("id, nome_negocio, whatsapp, nicho, status, dia_cadencia, data_proxima_acao, decisor, cidade, linked_instance, responsavel")
       .eq("status", "em_cadencia")
       .not("dia_cadencia", "is", null)
       .or(`data_proxima_acao.is.null,data_proxima_acao.lte.${nowIso}`)
