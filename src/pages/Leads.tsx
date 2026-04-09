@@ -302,7 +302,9 @@ export default function Leads() {
       setSelectedLead(null);
       toast({ title: `${lead.nome} promovido para o CRM!`, description: "O lead agora aparece no Pipeline Comercial." });
     } catch (err: unknown) {
-      toast({ title: "Erro ao promover", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+      const msg = err instanceof Error ? err.message : typeof err === "object" && err !== null ? JSON.stringify(err) : String(err);
+      console.error("Erro ao promover lead:", err);
+      toast({ title: "Erro ao promover", description: msg, variant: "destructive" });
     } finally {
       setPromotingId(null);
     }
