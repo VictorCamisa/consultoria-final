@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import {
   Send, Sparkles, Loader2, BrainCircuit, CheckCircle2, XCircle,
-  ExternalLink,
+  ExternalLink, RefreshCw,
 } from "lucide-react";
 import { Prospect, PIPELINE_STAGES, classificacaoConfig, scoreColor } from "./types";
 
@@ -28,7 +28,24 @@ export function ChatSheet({ prospect, onClose, onProspectUpdate }: Props) {
   const [loadingSuggest, setLoadingSuggest] = useState(false);
   const [loadingClassify, setLoadingClassify] = useState(false);
   const [loadingSend, setLoadingSend] = useState(false);
+  const [loadingSync, setLoadingSync] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const handleSync = async () => {
+    if (!prospect?.id) return;
+    setLoadingSync(true);
+    try {
+      const { error } = await supabase.functions.invoke("sync-whatsapp-messages", {
+        body: { prospect_id: prospect.id },
+      });
+      if (error) throw error;
+      refetchConversas();
+    } catch (err: unknown) {
+      console.error("Sync error:", err);
+    } finally {
+      setLoadingSync(false);
+    }
+  };
 
   const { data: conversas, refetch: refetchConversas } = useQuery({
     queryKey: ["conversas", prospect?.id],
@@ -44,6 +61,15 @@ export function ChatSheet({ prospect, onClose, onProspectUpdate }: Props) {
     },
     refetchInterval: 5000,
   });
+
+  // Auto-sync ao abrir o chat
+  const lastSyncedProspect = useRef<string | null>(null);
+  useEffect(() => {
+    if (prospect?.id && prospect.id !== lastSyncedProspect.current) {
+      lastSyncedProspect.current = prospect.id;
+      handleSync();
+    }
+  }, [prospect?.id]);
 
   const { data: cadenciaHistory } = useQuery({
     queryKey: ["cadencia-history", prospect?.id],
@@ -249,6 +275,12 @@ export function ChatSheet({ prospect, onClose, onProspectUpdate }: Props) {
           </TabsList>
 
           <TabsContent value="conversa" className="flex-1 flex flex-col min-h-0 mt-0">
+            <div className="flex items-center justify-end px-5 pt-2">
+              <Button size="sm" variant="ghost" className="text-[10px] h-6 px-2 text-muted-foreground" onClick={handleSync} disabled={loadingSync}>
+                {loadingSync ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                Sincronizar WhatsApp
+              </Button>
+            </div>
             <ScrollArea className="flex-1 px-5 py-3" ref={scrollRef}>
               <div className="space-y-2">
                 {conversas?.length === 0 && (
