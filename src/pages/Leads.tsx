@@ -240,39 +240,33 @@ export default function Leads() {
     }
     setPromotingId(lead.id);
     try {
-      const leadIdentity = buildLeadIdentityKey({
-        phone: lead.telefone,
-        email: lead.email,
-        name: lead.nome,
-        city: lead.cidade,
-        website: lead.site,
-      });
+      // Normaliza WhatsApp para checar duplicata direto no banco
+      const normalizedWhatsapp = (lead.telefone || "").replace(/\D/g, "");
 
-      const existingProspect = prospects.find((prospect) => {
-        const prospectIdentity = buildLeadIdentityKey({
-          phone: prospect.whatsapp,
-          name: prospect.nome_negocio,
-          city: prospect.cidade,
-          website: prospect.site,
-        });
+      if (normalizedWhatsapp) {
+        const { data: existing } = await supabase
+          .from("consultoria_prospects")
+          .select("id, nome_negocio")
+          .eq("whatsapp", lead.telefone || "")
+          .maybeSingle();
 
-        return leadIdentity && prospectIdentity === leadIdentity;
-      });
+        // Tenta também sem formatação
+        const { data: existing2 } = !existing ? await supabase
+          .from("consultoria_prospects")
+          .select("id, nome_negocio")
+          .eq("whatsapp", normalizedWhatsapp)
+          .maybeSingle() : { data: existing };
 
-      if (existingProspect) {
-        const { error: updateExistingError } = await supabase
-          .from("leads_raw")
-          .update({ status: "promoted" })
-          .eq("id", lead.id);
-
-        if (updateExistingError) throw updateExistingError;
-
-        queryClient.invalidateQueries({ queryKey: ["all-prospects"] });
-        queryClient.invalidateQueries({ queryKey: ["all-leads-raw"] });
-        queryClient.invalidateQueries({ queryKey: ["prospects"] });
-        setSelectedLead(null);
-        toast({ title: `${lead.nome} já estava no CRM`, description: "Marquei o lead da lista como promovido para não duplicar novamente." });
-        return;
+        const match = existing || existing2;
+        if (match) {
+          await supabase.from("leads_raw").update({ status: "promoted" }).eq("id", lead.id);
+          queryClient.invalidateQueries({ queryKey: ["all-prospects"] });
+          queryClient.invalidateQueries({ queryKey: ["all-leads-raw"] });
+          queryClient.invalidateQueries({ queryKey: ["prospects"] });
+          setSelectedLead(null);
+          toast({ title: `${lead.nome} já estava no CRM`, description: `Já existe como "${match.nome_negocio}". Marquei como promovido.` });
+          return;
+        }
       }
 
       const { error: insertError } = await supabase.from("consultoria_prospects").insert({
