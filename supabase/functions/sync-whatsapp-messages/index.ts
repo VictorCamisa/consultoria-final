@@ -6,55 +6,174 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-async function resolveInstanceByUserId(supabase: ReturnType<typeof createClient>, userId: string) {
-  const { data: inst } = await supabase
+type ProspectRecord = {
+  id: string;
+  whatsapp: string;
+  responsavel: string | null;
+  nicho: string;
+};
+
+type SyncInsertRow = {
+  prospect_id: string;
+  direcao: string;
+  conteudo: string;
+  message_id: string;
+  processado_ia: boolean;
+  created_at: string;
+};
+
+async function resolveOpenInstancesByUserId(supabase: ReturnType<typeof createClient>, userId: string) {
+  const { data: instances } = await supabase
     .from("evolution_instances")
     .select("instance_name")
     .eq("created_by", userId)
     .eq("state", "open")
-    .limit(1)
-    .maybeSingle();
+    .order("created_at", { ascending: false });
 
-  return (inst?.instance_name as string | undefined) ?? null;
+  return (instances ?? []).map((inst) => inst.instance_name as string).filter(Boolean);
 }
 
-async function resolveInstanceByResponsavel(supabase: ReturnType<typeof createClient>, responsavel: string) {
+async function resolveOpenInstancesByResponsavel(supabase: ReturnType<typeof createClient>, responsavel: string) {
   const { data: vsUser } = await supabase
     .from("vs_users")
     .select("id, email")
     .eq("role", responsavel)
     .maybeSingle();
 
-  if (vsUser) {
-    const { data: inst } = await supabase
-      .from("evolution_instances")
-      .select("instance_name")
-      .eq("created_by", vsUser.id)
-      .eq("state", "open")
-      .limit(1)
-      .maybeSingle();
+  const resolved = new Set<string>();
 
-    if (inst) return inst.instance_name as string;
+  if (vsUser) {
+    const directInstances = await resolveOpenInstancesByUserId(supabase, vsUser.id);
+    directInstances.forEach((name) => resolved.add(name));
 
     if (vsUser.email) {
       const { data: authData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
       const authUser = authData?.users?.find((u: any) => u.email?.toLowerCase() === vsUser.email.toLowerCase());
 
       if (authUser) {
-        const { data: inst2 } = await supabase
-          .from("evolution_instances")
-          .select("instance_name")
-          .eq("created_by", authUser.id)
-          .eq("state", "open")
-          .limit(1)
-          .maybeSingle();
-
-        if (inst2) return inst2.instance_name as string;
+        const authInstances = await resolveOpenInstancesByUserId(supabase, authUser.id);
+        authInstances.forEach((name) => resolved.add(name));
       }
     }
   }
 
-  return null;
+  return Array.from(resolved);
+}
+
+function pushUnique(target: string[], values: Array<string | null | undefined>) {
+  for (const value of values) {
+    if (value && !target.includes(value)) {
+      target.push(value);
+    }
+  }
+}
+
+async function resolveCandidateInstances(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+  prospect: ProspectRecord,
+) {
+  const candidates: string[] = [];
+
+  const responsavelInstances = await resolveOpenInstancesByResponsavel(supabase, prospect.responsavel ?? "danilo");
+  pushUnique(candidates, responsavelInstances);
+
+  const { data: exactConfig } = await supabase
+    .from("consultoria_config")
+    .select("instancia_evolution")
+    .eq("nicho", prospect.nicho)
+    .maybeSingle();
+  pushUnique(candidates, [exactConfig?.instancia_evolution]);
+
+  const authUserInstances = await resolveOpenInstancesByUserId(supabase, userId);
+  pushUnique(candidates, authUserInstances);
+
+  const { data: allConfigs } = await supabase
+    .from("consultoria_config")
+    .select("instancia_evolution")
+    .order("updated_at", { ascending: false });
+  pushUnique(candidates, (allConfigs ?? []).map((config) => config.instancia_evolution as string | null));
+
+  const { data: allOpenInstances } = await supabase
+    .from("evolution_instances")
+    .select("instance_name")
+    .eq("state", "open")
+    .order("created_at", { ascending: false });
+  pushUnique(candidates, (allOpenInstances ?? []).map((instance) => instance.instance_name as string | null));
+
+  return candidates;
+}
+
+function buildRemoteJidCandidates(whatsapp: string) {
+  const rawPhone = whatsapp.replace(/\D/g, "");
+  const lastDigits = rawPhone.startsWith("55") ? rawPhone.slice(2) : rawPhone;
+  const variants = new Set<string>();
+
+  if (rawPhone) variants.add(`${rawPhone}@s.whatsapp.net`);
+  if (lastDigits) variants.add(`55${lastDigits}@s.whatsapp.net`);
+  if (lastDigits && lastDigits.length >= 10) variants.add(`${lastDigits}@s.whatsapp.net`);
+
+  return Array.from(variants);
+}
+
+function extractMessages(rawResult: any): any[] {
+  if (Array.isArray(rawResult)) return rawResult;
+  if (!rawResult || typeof rawResult !== "object") return [];
+
+  const directCandidates = [rawResult.messages, rawResult.data, rawResult.records, rawResult.result];
+  for (const candidate of directCandidates) {
+    if (Array.isArray(candidate)) return candidate;
+  }
+
+  if (rawResult.data && typeof rawResult.data === "object") {
+    const nestedCandidates = [rawResult.data.messages, rawResult.data.records, rawResult.data.result];
+    for (const candidate of nestedCandidates) {
+      if (Array.isArray(candidate)) return candidate;
+    }
+  }
+
+  return [];
+}
+
+async function fetchMessagesForInstance(
+  baseUrl: string,
+  apiKey: string,
+  instanceName: string,
+  remoteJids: string[],
+) {
+  const collected: any[] = [];
+
+  for (const remoteJid of remoteJids) {
+    const chatRes = await fetch(`${baseUrl}/chat/findMessages/${instanceName}`, {
+      method: "POST",
+      headers: { apikey: apiKey, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        where: { key: { remoteJid } },
+        limit: 250,
+      }),
+    });
+
+    if (!chatRes.ok) {
+      const errText = await chatRes.text();
+      console.warn(`[sync] Evolution API error on ${instanceName} (${remoteJid}): ${chatRes.status} - ${errText}`);
+      continue;
+    }
+
+    const rawText = await chatRes.text();
+    if (!rawText.trim()) continue;
+
+    try {
+      const parsed = JSON.parse(rawText);
+      const messages = extractMessages(parsed);
+      if (messages.length > 0) {
+        collected.push(...messages);
+      }
+    } catch (error) {
+      console.warn(`[sync] Não foi possível interpretar resposta da instância ${instanceName}:`, error);
+    }
+  }
+
+  return collected;
 }
 
 serve(async (req) => {
@@ -103,60 +222,31 @@ serve(async (req) => {
       .single();
     if (pErr || !prospect) throw new Error("Prospect não encontrado");
 
-    let instanceName = await resolveInstanceByUserId(supabase, user.id);
-
-    if (!instanceName) {
-      instanceName = await resolveInstanceByResponsavel(supabase, prospect.responsavel ?? "danilo");
-    }
-
-    if (!instanceName) {
-      const { data: exactConfig } = await supabase
-        .from("consultoria_config")
-        .select("instancia_evolution")
-        .eq("nicho", prospect.nicho)
-        .maybeSingle();
-
-      if (exactConfig?.instancia_evolution) {
-        instanceName = exactConfig.instancia_evolution;
-      } else {
-        const { data: allConfigs } = await supabase
-          .from("consultoria_config")
-          .select("instancia_evolution");
-        instanceName = allConfigs?.find((c: any) => c.instancia_evolution)?.instancia_evolution ?? null;
-      }
-    }
-
-    if (!instanceName) {
+    const candidateInstances = await resolveCandidateInstances(supabase, user.id, prospect);
+    if (candidateInstances.length === 0) {
       throw new Error("Nenhuma instância Evolution disponível para sincronização.");
     }
 
-    const rawPhone = prospect.whatsapp.replace(/\D/g, "");
-    const normalizedPhone = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`;
-    const remoteJid = `${normalizedPhone}@s.whatsapp.net`;
+    const remoteJids = buildRemoteJidCandidates(prospect.whatsapp);
+    const messagesById = new Map<string, any>();
+    const matchedInstances: string[] = [];
 
-    const chatRes = await fetch(`${baseUrl}/chat/findMessages/${instanceName}`, {
-      method: "POST",
-      headers: { apikey: apiKey, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        where: { key: { remoteJid } },
-        limit: 100,
-      }),
-    });
+    for (const instanceName of candidateInstances) {
+      const instanceMessages = await fetchMessagesForInstance(baseUrl, apiKey, instanceName, remoteJids);
+      if (instanceMessages.length > 0) {
+        matchedInstances.push(instanceName);
+      }
 
-    if (!chatRes.ok) {
-      const errText = await chatRes.text();
-      console.error(`[sync] Evolution API error: ${chatRes.status} - ${errText}`);
-      throw new Error(`Evolution API retornou ${chatRes.status}`);
+      for (const message of instanceMessages) {
+        const messageId = message?.key?.id;
+        if (messageId && !messagesById.has(messageId)) {
+          messagesById.set(messageId, message);
+        }
+      }
     }
 
-    const rawResult = await chatRes.json();
-    const messages = Array.isArray(rawResult)
-      ? rawResult
-      : Array.isArray(rawResult?.messages)
-        ? rawResult.messages
-        : Array.isArray(rawResult?.data)
-          ? rawResult.data
-          : [];
+    const messages = Array.from(messagesById.values());
+    console.log(`[sync] Prospect ${prospect_id}: ${messages.length} mensagens encontradas em ${matchedInstances.join(", ") || "nenhuma instância"}`);
 
     const { data: existing } = await supabase
       .from("consultoria_conversas")
@@ -167,14 +257,7 @@ serve(async (req) => {
     const existingIds = new Set((existing ?? []).map((e) => e.message_id));
 
     let synced = 0;
-    const toInsert: Array<{
-      prospect_id: string;
-      direcao: string;
-      conteudo: string;
-      message_id: string;
-      processado_ia: boolean;
-      created_at: string;
-    }> = [];
+    const toInsert: SyncInsertRow[] = [];
 
     for (const msg of messages) {
       const msgKey = msg.key;
@@ -205,6 +288,8 @@ serve(async (req) => {
       });
     }
 
+    toInsert.sort((a, b) => a.created_at.localeCompare(b.created_at));
+
     if (toInsert.length > 0) {
       for (let i = 0; i < toInsert.length; i += 50) {
         const batch = toInsert.slice(i, i + 50);
@@ -217,7 +302,13 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, synced, total_found: messages.length, instance_name: instanceName }),
+      JSON.stringify({
+        success: true,
+        synced,
+        total_found: messages.length,
+        searched_instances: candidateInstances,
+        matched_instances: matchedInstances,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
