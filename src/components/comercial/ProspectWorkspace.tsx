@@ -12,7 +12,7 @@ import {
   Send, Sparkles, Loader2, BrainCircuit, CheckCircle2, XCircle,
   X, Phone, MapPin, Instagram, Globe, User,
   Megaphone, PlayCircle, RotateCcw, ChevronRight, Copy,
-  AlertTriangle, Target, Lightbulb, ArrowRight, Zap, MessageSquare,
+  AlertTriangle, Target, Lightbulb, ArrowRight, Zap, MessageSquare, RefreshCw,
 } from "lucide-react";
 import { StickyNote, Plus, Trash2, Clock } from "lucide-react";
 import { Prospect, PIPELINE_STAGES, classificacaoConfig, scoreColor, timeAgo } from "./types";
@@ -55,10 +55,12 @@ export function ProspectWorkspace({
   const [loadingSuggest, setLoadingSuggest] = useState(false);
   const [loadingClassify, setLoadingClassify] = useState(false);
   const [loadingSend, setLoadingSend] = useState(false);
+  const [loadingSync, setLoadingSync] = useState(false);
   const [coaching, setCoaching] = useState<AiCoaching | null>(null);
   const [lastInboundId, setLastInboundId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"chat" | "ai" | "acoes">("chat");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const lastSyncedProspectRef = useRef<string | null>(null);
   const [novaNota, setNovaNota] = useState("");
   const [savingNota, setSavingNota] = useState(false);
 
@@ -234,8 +236,14 @@ export function ProspectWorkspace({
     if (lastInbound && !coaching && !loadingSuggest) {
       triggerAutoSuggest();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prospect?.id, conversas?.length]);
+  }, [prospect?.id, conversas?.length, coaching, loadingSuggest, triggerAutoSuggest]);
+
+  useEffect(() => {
+    if (!prospect?.id) return;
+    if (lastSyncedProspectRef.current === prospect.id) return;
+    lastSyncedProspectRef.current = prospect.id;
+    handleSyncMessages(false);
+  }, [prospect?.id]);
 
   const handleSuggestReply = async () => {
     if (!prospect) return;
@@ -310,13 +318,33 @@ export function ProspectWorkspace({
         setMensagem("");
         refetchConversas();
         toast({ title: "Mensagem enviada!" });
-        // Auto re-suggest after sending
         setTimeout(triggerAutoSuggest, 2000);
       }
     } catch (err: unknown) {
       toast({ title: "Erro ao enviar", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally {
       setLoadingSend(false);
+    }
+  };
+
+  const handleSyncMessages = async (showToast = true) => {
+    if (!prospect?.id) return;
+    setLoadingSync(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-whatsapp-messages", {
+        body: { prospect_id: prospect.id },
+      });
+      if (error) throw error;
+      await refetchConversas();
+      queryClient.invalidateQueries({ queryKey: ["prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["unread-counts"] });
+      if (showToast) {
+        toast({ title: `Sincronização concluída`, description: `${data?.synced ?? 0} mensagens importadas.` });
+      }
+    } catch (err: unknown) {
+      toast({ title: "Erro ao sincronizar WhatsApp", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    } finally {
+      setLoadingSync(false);
     }
   };
 
@@ -386,6 +414,10 @@ export function ProspectWorkspace({
         </div>
 
         <div className="flex items-center gap-1.5">
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] text-muted-foreground" onClick={() => handleSyncMessages(true)} disabled={loadingSync}>
+            {loadingSync ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            <span className="hidden sm:inline">Sincronizar</span>
+          </Button>
           <a href={`https://wa.me/${prospect.whatsapp.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300">
             <Phone className="h-3.5 w-3.5" /><span className="hidden sm:inline">WhatsApp</span>
