@@ -215,8 +215,8 @@ serve(async (req) => {
       }
     }
 
-    // AUTO-REPLY: Só se não houve handoff
-    if (shouldUpdateStatus && !handoffTriggered && conteudo !== "[mídia não suportada]") {
+    // AUTO-REPLY: Só se não houve handoff e não é duplicata
+    if (shouldUpdateStatus && !handoffTriggered && !skipAutoReply && conteudo !== "[mídia não suportada]") {
       console.log(`[webhook] Auto-reply para ${prospect.nome_negocio} (${prospect.nicho})`);
 
       (async () => {
