@@ -31,6 +31,22 @@ export function ChatSheet({ prospect, onClose, onProspectUpdate }: Props) {
   const [loadingSync, setLoadingSync] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const handleSync = async () => {
+    if (!prospect?.id) return;
+    setLoadingSync(true);
+    try {
+      const { error } = await supabase.functions.invoke("sync-whatsapp-messages", {
+        body: { prospect_id: prospect.id },
+      });
+      if (error) throw error;
+      refetchConversas();
+    } catch (err: unknown) {
+      console.error("Sync error:", err);
+    } finally {
+      setLoadingSync(false);
+    }
+  };
+
   const { data: conversas, refetch: refetchConversas } = useQuery({
     queryKey: ["conversas", prospect?.id],
     enabled: !!prospect?.id,
@@ -45,6 +61,15 @@ export function ChatSheet({ prospect, onClose, onProspectUpdate }: Props) {
     },
     refetchInterval: 5000,
   });
+
+  // Auto-sync ao abrir o chat
+  const lastSyncedProspect = useRef<string | null>(null);
+  useEffect(() => {
+    if (prospect?.id && prospect.id !== lastSyncedProspect.current) {
+      lastSyncedProspect.current = prospect.id;
+      handleSync();
+    }
+  }, [prospect?.id]);
 
   const { data: cadenciaHistory } = useQuery({
     queryKey: ["cadencia-history", prospect?.id],
