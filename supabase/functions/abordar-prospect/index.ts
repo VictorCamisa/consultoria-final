@@ -151,7 +151,7 @@ serve(async (req) => {
 
     const evolutionUrl = Deno.env.get("EVOLUTION_API_URL");
     const evolutionKey = Deno.env.get("EVOLUTION_API_KEY");
-    const instancia = config ? (config.instancia_evolution as string) : null;
+    const instancia = config ? (config.instancia_evolution as string) : fallbackInstancia;
 
     let messageId: string | null = null;
     let enviado = false;
