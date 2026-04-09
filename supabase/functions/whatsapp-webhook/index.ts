@@ -62,11 +62,7 @@ serve(async (req) => {
     const data = payload.data;
     const key = data?.key;
 
-    if (key?.fromMe === true) {
-      return new Response(JSON.stringify({ skipped: true, reason: "fromMe" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const isFromMe = key?.fromMe === true;
 
     const remoteJid: string = key?.remoteJid ?? "";
     if (remoteJid.endsWith("@g.us")) {
@@ -118,9 +114,10 @@ serve(async (req) => {
       }
     }
 
-    // Salva mensagem
+    // Salva mensagem — fromMe = saida, senão = entrada
+    const direcao = isFromMe ? "saida" : "entrada";
     const { error: insertErr } = await supabase.from("consultoria_conversas").insert({
-      prospect_id: prospect.id, direcao: "entrada", conteudo, message_id: messageId, processado_ia: false,
+      prospect_id: prospect.id, direcao, conteudo, message_id: messageId, processado_ia: isFromMe,
     });
 
     // Se falhar por duplicata (race condition), ignora
@@ -131,6 +128,13 @@ serve(async (req) => {
         });
       }
       console.error("[webhook] Insert error:", insertErr);
+    }
+    // Se é mensagem enviada pelo celular (fromMe), apenas salva e retorna
+    if (isFromMe) {
+      return new Response(
+        JSON.stringify({ success: true, prospect_id: prospect.id, from_me: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Dedup extra para auto-reply: verifica se já enviamos saída nos últimos 30s
