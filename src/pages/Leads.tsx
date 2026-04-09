@@ -823,6 +823,7 @@ function LeadCard({
   isSelected,
   onPromote,
   onAbordar,
+  onDelete,
   promotingId,
   abordandoId,
 }: {
