@@ -1,6 +1,5 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = any;
 
 async function findOpenInstanceByOwnerId(
   supabase: SupabaseClient,
@@ -20,119 +19,46 @@ async function findOpenInstanceByOwnerId(
   return data?.instance_name ?? null;
 }
 
-async function findAuthUserIdByEmail(
-  supabase: SupabaseClient,
-  email: string,
-) {
-  const { data, error } = await supabase.auth.admin.listUsers({
-    page: 1,
-    perPage: 200,
-  });
-
-  if (error) {
-    console.error(`[instance] Falha ao listar usuários auth: ${error.message}`);
-    return null;
-  }
-
-  return (
-    data.users.find((user) => user.email?.toLowerCase() === email.toLowerCase())
-      ?.id ?? null
-  );
-}
-
-async function findRequestUser(
-  authHeader: string | null,
-) {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-
-  if (!authHeader?.startsWith("Bearer ") || !supabaseUrl || !supabaseAnonKey) {
-    return null;
-  }
-
-  const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: {
-        Authorization: authHeader,
-      },
-    },
-  });
-
-  const {
-    data: { user },
-    error,
-  } = await authClient.auth.getUser();
-
-  if (error) {
-    console.error(`[instance] Falha ao identificar usuário autenticado: ${error.message}`);
-    return null;
-  }
-
-  return user;
-}
-
 export async function resolveInstanceForResponsavel({
   supabase,
   responsavel,
-  authHeader,
   logPrefix,
 }: {
   supabase: SupabaseClient;
   responsavel: string;
-  authHeader?: string | null;
   logPrefix: string;
 }) {
-  const requestUser = await findRequestUser(authHeader ?? null);
-
-  if (requestUser?.email) {
-    const { data: currentVsUser } = await supabase
-      .from("vs_users")
-      .select("role")
-      .ilike("email", requestUser.email)
-      .maybeSingle();
-
-    if (currentVsUser?.role === responsavel) {
-      const currentUserInstance = await findOpenInstanceByOwnerId(
-        supabase,
-        requestUser.id,
-      );
-
-      if (currentUserInstance) {
-        console.log(
-          `[${logPrefix}] Usando instância do usuário autenticado "${responsavel}": ${currentUserInstance}`,
-        );
-        return currentUserInstance;
-      }
-    }
-  }
-
+  // 1. Busca vs_users pelo role do responsável
   const { data: responsibleUser } = await supabase
     .from("vs_users")
     .select("id, email")
     .eq("role", responsavel)
     .maybeSingle();
 
+  // 2. Tenta pela vs_users.id (Victor, cujo vs_users.id === auth.uid)
   const legacyInstance = await findOpenInstanceByOwnerId(
     supabase,
     responsibleUser?.id,
   );
-
   if (legacyInstance) {
-    console.log(
-      `[${logPrefix}] Usando instância legada do responsável "${responsavel}": ${legacyInstance}`,
-    );
+    console.log(`[${logPrefix}] Instância por vs_users.id "${responsavel}": ${legacyInstance}`);
     return legacyInstance;
   }
 
+  // 3. Busca auth user pelo email e tenta pelo auth.uid (Danilo, cujo created_by é auth.uid)
   if (responsibleUser?.email) {
-    const authUserId = await findAuthUserIdByEmail(supabase, responsibleUser.email);
-    const authOwnedInstance = await findOpenInstanceByOwnerId(supabase, authUserId);
-
-    if (authOwnedInstance) {
-      console.log(
-        `[${logPrefix}] Usando instância auth do responsável "${responsavel}": ${authOwnedInstance}`,
+    const { data: authData, error: authErr } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
+    if (!authErr && authData?.users) {
+      const authUser = authData.users.find(
+        (u: { email?: string }) => u.email?.toLowerCase() === responsibleUser.email.toLowerCase()
       );
-      return authOwnedInstance;
+      if (authUser) {
+        const authInstance = await findOpenInstanceByOwnerId(supabase, authUser.id);
+        if (authInstance) {
+          console.log(`[${logPrefix}] Instância por auth.uid "${responsavel}": ${authInstance}`);
+          return authInstance;
+        }
+      }
     }
   }
 
