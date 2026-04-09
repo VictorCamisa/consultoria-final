@@ -46,6 +46,7 @@ export default function AppLayout() {
   // Desktop layout
   return (
     <SidebarProvider>
+      <WhatsAppOnboarding />
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
 
