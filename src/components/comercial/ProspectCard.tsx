@@ -22,7 +22,7 @@ export function ProspectCard({
   onSelect, onAbordar, onCadencia, onReativar,
 }: Props) {
   const classif = classificacaoConfig(p.classificacao_ia);
-
+  const nichoCat = nichoCategory(p.nicho);
   return (
     <div
       className="group bg-background rounded-lg border border-border hover:border-primary/30 p-3.5 space-y-3 cursor-pointer transition-all duration-150 hover:shadow-sm"
@@ -52,8 +52,8 @@ export function ProspectCard({
 
       {/* Row 2: Badges */}
       <div className="flex items-center gap-1.5 min-w-0">
-        <Badge variant="outline" className="text-[10px] h-[18px] px-1.5 font-medium border-border max-w-[140px] truncate shrink-0">
-          {p.nicho}
+        <Badge variant="outline" className={`text-[10px] h-[18px] px-1.5 font-medium max-w-[140px] truncate shrink-0 ${nichoCat ? nichoCat.color : "border-border"}`}>
+          {nichoCat?.label ?? p.nicho}
         </Badge>
         {p.status === "em_cadencia" && p.dia_cadencia !== null && (
           <Badge variant="secondary" className="text-[10px] h-[18px] px-1.5 shrink-0">
