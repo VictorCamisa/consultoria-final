@@ -8,6 +8,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { resolveInstanceForResponsavel } from "../_shared/resolve-instance.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -34,28 +35,12 @@ serve(async (req) => {
     if (pErr) throw pErr;
 
     // Resolve instância pelo responsável do prospect
-    let instancia: string | null = null;
-    const realResponsavel = prospect.responsavel ?? "danilo";
-
-    // Busca user_id do responsável
-    const { data: vsUser } = await supabase
-      .from("vs_users")
-      .select("id")
-      .eq("role", realResponsavel)
-      .maybeSingle();
-
-    if (vsUser) {
-      const { data: userInstance } = await supabase
-        .from("evolution_instances")
-        .select("instance_name")
-        .eq("created_by", vsUser.id)
-        .eq("state", "open")
-        .limit(1)
-        .maybeSingle();
-      if (userInstance) {
-        instancia = userInstance.instance_name;
-      }
-    }
+    let instancia = await resolveInstanceForResponsavel({
+      supabase,
+      responsavel: prospect.responsavel ?? "danilo",
+      authHeader: req.headers.get("authorization"),
+      logPrefix: "send-whatsapp",
+    });
 
     // Fallback: config do nicho → qualquer config
     if (!instancia) {

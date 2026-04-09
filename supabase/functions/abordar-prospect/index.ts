@@ -5,6 +5,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { resolveInstanceForResponsavel } from "../_shared/resolve-instance.ts";
 
 async function findConfig(supabase: ReturnType<typeof createClient>, nicho: string) {
   const { data: exactConfig } = await supabase
@@ -153,29 +154,13 @@ serve(async (req) => {
     const evolutionKey = Deno.env.get("EVOLUTION_API_KEY");
 
     // Resolve instância pelo responsável do prospect (cada sócio usa seu próprio WhatsApp)
-    let instancia: string | null = null;
     const responsavel = prospect.responsavel ?? "danilo";
-
-    // Busca o user_id do responsável na vs_users
-    const { data: vsUser } = await supabase
-      .from("vs_users")
-      .select("id")
-      .eq("role", responsavel)
-      .maybeSingle();
-
-    if (vsUser) {
-      const { data: userInstance } = await supabase
-        .from("evolution_instances")
-        .select("instance_name")
-        .eq("created_by", vsUser.id)
-        .eq("state", "open")
-        .limit(1)
-        .maybeSingle();
-      if (userInstance) {
-        instancia = userInstance.instance_name;
-        console.log(`[abordar] Usando instância do responsável "${responsavel}": ${instancia}`);
-      }
-    }
+    let instancia = await resolveInstanceForResponsavel({
+      supabase,
+      responsavel,
+      authHeader: req.headers.get("authorization"),
+      logPrefix: "abordar",
+    });
 
     // Fallback: config do nicho → qualquer config
     if (!instancia) {
