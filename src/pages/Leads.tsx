@@ -365,7 +365,7 @@ export default function Leads() {
       if (l.cidade) cidades.add(l.cidade);
       if (l.origem) origens.add(l.origem);
     });
-    const nichoOptions = NICHO_CATEGORIES.map(c => c.label);
+    const nichoOptions: string[] = NICHO_CATEGORIES.map(c => c.label);
     if (hasUncategorizedNicho) nichoOptions.push("Não definido");
     return {
       nichos: nichoOptions,
