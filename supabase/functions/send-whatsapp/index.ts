@@ -28,7 +28,7 @@ serve(async (req) => {
     // Busca prospect
     const { data: prospect, error: pErr } = await supabase
       .from("consultoria_prospects")
-      .select("id, whatsapp, nicho, status")
+      .select("id, whatsapp, nicho, status, responsavel")
       .eq("id", prospect_id)
       .single();
     if (pErr) throw pErr;
