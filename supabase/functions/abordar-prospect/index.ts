@@ -130,7 +130,7 @@ serve(async (req) => {
 
     const evolutionUrl = Deno.env.get("EVOLUTION_API_URL");
     const evolutionKey = Deno.env.get("EVOLUTION_API_KEY");
-    const instancia = config.instancia_evolution as string;
+    const instancia = config ? (config.instancia_evolution as string) : null;
 
     let messageId: string | null = null;
     let enviado = false;
@@ -141,8 +141,8 @@ serve(async (req) => {
       console.log("[abordar] instancia_evolution vazia — salvando sem enviar");
     } else {
       const hora = new Date().getHours();
-      const horaInicio = (config.horario_inicio as number) ?? 8;
-      const horaFim = (config.horario_fim as number) ?? 18;
+      const horaInicio = config ? (config.horario_inicio as number) ?? 8 : 8;
+      const horaFim = config ? (config.horario_fim as number) ?? 18 : 18;
       if (hora < horaInicio || hora >= horaFim) {
         await upsertState(supabase, prospect_id, "send", ["draft", "validate"], "pending", { reason: "fora_horario" });
         return new Response(
