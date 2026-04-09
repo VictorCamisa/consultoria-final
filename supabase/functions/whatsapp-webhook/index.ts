@@ -129,6 +129,13 @@ serve(async (req) => {
       }
       console.error("[webhook] Insert error:", insertErr);
     }
+    // Se é mensagem enviada pelo celular (fromMe), apenas salva e retorna
+    if (isFromMe) {
+      return new Response(
+        JSON.stringify({ success: true, prospect_id: prospect.id, from_me: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Dedup extra para auto-reply: verifica se já enviamos saída nos últimos 30s
     const thirtySecsAgo = new Date(Date.now() - 30000).toISOString();
