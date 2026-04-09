@@ -2,7 +2,7 @@ import { Prospect, classificacaoConfig, scoreColor, timeAgo, nichoCategory } fro
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  MessageSquare, Phone, Megaphone, PlayCircle, RotateCcw, Loader2,
+  MessageSquare, Phone, Megaphone, PlayCircle, RotateCcw, Loader2, Trash2,
 } from "lucide-react";
 
 interface Props {
@@ -15,11 +15,12 @@ interface Props {
   onAbordar: () => void;
   onCadencia: () => void;
   onReativar: () => void;
+  onDelete?: () => void;
 }
 
 export function ProspectCard({
   prospect: p, unread, loadingAbordar, loadingCadencia, loadingReativar,
-  onSelect, onAbordar, onCadencia, onReativar,
+  onSelect, onAbordar, onCadencia, onReativar, onDelete,
 }: Props) {
   const classif = classificacaoConfig(p.classificacao_ia);
   const nichoCat = nichoCategory(p.nicho);
@@ -116,6 +117,18 @@ export function ProspectCard({
         {p.status === "frio" && (
           <Button size="sm" variant="outline" className="text-[11px] h-7 px-2.5" onClick={onReativar} disabled={loadingReativar}>
             {loadingReativar ? <Loader2 className="h-3 w-3 animate-spin" /> : <><RotateCcw className="h-3 w-3 mr-1" />Reativar</>}
+          </Button>
+        )}
+
+        {onDelete && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-[11px] h-7 w-7 px-0 ml-auto text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10"
+            onClick={onDelete}
+            title="Excluir prospect"
+          >
+            <Trash2 className="h-3 w-3" />
           </Button>
         )}
       </div>
