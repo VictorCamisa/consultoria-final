@@ -8,7 +8,29 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
-import { resolveInstanceForResponsavel } from "../_shared/resolve-instance.ts";
+
+// Inline: resolve instance by responsavel
+async function resolveInstance(supabase: ReturnType<typeof createClient>, responsavel: string) {
+  const { data: vsUser } = await supabase
+    .from("vs_users").select("id, email").eq("role", responsavel).maybeSingle();
+  if (vsUser) {
+    const { data: inst } = await supabase
+      .from("evolution_instances").select("instance_name")
+      .eq("created_by", vsUser.id).eq("state", "open").limit(1).maybeSingle();
+    if (inst) return inst.instance_name as string;
+    if (vsUser.email) {
+      const { data: authData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
+      const authUser = authData?.users?.find((u: any) => u.email?.toLowerCase() === vsUser.email.toLowerCase());
+      if (authUser) {
+        const { data: inst2 } = await supabase
+          .from("evolution_instances").select("instance_name")
+          .eq("created_by", authUser.id).eq("state", "open").limit(1).maybeSingle();
+        if (inst2) return inst2.instance_name as string;
+      }
+    }
+  }
+  return null;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -35,11 +57,7 @@ serve(async (req) => {
     if (pErr) throw pErr;
 
     // Resolve instância pelo responsável do prospect
-    let instancia = await resolveInstanceForResponsavel({
-      supabase,
-      responsavel: prospect.responsavel ?? "danilo",
-      logPrefix: "send-whatsapp",
-    });
+    let instancia = await resolveInstance(supabase, prospect.responsavel ?? "danilo");
 
     // Fallback: config do nicho → qualquer config
     if (!instancia) {
