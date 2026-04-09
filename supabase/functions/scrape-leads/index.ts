@@ -410,7 +410,7 @@ Responda APENAS com JSON válido:
     // Sort by ICP score descending (best leads first)
     uniqueContacts.sort((a: any, b: any) => (b.icp_score || 50) - (a.icp_score || 50));
 
-    // Check DB duplicates
+    // Check DB duplicates in leads_raw AND consultoria_prospects
     const phonesToCheck = uniqueContacts.map((c: any) => formatPhone(c.phone || "")).filter(Boolean) as string[];
     const emailsToCheck = uniqueContacts.map((c: any) => c.email?.toLowerCase()?.trim()).filter(Boolean) as string[];
 
@@ -418,8 +418,12 @@ Responda APENAS com JSON válido:
     let existingEmails = new Set<string>();
 
     if (phonesToCheck.length > 0) {
-      const { data: existingByPhone } = await supabaseAdmin.from("leads_raw").select("phone").in("phone", phonesToCheck);
-      existingPhones = new Set((existingByPhone || []).map((l: any) => l.phone));
+      const [{ data: rawByPhone }, { data: prospectByPhone }] = await Promise.all([
+        supabaseAdmin.from("leads_raw").select("phone").in("phone", phonesToCheck),
+        supabaseAdmin.from("consultoria_prospects").select("whatsapp").in("whatsapp", phonesToCheck),
+      ]);
+      (rawByPhone || []).forEach((l: any) => existingPhones.add(l.phone));
+      (prospectByPhone || []).forEach((l: any) => existingPhones.add(l.whatsapp));
     }
     if (emailsToCheck.length > 0) {
       const { data: existingByEmail } = await supabaseAdmin.from("leads_raw").select("email").in("email", emailsToCheck);
