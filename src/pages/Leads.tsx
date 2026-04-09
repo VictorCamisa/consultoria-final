@@ -513,24 +513,26 @@ export default function Leads() {
             Todos os leads — listas de prospecção e CRM
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === "grid" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("grid")}
-            className="h-8 px-2.5"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("list")}
-            className="h-8 px-2.5"
-          >
-            <LayoutList className="h-4 w-4" />
-          </Button>
-        </div>
+        {fonteFilter === "todos" && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === "grid" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("grid")}
+              className="h-8 px-2.5"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className="h-8 px-2.5"
+            >
+              <LayoutList className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* ── KPI Strip ── */}
@@ -711,7 +713,9 @@ export default function Leads() {
           <p className="font-medium">Nenhum lead encontrado</p>
           <p className="text-sm mt-1">Ajuste os filtros ou inicie uma prospecção</p>
         </div>
-      ) : viewMode === "grid" ? (
+      ) : (() => {
+        const effectiveView = fonteFilter === "lead_raw" ? "list" : fonteFilter === "prospect" ? "grid" : viewMode;
+        return effectiveView === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {filtered.map((lead) => (
             <LeadCard
@@ -737,14 +741,15 @@ export default function Leads() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                <th className="text-left p-3 font-medium text-muted-foreground text-xs">Fonte</th>
                 <th className="text-left p-3 font-medium text-muted-foreground text-xs">Nome</th>
                 <th className="text-left p-3 font-medium text-muted-foreground text-xs">Contato</th>
                 <th className="text-left p-3 font-medium text-muted-foreground text-xs">Nicho</th>
                 <th className="text-left p-3 font-medium text-muted-foreground text-xs">Cidade</th>
                 <th className="text-center p-3 font-medium text-muted-foreground text-xs">Score</th>
                 <th className="text-center p-3 font-medium text-muted-foreground text-xs">Status</th>
-                <th className="text-right p-3 font-medium text-muted-foreground text-xs">Criado em</th>
+                <th className="text-center p-3 font-medium text-muted-foreground text-xs">Origem</th>
+                <th className="text-right p-3 font-medium text-muted-foreground text-xs">Criado</th>
+                <th className="text-right p-3 font-medium text-muted-foreground text-xs w-[140px]">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -758,17 +763,21 @@ export default function Leads() {
                     onClick={() => setSelectedLead(selectedLead?.id === lead.id && selectedLead?.fonte === lead.fonte ? null : lead)}
                   >
                     <td className="p-3">
-                      <Badge variant="outline" className={`text-[9px] ${fb.color}`}>{fb.label}</Badge>
-                    </td>
-                    <td className="p-3">
-                      <p className="font-semibold text-foreground truncate max-w-[200px]">{lead.nome}</p>
-                      {lead.decisor && <p className="text-xs text-muted-foreground">{lead.decisor}</p>}
+                      <div className="flex items-center gap-2">
+                        {fonteFilter === "todos" && (
+                          <Badge variant="outline" className={`text-[9px] shrink-0 ${fb.color}`}>{fb.label}</Badge>
+                        )}
+                        <div className="min-w-0">
+                          <p className="font-semibold text-foreground truncate max-w-[200px]">{lead.nome}</p>
+                          {lead.decisor && <p className="text-[11px] text-muted-foreground truncate">{lead.decisor}</p>}
+                        </div>
+                      </div>
                     </td>
                     <td className="p-3 text-xs">
                       {lead.telefone ? (
                         <span className="font-mono">{formatPhone(lead.telefone)}</span>
                       ) : lead.email ? (
-                        <span>{lead.email}</span>
+                        <span className="truncate block max-w-[180px]">{lead.email}</span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -783,14 +792,62 @@ export default function Leads() {
                     <td className="p-3 text-center">
                       <Badge variant="outline" className={`text-[10px] ${st.color}`}>{st.label}</Badge>
                     </td>
+                    <td className="p-3 text-center">
+                      {lead.origem && (
+                        <Badge variant="secondary" className="text-[9px]">
+                          {lead.origem === "prospecção_web" ? "Web" : lead.origem === "whatsapp" ? "WA" : lead.origem}
+                        </Badge>
+                      )}
+                    </td>
                     <td className="p-3 text-right text-xs text-muted-foreground">{formatDate(lead.created_at)}</td>
+                    <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1">
+                        {lead.fonte === "lead_raw" && lead.raw_status !== "promoted" && (
+                          <Button
+                            size="sm"
+                            className="text-[10px] h-6 px-2 gap-1"
+                            onClick={() => handlePromote(lead)}
+                            disabled={promotingId === lead.id}
+                          >
+                            {promotingId === lead.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Rocket className="h-3 w-3" />}
+                            CRM
+                          </Button>
+                        )}
+                        {lead.fonte === "lead_raw" && lead.raw_status === "promoted" && (
+                          <Badge variant="secondary" className="text-[9px] py-0">
+                            <UserCheck className="h-2.5 w-2.5 mr-0.5" /> CRM
+                          </Badge>
+                        )}
+                        {lead.fonte === "prospect" && lead.status === "novo" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-[10px] h-6 px-2 gap-1"
+                            onClick={() => handleAbordar(lead)}
+                            disabled={abordandoId === lead.id}
+                          >
+                            {abordandoId === lead.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Megaphone className="h-3 w-3" />}
+                            Abordar
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 w-6 px-0 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteLead(lead)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-      )}
+      );
+      })()}
 
       {/* ── Detail slide ── */}
       {selectedLead && (
