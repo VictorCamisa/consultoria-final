@@ -35,15 +35,7 @@ serve(async (req) => {
 
     // Resolve instância pelo responsável do prospect
     let instancia: string | null = null;
-    const responsavel = prospect.status === "abordado" ? "danilo" : "danilo"; // default
-
-    // Busca responsável real do prospect
-    const { data: fullProspect } = await supabase
-      .from("consultoria_prospects")
-      .select("responsavel")
-      .eq("id", prospect_id)
-      .single();
-    const realResponsavel = fullProspect?.responsavel ?? "danilo";
+    const realResponsavel = prospect.responsavel ?? "danilo";
 
     // Busca user_id do responsável
     const { data: vsUser } = await supabase
