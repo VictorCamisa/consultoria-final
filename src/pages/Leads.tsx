@@ -728,6 +728,7 @@ export default function Leads() {
               onAbordar={handleAbordar}
               promotingId={promotingId}
               abordandoId={abordandoId}
+              onDelete={handleDeleteLead}
             />
           ))}
         </div>
