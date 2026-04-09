@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { WhatsAppNotificationListener } from "@/components/WhatsAppNotificationListener";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AppLayout from "@/components/AppLayout";
@@ -39,6 +40,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <AuthProvider>
+          <WhatsAppNotificationListener />
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
