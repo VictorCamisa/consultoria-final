@@ -193,11 +193,11 @@ serve(async (req) => {
 
     // Checkpoint: complete
     await upsertState(supabase, prospect_id, "await_reply", ["draft", "validate", "send"], "completed", {
-      enviado, message_id: messageId, config_nicho: config.nicho
+      enviado, message_id: messageId, config_nicho: configNicho
     });
 
     return new Response(
-      JSON.stringify({ success: true, enviado, message_id: messageId, config_nicho: config.nicho }),
+      JSON.stringify({ success: true, enviado, message_id: messageId, config_nicho: configNicho }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
