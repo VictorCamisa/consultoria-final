@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -18,8 +19,14 @@ import { KanbanSkeleton } from "@/components/PageSkeleton";
 
 export default function Comercial() {
   const queryClient = useQueryClient();
-  const [filterNicho, setFilterNicho] = useState("todos");
+  const { user } = useAuth();
+  const storageKey = user ? `vs_filterNicho_${user.id}` : "vs_filterNicho";
+  const [filterNicho, setFilterNicho] = useState(() => localStorage.getItem(storageKey) || "todos");
   const [filterClassificacao, setFilterClassificacao] = useState("todos");
+
+  useEffect(() => {
+    localStorage.setItem(storageKey, filterNicho);
+  }, [filterNicho, storageKey]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProspect, setSelectedProspect] = useState<Prospect | null>(null);
   const [loadingAbordar, setLoadingAbordar] = useState<string | null>(null);
