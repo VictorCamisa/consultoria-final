@@ -91,6 +91,18 @@ export default function Comercial() {
   });
 
   // --- Actions ---
+  const handleDelete = async (prospect: Prospect) => {
+    if (!confirm(`Tem certeza que deseja excluir "${prospect.nome_negocio}"?`)) return;
+    try {
+      const { error } = await supabase.from("consultoria_prospects").delete().eq("id", prospect.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["prospects"] });
+      toast({ title: `${prospect.nome_negocio} excluído` });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao excluir", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    }
+  };
+
   const handleAbordar = async (prospect: Prospect) => {
     setLoadingAbordar(prospect.id);
     try {
@@ -251,6 +263,7 @@ export default function Comercial() {
                       onAbordar={() => handleAbordar(p)}
                       onCadencia={() => handleIniciarCadencia(p)}
                       onReativar={() => handleReativar(p)}
+                      onDelete={() => handleDelete(p)}
                     />
                   ))}
                   {items.length === 0 && (
