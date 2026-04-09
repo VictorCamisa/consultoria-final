@@ -973,6 +973,15 @@ function LeadCard({
             <UserCheck className="h-3 w-3 mr-1" /> Já no CRM
           </Badge>
         )}
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-[11px] h-7 w-7 px-0 ml-auto text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10"
+          onClick={() => onDelete(lead)}
+          title="Excluir lead"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
       </div>
     </div>
   );
