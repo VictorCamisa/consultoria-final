@@ -166,14 +166,14 @@ export function ProspectWorkspace({
         body: { prospect_id: prospect.id },
       });
       if (error) {
-        // Check for rate limit (429)
-        if (typeof error === "object" && "status" in (error as any) && (error as any).status === 429) {
-          throw { status: 429 };
-        }
+        const status = (error as any)?.status;
+        if (status === 429) throw { status: 429 };
+        if (status === 402) throw { status: 402 };
         throw error;
       }
-      if (data?.error && data.error.includes?.("Rate limit")) {
-        throw { status: 429 };
+      if (data?.error) {
+        if (data.error.includes?.("Rate limit")) throw { status: 429 };
+        if (data.error.includes?.("Créditos") || data.error.includes?.("402")) throw { status: 402 };
       }
       if (data?.sugestao) {
         setCoaching({
@@ -191,16 +191,16 @@ export function ProspectWorkspace({
         });
       }
     } catch (err: any) {
-      if (err?.status === 429 && retryCount < 2) {
+      if (err?.status === 402) {
+        toast({ title: "Créditos de IA esgotados", description: "Adicione créditos em Settings > Workspace > Usage.", variant: "destructive" });
+      } else if (err?.status === 429 && retryCount < 2) {
         const delay = (retryCount + 1) * 5000;
         toast({ title: "IA ocupada", description: `Tentando novamente em ${delay / 1000}s...` });
         suggestRetryRef.current = setTimeout(() => triggerAutoSuggest(retryCount + 1), delay);
         return;
-      }
-      if (err?.status === 429) {
+      } else if (err?.status === 429) {
         toast({ title: "Limite de requisições atingido", description: "Aguarde alguns segundos e tente novamente.", variant: "destructive" });
       }
-      // Silent fail for other errors
     } finally {
       setLoadingSuggest(false);
     }
