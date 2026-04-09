@@ -1,5 +1,4 @@
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Bell, MessageSquare, X } from "lucide-react";
 import { useState } from "react";
@@ -28,7 +27,7 @@ export function UnreadNotifications({ prospects, unreadCounts, onSelectProspect 
         <div className="flex items-center gap-1.5 text-primary">
           <Bell className="h-4 w-4" />
           <span className="text-xs font-semibold">
-            {totalUnread} mensage{totalUnread === 1 ? "m" : "ns"} não lida{totalUnread === 1 ? "" : "s"}
+            {totalUnread} mensage{totalUnread === 1 ? "m" : "ns"} nova{totalUnread === 1 ? "" : "s"}
           </span>
         </div>
         <Badge variant="secondary" className="text-[10px] h-[18px] px-1.5">
