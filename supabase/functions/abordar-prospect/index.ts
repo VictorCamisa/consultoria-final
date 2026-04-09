@@ -72,11 +72,24 @@ serve(async (req) => {
 
     const config = await findConfig(supabase, prospect.nicho);
 
+    // Busca fallback de instância Evolution de qualquer config existente
+    let fallbackInstancia: string | null = null;
+    if (!config) {
+      const { data: anyConfig } = await supabase
+        .from("consultoria_config")
+        .select("instancia_evolution")
+        .not("instancia_evolution", "eq", "")
+        .limit(1);
+      if (anyConfig?.length) {
+        fallbackInstancia = anyConfig[0].instancia_evolution;
+      }
+    }
+
     // Fallback genérico quando não há config para o nicho
     const genericScripts: Record<string, string> = {
-      a: `Olá, {{decisor}}! Tudo bem? Sou da VS Growth Hub. Vi que a {{nome}} atua em {{cidade}} e gostaria de entender melhor o seu negócio. Posso te fazer algumas perguntas rápidas para ver se consigo te ajudar a crescer?`,
-      b: `{{decisor}}, boa tarde! Aqui é da VS Growth Hub. Estamos ajudando empresas como a {{nome}} a otimizar marketing e vendas. Você teria 2 minutos para eu entender seus principais desafios hoje?`,
-      c: `Oi {{decisor}}! Tudo certo? Sou consultor da VS Growth Hub e trabalho com empresas de {{cidade}}. Queria entender: qual o maior gargalo da {{nome}} hoje quando o assunto é atrair e converter clientes?`,
+      a: `Olá{{decisor_greeting}}! Tudo bem? Sou da VS Growth Hub. Gostaria de entender melhor o seu negócio{{cidade_ref}}. Posso te fazer algumas perguntas rápidas para ver se consigo te ajudar a crescer?`,
+      b: `{{decisor_greeting}}, boa tarde! Aqui é da VS Growth Hub. Estamos ajudando empresas a otimizar marketing e vendas. Você teria 2 minutos para eu entender seus principais desafios hoje?`,
+      c: `Oi{{decisor_greeting}}! Tudo certo? Sou consultor da VS Growth Hub. Queria entender: qual o maior gargalo do seu negócio hoje quando o assunto é atrair e converter clientes?`,
     };
 
     let mensagem: string;
@@ -95,10 +108,18 @@ serve(async (req) => {
       mensagem = genericScripts[script.toLowerCase()] || genericScripts.a;
     }
 
+    // Sanitiza valores de placeholder — evita mostrar dados crus inválidos
+    const decisorNome = (prospect.decisor && prospect.decisor !== prospect.nome_negocio && prospect.decisor !== "Não informado")
+      ? prospect.decisor : "";
+    const cidadeValida = (prospect.cidade && !["não informada", "não informado", ""].includes(prospect.cidade.toLowerCase().trim()))
+      ? prospect.cidade : "";
+
     mensagem = mensagem
+      .replace(/\{\{decisor_greeting\}\}/gi, decisorNome ? `, ${decisorNome}` : "")
+      .replace(/\{\{cidade_ref\}\}/gi, cidadeValida ? ` em ${cidadeValida}` : "")
       .replace(/\{\{nome\}\}/gi, prospect.nome_negocio)
-      .replace(/\{\{decisor\}\}/gi, prospect.decisor ?? prospect.nome_negocio)
-      .replace(/\{\{cidade\}\}/gi, prospect.cidade ?? "");
+      .replace(/\{\{decisor\}\}/gi, decisorNome || "")
+      .replace(/\{\{cidade\}\}/gi, cidadeValida);
 
     // Checkpoint: validate
     await upsertState(supabase, prospect_id, "validate", ["draft"], "in_progress", { script, mensagem_original: mensagem });
@@ -130,7 +151,7 @@ serve(async (req) => {
 
     const evolutionUrl = Deno.env.get("EVOLUTION_API_URL");
     const evolutionKey = Deno.env.get("EVOLUTION_API_KEY");
-    const instancia = config ? (config.instancia_evolution as string) : null;
+    const instancia = config ? (config.instancia_evolution as string) : fallbackInstancia;
 
     let messageId: string | null = null;
     let enviado = false;
