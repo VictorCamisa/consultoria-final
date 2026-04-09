@@ -1,57 +1,11 @@
 /**
  * Envia mensagem via Evolution API e salva em consultoria_conversas.
- *
- * Variáveis de ambiente (Supabase Secrets):
- *   EVOLUTION_API_URL  - ex: https://evolution.seudominio.com.br
- *   EVOLUTION_API_KEY  - API key global da Evolution
+ * Usa helper centralizado para resolução de instância.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
-
-async function resolveInstanceByUserId(supabase: ReturnType<typeof createClient>, userId: string) {
-  const { data: inst } = await supabase
-    .from("evolution_instances").select("instance_name")
-    .eq("created_by", userId).eq("state", "open").limit(1).maybeSingle();
-  return (inst?.instance_name as string | undefined) ?? null;
-}
-
-async function resolveInstanceByResponsavel(supabase: ReturnType<typeof createClient>, responsavel: string) {
-  const { data: vsUser } = await supabase
-    .from("vs_users").select("id, email").eq("role", responsavel).maybeSingle();
-  if (vsUser) {
-    const { data: inst } = await supabase
-      .from("evolution_instances").select("instance_name")
-      .eq("created_by", vsUser.id).eq("state", "open").limit(1).maybeSingle();
-    if (inst) return inst.instance_name as string;
-    if (vsUser.email) {
-      const { data: authData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
-      const authUser = authData?.users?.find((u: any) => u.email?.toLowerCase() === vsUser.email.toLowerCase());
-      if (authUser) {
-        const { data: inst2 } = await supabase
-          .from("evolution_instances").select("instance_name")
-          .eq("created_by", authUser.id).eq("state", "open").limit(1).maybeSingle();
-        if (inst2) return inst2.instance_name as string;
-      }
-    }
-  }
-  return null;
-}
-
-async function getAuthenticatedUserId(req: Request) {
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) return null;
-
-  const supabaseUser = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
-
-  const { data: { user }, error } = await supabaseUser.auth.getUser();
-  if (error || !user) return null;
-  return user.id;
-}
+import { normalizePhone, resolveSendInstance } from "../_shared/instance-resolver.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -68,61 +22,28 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
-    const authUserId = await getAuthenticatedUserId(req);
 
     // Busca prospect
     const { data: prospect, error: pErr } = await supabase
       .from("consultoria_prospects")
-      .select("id, whatsapp, nicho, status, responsavel")
+      .select("id, whatsapp, nicho, status, responsavel, linked_instance")
       .eq("id", prospect_id)
       .single();
     if (pErr) throw pErr;
 
-    let instancia: string | null = null;
-
-    if (authUserId) {
-      instancia = await resolveInstanceByUserId(supabase, authUserId);
-      if (!instancia) {
-        throw new Error("Nenhuma instância Evolution conectada para seu usuário. Vá em Configurações > WhatsApp e conecte sua instância.");
-      }
-    } else {
-      instancia = await resolveInstanceByResponsavel(supabase, prospect.responsavel ?? "danilo");
-
-      // Fallback: config do nicho → qualquer config
-      if (!instancia) {
-        const { data: exactConfig } = await supabase
-          .from("consultoria_config")
-          .select("instancia_evolution")
-          .eq("nicho", prospect.nicho)
-          .maybeSingle();
-        if (exactConfig?.instancia_evolution) {
-          instancia = exactConfig.instancia_evolution;
-        } else {
-          const { data: allConfigs } = await supabase
-            .from("consultoria_config")
-            .select("instancia_evolution, nicho");
-          if (allConfigs?.length) {
-            const match = allConfigs.find((c: any) => c.instancia_evolution);
-            instancia = match?.instancia_evolution ?? null;
-          }
-        }
-      }
-    }
+    // Resolve instância via helper centralizado
+    const instancia = await resolveSendInstance(supabase, prospect);
     if (!instancia) {
-      throw new Error("Nenhuma instância Evolution configurada. Vá em Configurações > WhatsApp.");
+      throw new Error("Nenhuma instância Evolution disponível. Vá em Configurações > WhatsApp.");
     }
 
     const evolutionUrl = Deno.env.get("EVOLUTION_API_URL");
     const evolutionKey = Deno.env.get("EVOLUTION_API_KEY");
     if (!evolutionUrl || !evolutionKey) {
-      throw new Error(
-        "EVOLUTION_API_URL e EVOLUTION_API_KEY não configurados"
-      );
+      throw new Error("EVOLUTION_API_URL e EVOLUTION_API_KEY não configurados");
     }
 
-    // Normaliza número: garante formato com DDI 55
-    const rawPhone = prospect.whatsapp.replace(/\D/g, "");
-    const phone = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`;
+    const phone = normalizePhone(prospect.whatsapp);
 
     // Envia mensagem via Evolution API v2
     const evoRes = await fetch(
@@ -133,10 +54,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
           apikey: evolutionKey,
         },
-        body: JSON.stringify({
-          number: phone,
-          text: mensagem,
-        }),
+        body: JSON.stringify({ number: phone, text: mensagem }),
       }
     );
 
@@ -158,6 +76,8 @@ serve(async (req) => {
         conteudo: mensagem,
         message_id: messageId,
         processado_ia: false,
+        origem: "system_send",
+        instance_name: instancia,
       });
     if (insertErr) throw insertErr;
 
@@ -168,7 +88,7 @@ serve(async (req) => {
       .eq("id", prospect_id);
 
     return new Response(
-      JSON.stringify({ success: true, message_id: messageId }),
+      JSON.stringify({ success: true, message_id: messageId, instance: instancia }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
