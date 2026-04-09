@@ -155,15 +155,26 @@ export function ProspectWorkspace({
     }
   };
 
-  // Auto-suggest
-  const triggerAutoSuggest = useCallback(async () => {
+  // Auto-suggest with rate-limit retry
+  const suggestRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggerAutoSuggest = useCallback(async (retryCount = 0) => {
     if (!prospect) return;
+    if (suggestRetryRef.current) { clearTimeout(suggestRetryRef.current); suggestRetryRef.current = null; }
     setLoadingSuggest(true);
     try {
       const { data, error } = await supabase.functions.invoke("suggest-reply", {
         body: { prospect_id: prospect.id },
       });
-      if (error) throw error;
+      if (error) {
+        // Check for rate limit (429)
+        if (typeof error === "object" && "status" in (error as any) && (error as any).status === 429) {
+          throw { status: 429 };
+        }
+        throw error;
+      }
+      if (data?.error && data.error.includes?.("Rate limit")) {
+        throw { status: 429 };
+      }
       if (data?.sugestao) {
         setCoaching({
           sugestao: data.sugestao,
@@ -179,8 +190,17 @@ export function ProspectWorkspace({
           tom_recomendado: data.tom_recomendado ?? "",
         });
       }
-    } catch {
-      // Silent fail for auto-suggest
+    } catch (err: any) {
+      if (err?.status === 429 && retryCount < 2) {
+        const delay = (retryCount + 1) * 5000;
+        toast({ title: "IA ocupada", description: `Tentando novamente em ${delay / 1000}s...` });
+        suggestRetryRef.current = setTimeout(() => triggerAutoSuggest(retryCount + 1), delay);
+        return;
+      }
+      if (err?.status === 429) {
+        toast({ title: "Limite de requisições atingido", description: "Aguarde alguns segundos e tente novamente.", variant: "destructive" });
+      }
+      // Silent fail for other errors
     } finally {
       setLoadingSuggest(false);
     }
@@ -246,34 +266,7 @@ export function ProspectWorkspace({
   }, [prospect?.id]);
 
   const handleSuggestReply = async () => {
-    if (!prospect) return;
-    setLoadingSuggest(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("suggest-reply", {
-        body: { prospect_id: prospect.id },
-      });
-      if (error) throw error;
-      if (data?.sugestao) {
-        setCoaching({
-          sugestao: data.sugestao,
-          intent: data.intent ?? "padrao",
-          phase: data.phase ?? "unknown",
-          phase_label: data.phase_label ?? "—",
-          phase_desc: data.phase_desc ?? "",
-          active_script: data.active_script ?? "",
-          script_content: data.script_content ?? "",
-          insights: data.insights ?? [],
-          proximo_passo: data.proximo_passo ?? "",
-          alerta: data.alerta ?? "",
-          tom_recomendado: data.tom_recomendado ?? "",
-        });
-        toast({ title: "Coaching IA atualizado" });
-      }
-    } catch (err: unknown) {
-      toast({ title: "Erro ao gerar sugestão", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
-    } finally {
-      setLoadingSuggest(false);
-    }
+    triggerAutoSuggest(0);
   };
 
   const handleUseSuggestion = () => {
