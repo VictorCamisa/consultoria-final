@@ -38,7 +38,6 @@ serve(async (req) => {
     let instancia = await resolveInstanceForResponsavel({
       supabase,
       responsavel: prospect.responsavel ?? "danilo",
-      authHeader: req.headers.get("authorization"),
       logPrefix: "send-whatsapp",
     });
 

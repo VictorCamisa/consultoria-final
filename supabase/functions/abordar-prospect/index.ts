@@ -158,7 +158,6 @@ serve(async (req) => {
     let instancia = await resolveInstanceForResponsavel({
       supabase,
       responsavel,
-      authHeader: req.headers.get("authorization"),
       logPrefix: "abordar",
     });
 
