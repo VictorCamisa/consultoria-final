@@ -40,6 +40,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <AuthProvider>
+          <WhatsAppNotificationListener />
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />
