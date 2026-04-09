@@ -9,7 +9,7 @@ import { Loader2, RefreshCw, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { Tables } from "@/integrations/supabase/types";
 
-import { PIPELINE_STAGES, NICHOS, Prospect } from "@/components/comercial/types";
+import { PIPELINE_STAGES, NICHOS, NICHO_CATEGORIES, matchesNichoFilter, Prospect } from "@/components/comercial/types";
 import { PipelineStats } from "@/components/comercial/PipelineStats";
 import { ProspectCard } from "@/components/comercial/ProspectCard";
 import { ProspectWorkspace } from "@/components/comercial/ProspectWorkspace";

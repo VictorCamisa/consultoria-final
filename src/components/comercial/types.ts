@@ -20,7 +20,27 @@ export const PIPELINE_STAGES = [
   { key: "blacklist", label: "Blacklist", color: "bg-gray-500" },
 ] as const;
 
-export const NICHOS = ["Estética", "Odonto", "Advocacia", "Revendas de Veículos"] as const;
+export const NICHO_CATEGORIES = [
+  { key: "estetica", label: "Estética", keywords: ["estética", "estetic", "bem-estar", "cirurgia plástica"], color: "bg-pink-500/15 border-pink-500/30 text-pink-400", dot: "bg-pink-500" },
+  { key: "odonto", label: "Odonto", keywords: ["odonto", "odontológ"], color: "bg-cyan-500/15 border-cyan-500/30 text-cyan-400", dot: "bg-cyan-500" },
+  { key: "advocacia", label: "Advocacia", keywords: ["advoca", "advocacia", "advogado", "direito", "jurídic"], color: "bg-amber-500/15 border-amber-500/30 text-amber-400", dot: "bg-amber-500" },
+  { key: "revendas", label: "Revendas", keywords: ["revenda", "veículo", "seminov", "motors", "auto"], color: "bg-blue-500/15 border-blue-500/30 text-blue-400", dot: "bg-blue-500" },
+] as const;
+
+export const NICHOS = NICHO_CATEGORIES.map(c => c.label);
+
+export function nichoCategory(nicho: string) {
+  const lower = nicho.toLowerCase();
+  return NICHO_CATEGORIES.find(c => c.keywords.some(k => lower.includes(k))) ?? null;
+}
+
+export function matchesNichoFilter(prospectNicho: string, filterKey: string): boolean {
+  if (filterKey === "todos") return true;
+  const cat = NICHO_CATEGORIES.find(c => c.label === filterKey);
+  if (!cat) return false;
+  const lower = prospectNicho.toLowerCase();
+  return cat.keywords.some(k => lower.includes(k));
+}
 
 export const classificacaoConfig = (c: string | null) => {
   if (c === "quente") return { label: "Quente", color: "text-red-400", bg: "bg-red-500/15 border-red-500/30 text-red-400", icon: "🔥" };
