@@ -1,0 +1,1 @@
+INSERT INTO vs_users (email, name, role) VALUES ('danilo@vs.com', 'Danilo', 'danilo');
