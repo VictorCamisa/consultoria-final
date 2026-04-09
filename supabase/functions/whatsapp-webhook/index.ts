@@ -1,12 +1,13 @@
 /**
  * Evolution API Webhook Handler
  * Integra: HITL com gatilhos de handoff, extração de fatos, validação anti-eco.
+ * Usa helper centralizado para matching de telefone e binding de instância.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { buildPhoneMatchFilter, phoneToJid } from "../_shared/instance-resolver.ts";
 
-// Gatilhos HITL
 function detectHandoffTrigger(
   conteudo: string,
   prospect: { status: string; classificacao_ia: string | null; score_qualificacao: number | null },
@@ -14,19 +15,16 @@ function detectHandoffTrigger(
 ): { triggered: boolean; reason: string } {
   const lower = conteudo.toLowerCase();
 
-  // Gatilho 1: Pedido explícito de falar com humano
   if (/falar com (alguém|pessoa|humano|responsável|dono|gerente|quem decide)/i.test(lower) ||
       /quero (conversar|falar) com (vocês|uma pessoa)/i.test(lower) ||
       /tem alguém (aí|real|de verdade)/i.test(lower)) {
     return { triggered: true, reason: "prospect_pediu_humano" };
   }
 
-  // Gatilho 2: 3+ turnos sem resolução
   if (turnsSemResolucao >= 3) {
     return { triggered: true, reason: "repeticao_sem_resolucao" };
   }
 
-  // Gatilho 3: Alto valor (quente + score > 70)
   if (prospect.classificacao_ia === "quente" && (prospect.score_qualificacao ?? 0) > 70) {
     return { triggered: true, reason: "alto_valor_quente" };
   }
@@ -52,6 +50,8 @@ serve(async (req) => {
 
     const payload = await req.json();
     const event = payload.event as string;
+    // Extract instance name from webhook payload
+    const webhookInstance: string = payload.instance ?? payload.instanceName ?? "";
 
     if (event !== "messages.upsert") {
       return new Response(JSON.stringify({ skipped: true, event }), {
@@ -61,7 +61,6 @@ serve(async (req) => {
 
     const data = payload.data;
     const key = data?.key;
-
     const isFromMe = key?.fromMe === true;
 
     const remoteJid: string = key?.remoteJid ?? "";
@@ -85,10 +84,12 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Use centralized phone matching
+    const phoneFilter = buildPhoneMatchFilter(rawPhone);
     const { data: prospects } = await supabase
       .from("consultoria_prospects")
-      .select("id, nicho, status, whatsapp, nome_negocio, dia_cadencia, classificacao_ia, score_qualificacao")
-      .or(`whatsapp.eq.${rawPhone},whatsapp.eq.+${rawPhone},whatsapp.eq.55${rawPhone.slice(-11)}`)
+      .select("id, nicho, status, whatsapp, nome_negocio, dia_cadencia, classificacao_ia, score_qualificacao, linked_instance, remote_jid")
+      .or(phoneFilter)
       .limit(1);
 
     if (!prospects?.length) {
@@ -100,7 +101,19 @@ serve(async (req) => {
 
     const prospect = prospects[0];
 
-    // Dedup robusto: tenta inserir e detecta conflito pelo message_id
+    // Bind instance + remote_jid if not already bound
+    if (!prospect.linked_instance && webhookInstance) {
+      await supabase.from("consultoria_prospects").update({
+        linked_instance: webhookInstance,
+        remote_jid: remoteJid,
+      }).eq("id", prospect.id);
+    } else if (!prospect.remote_jid) {
+      await supabase.from("consultoria_prospects").update({
+        remote_jid: remoteJid,
+      }).eq("id", prospect.id);
+    }
+
+    // Dedup by message_id
     if (messageId) {
       const { data: existente } = await supabase
         .from("consultoria_conversas")
@@ -114,13 +127,15 @@ serve(async (req) => {
       }
     }
 
-    // Salva mensagem — fromMe = saida, senão = entrada
+    // Determine origin: fromMe via webhook = cellphone (manual send) or system_send
     const direcao = isFromMe ? "saida" : "entrada";
+    const origem = isFromMe ? "cellphone" : "webhook";
+
     const { error: insertErr } = await supabase.from("consultoria_conversas").insert({
-      prospect_id: prospect.id, direcao, conteudo, message_id: messageId, processado_ia: isFromMe,
+      prospect_id: prospect.id, direcao, conteudo, message_id: messageId,
+      processado_ia: isFromMe, origem, instance_name: webhookInstance || null,
     });
 
-    // Se falhar por duplicata (race condition), ignora
     if (insertErr) {
       if (insertErr.code === "23505" || insertErr.message?.includes("duplicate")) {
         return new Response(JSON.stringify({ skipped: true, reason: "duplicate_race" }), {
@@ -129,15 +144,20 @@ serve(async (req) => {
       }
       console.error("[webhook] Insert error:", insertErr);
     }
-    // Se é mensagem enviada pelo celular (fromMe), apenas salva e retorna
+
+    // If sent from phone (fromMe), just save and return
     if (isFromMe) {
+      const now = new Date().toISOString();
+      await supabase.from("consultoria_prospects").update({
+        data_ultima_interacao: now, updated_at: now,
+      }).eq("id", prospect.id);
       return new Response(
         JSON.stringify({ success: true, prospect_id: prospect.id, from_me: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Dedup extra para auto-reply: verifica se já enviamos saída nos últimos 30s
+    // --- Inbound message handling (same as before) ---
     const thirtySecsAgo = new Date(Date.now() - 30000).toISOString();
     const { data: recentOutbound } = await supabase
       .from("consultoria_conversas")
@@ -160,7 +180,6 @@ serve(async (req) => {
     const baseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Dispara classificação + extração de fatos em background
     fetch(`${baseUrl}/functions/v1/classify-prospect`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
@@ -173,10 +192,9 @@ serve(async (req) => {
       body: JSON.stringify({ prospect_id: prospect.id, message_id: messageId }),
     }).catch((e) => console.error("[webhook] Extract-facts error:", e));
 
-    // HITL: Verifica gatilhos de handoff
+    // HITL
     let handoffTriggered = false;
     if (shouldUpdateStatus && conteudo !== "[mídia não suportada]") {
-      // Conta turnos recentes sem resolução (saída VS → entrada prospect sem avanço)
       const { data: recentMsgs } = await supabase
         .from("consultoria_conversas")
         .select("direcao")
@@ -207,7 +225,6 @@ serve(async (req) => {
           updated_at: now,
         }).eq("id", prospect.id);
 
-        // Atualiza estado
         await supabase.from("prospect_execution_state").upsert({
           prospect_id: prospect.id,
           current_step: "handoff",
@@ -219,7 +236,7 @@ serve(async (req) => {
       }
     }
 
-    // AUTO-REPLY: Só se não houve handoff e não é duplicata
+    // AUTO-REPLY
     if (shouldUpdateStatus && !handoffTriggered && !skipAutoReply && conteudo !== "[mídia não suportada]") {
       console.log(`[webhook] Auto-reply para ${prospect.nome_negocio} (${prospect.nicho})`);
 
@@ -230,7 +247,7 @@ serve(async (req) => {
           const hora = new Date().getHours();
           const { data: config } = await supabase
             .from("consultoria_config")
-            .select("horario_inicio, horario_fim, instancia_evolution")
+            .select("horario_inicio, horario_fim")
             .ilike("nicho", prospect.nicho)
             .maybeSingle();
 
@@ -241,7 +258,6 @@ serve(async (req) => {
             return;
           }
 
-          // Gera sugestão
           const suggestRes = await fetch(`${baseUrl}/functions/v1/suggest-reply`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },
@@ -256,7 +272,6 @@ serve(async (req) => {
           const { sugestao: resposta } = await suggestRes.json();
           if (!resposta) return;
 
-          // Valida com anti-eco
           let mensagemFinal = resposta;
           try {
             const validateRes = await fetch(`${baseUrl}/functions/v1/validate-message`, {
@@ -269,7 +284,6 @@ serve(async (req) => {
               const validation = await validateRes.json();
               if (!validation.approved && validation.revised_message) {
                 mensagemFinal = validation.revised_message;
-                console.log(`[webhook] Mensagem revisada pelo validador`);
               } else if (!validation.approved && !validation.revised_message) {
                 console.log(`[webhook] Mensagem reprovada sem revisão, cancelando auto-reply`);
                 return;
@@ -279,7 +293,6 @@ serve(async (req) => {
             console.warn("[webhook] Validador indisponível, prosseguindo:", e);
           }
 
-          // Envia
           const sendRes = await fetch(`${baseUrl}/functions/v1/send-whatsapp`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },

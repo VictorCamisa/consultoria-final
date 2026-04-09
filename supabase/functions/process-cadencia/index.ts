@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { normalizePhone, resolveSendInstance } from "../_shared/instance-resolver.ts";
 
 const CADENCIA: Array<{ dia: number; next: number | null; next_days: number }> = [
   { dia: 1, next: 3, next_days: 2 },
@@ -64,7 +65,7 @@ serve(async (req) => {
   try {
     const { data: prospects, error: pErr } = await supabase
       .from("consultoria_prospects")
-      .select("id, nome_negocio, whatsapp, nicho, status, dia_cadencia, data_proxima_acao, decisor, cidade")
+      .select("id, nome_negocio, whatsapp, nicho, status, dia_cadencia, data_proxima_acao, decisor, cidade, linked_instance, responsavel")
       .eq("status", "em_cadencia")
       .not("dia_cadencia", "is", null)
       .or(`data_proxima_acao.is.null,data_proxima_acao.lte.${nowIso}`)
@@ -151,11 +152,16 @@ serve(async (req) => {
         let messageId: string | null = null;
         let enviado = false;
 
-        if (evolutionUrl && evolutionKey && config.instancia_evolution) {
-          const rawPhone = prospect.whatsapp.replace(/\D/g, "");
-          const phone = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`;
+        // Use centralized instance resolver
+        const instancia = await resolveSendInstance(supabase, {
+          id: prospect.id, whatsapp: prospect.whatsapp,
+          responsavel: null, nicho: prospect.nicho,
+        });
 
-          const evoRes = await fetch(`${evolutionUrl}/message/sendText/${config.instancia_evolution}`, {
+        if (evolutionUrl && evolutionKey && instancia) {
+          const phone = normalizePhone(prospect.whatsapp);
+
+          const evoRes = await fetch(`${evolutionUrl}/message/sendText/${instancia}`, {
             method: "POST",
             headers: { "Content-Type": "application/json", apikey: evolutionKey },
             body: JSON.stringify({ number: phone, text: mensagem }),
@@ -173,6 +179,7 @@ serve(async (req) => {
 
         await supabase.from("consultoria_conversas").insert({
           prospect_id: prospect.id, direcao: "saida", conteudo: mensagem, message_id: messageId, processado_ia: false,
+          origem: "system_send", instance_name: instancia || null,
         });
 
         await supabase.from("consultoria_cadencia").insert({
