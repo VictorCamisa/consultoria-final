@@ -104,7 +104,7 @@ serve(async (req) => {
 
     const prospect = prospects[0];
 
-    // Dedup
+    // Dedup robusto: tenta inserir e detecta conflito pelo message_id
     if (messageId) {
       const { data: existente } = await supabase
         .from("consultoria_conversas")
@@ -119,9 +119,30 @@ serve(async (req) => {
     }
 
     // Salva mensagem
-    await supabase.from("consultoria_conversas").insert({
+    const { error: insertErr } = await supabase.from("consultoria_conversas").insert({
       prospect_id: prospect.id, direcao: "entrada", conteudo, message_id: messageId, processado_ia: false,
     });
+
+    // Se falhar por duplicata (race condition), ignora
+    if (insertErr) {
+      if (insertErr.code === "23505" || insertErr.message?.includes("duplicate")) {
+        return new Response(JSON.stringify({ skipped: true, reason: "duplicate_race" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      console.error("[webhook] Insert error:", insertErr);
+    }
+
+    // Dedup extra para auto-reply: verifica se já enviamos saída nos últimos 30s
+    const thirtySecsAgo = new Date(Date.now() - 30000).toISOString();
+    const { data: recentOutbound } = await supabase
+      .from("consultoria_conversas")
+      .select("id")
+      .eq("prospect_id", prospect.id)
+      .eq("direcao", "saida")
+      .gte("created_at", thirtySecsAgo)
+      .limit(1);
+    const skipAutoReply = (recentOutbound?.length ?? 0) > 0;
 
     const now = new Date().toISOString();
     const shouldUpdateStatus = ["abordado", "em_cadencia"].includes(prospect.status);
