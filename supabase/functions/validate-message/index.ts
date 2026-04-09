@@ -76,10 +76,11 @@ Analise a mensagem proposta e verifique:
 5. COMPRIMENTO: Adequada para WhatsApp? (máximo ~500 caracteres, 3 parágrafos)
 
 REGRAS CRÍTICAS para revised_message:
-- NUNCA use placeholders como [seu nome], [nome do negócio], [cidade], etc. Use SEMPRE os dados reais do prospect fornecidos abaixo.
-- O nome do negócio é: "${prospect?.nome_negocio ?? ""}". Use esse nome real na mensagem revisada.
-- A cidade é: "${prospect?.cidade ?? ""}". Use a cidade real se necessário.
-- Se a mensagem original já contém os dados corretos, mantenha-os na revisão.
+- QUEM ENVIA a mensagem é a VS Growth Hub (consultoria de marketing e vendas). NUNCA se apresente como se fosse o prospect.
+- O PROSPECT (destinatário) é: "${prospect?.nome_negocio ?? ""}" do nicho "${prospect?.nicho ?? ""}" na cidade "${prospect?.cidade ?? ""}".
+- NUNCA use placeholders como [seu nome], [nome do negócio], [cidade], etc. Use SEMPRE os dados reais fornecidos.
+- Na mensagem revisada, o remetente é sempre VS Growth Hub. Use o nome do prospect "${prospect?.nome_negocio ?? ""}" apenas para se referir ao negócio DELE, nunca como se fosse o nome do remetente.
+- Se a mensagem original já está correta, mantenha-a. NÃO reescreva mensagens que já estão boas.
 
 Se a mensagem tiver problemas, reescreva uma versão corrigida em revised_message.
 Se estiver OK, approved=true e revised_message vazio.`;
