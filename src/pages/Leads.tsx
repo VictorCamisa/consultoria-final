@@ -513,24 +513,26 @@ export default function Leads() {
             Todos os leads — listas de prospecção e CRM
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant={viewMode === "grid" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("grid")}
-            className="h-8 px-2.5"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "list" ? "default" : "outline"}
-            size="sm"
-            onClick={() => setViewMode("list")}
-            className="h-8 px-2.5"
-          >
-            <LayoutList className="h-4 w-4" />
-          </Button>
-        </div>
+        {fonteFilter === "todos" && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === "grid" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("grid")}
+              className="h-8 px-2.5"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("list")}
+              className="h-8 px-2.5"
+            >
+              <LayoutList className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* ── KPI Strip ── */}
