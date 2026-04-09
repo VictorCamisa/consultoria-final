@@ -170,7 +170,10 @@ export default function Comercial() {
         <UnreadNotifications
           prospects={prospects}
           unreadCounts={unreadCounts}
-          onSelectProspect={p => setSelectedProspect(p)}
+          onSelectProspect={p => {
+            markAsSeen(p.id);
+            setSelectedProspect(p);
+          }}
         />
       )}
 
