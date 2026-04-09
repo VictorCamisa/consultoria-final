@@ -12,7 +12,7 @@ import {
   ChevronDown, ChevronRight, ExternalLink, Eye, TrendingUp,
   Flame, Snowflake, Thermometer, X, Building2, Calendar,
   ArrowUpDown, LayoutGrid, LayoutList, SlidersHorizontal,
-  Database, UserCheck, Inbox, Rocket, Loader2, Megaphone, PlayCircle,
+  Database, UserCheck, Inbox, Rocket, Loader2, Megaphone, PlayCircle, Trash2,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
