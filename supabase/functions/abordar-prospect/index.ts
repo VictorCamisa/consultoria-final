@@ -61,7 +61,6 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
-    const authUserId = await getAuthenticatedUserId(req);
 
     // Checkpoint: draft
     await upsertState(supabase, prospect_id, "draft", [], "in_progress");
@@ -74,19 +73,6 @@ serve(async (req) => {
     if (pErr) throw pErr;
 
     const config = await findConfig(supabase, prospect.nicho);
-
-    // Busca fallback de instância Evolution de qualquer config existente
-    let fallbackInstancia: string | null = null;
-    if (!config) {
-      const { data: anyConfig } = await supabase
-        .from("consultoria_config")
-        .select("instancia_evolution")
-        .not("instancia_evolution", "eq", "")
-        .limit(1);
-      if (anyConfig?.length) {
-        fallbackInstancia = anyConfig[0].instancia_evolution;
-      }
-    }
 
     // Fallback genérico quando não há config para o nicho
     const genericScripts: Record<string, string> = {
