@@ -62,11 +62,7 @@ serve(async (req) => {
     const data = payload.data;
     const key = data?.key;
 
-    if (key?.fromMe === true) {
-      return new Response(JSON.stringify({ skipped: true, reason: "fromMe" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const isFromMe = key?.fromMe === true;
 
     const remoteJid: string = key?.remoteJid ?? "";
     if (remoteJid.endsWith("@g.us")) {
