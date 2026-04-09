@@ -321,7 +321,24 @@ export default function Leads() {
     }
   }, [queryClient]);
 
-  /* ── Unified list ──────────────────────────────── */
+  /* ── Excluir lead ────────────────────────────────── */
+  const handleDeleteLead = useCallback(async (lead: UnifiedLead) => {
+    if (!confirm(`Excluir "${lead.nome}"? Esta ação não pode ser desfeita.`)) return;
+    try {
+      const table = lead.fonte === "lead_raw" ? "leads_raw" : "consultoria_prospects";
+      const { error } = await supabase.from(table).delete().eq("id", lead.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["all-prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leads-raw"] });
+      queryClient.invalidateQueries({ queryKey: ["prospects"] });
+      if (selectedLead?.id === lead.id) setSelectedLead(null);
+      toast({ title: `"${lead.nome}" excluído com sucesso` });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : typeof err === "object" && err !== null ? JSON.stringify(err) : String(err);
+      toast({ title: "Erro ao excluir", description: msg, variant: "destructive" });
+    }
+  }, [queryClient, selectedLead]);
+
   const allLeads = useMemo(() => {
     const deduped = new Map<string, UnifiedLead>();
 
