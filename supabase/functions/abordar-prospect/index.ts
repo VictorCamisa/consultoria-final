@@ -71,18 +71,29 @@ serve(async (req) => {
     if (pErr) throw pErr;
 
     const config = await findConfig(supabase, prospect.nicho);
-    if (!config) {
-      await upsertState(supabase, prospect_id, "draft", [], "error", {}, `Config não encontrada para nicho "${prospect.nicho}"`);
-      throw new Error(`Nenhuma config encontrada para nicho "${prospect.nicho}".`);
-    }
 
-    const scriptMap: Record<string, string> = {
-      a: (config.script_a as string) ?? "",
-      b: (config.script_b as string) ?? "",
-      c: (config.script_c as string) ?? "",
+    // Fallback genérico quando não há config para o nicho
+    const genericScripts: Record<string, string> = {
+      a: `Olá, {{decisor}}! Tudo bem? Sou da VS Growth Hub. Vi que a {{nome}} atua em {{cidade}} e gostaria de entender melhor o seu negócio. Posso te fazer algumas perguntas rápidas para ver se consigo te ajudar a crescer?`,
+      b: `{{decisor}}, boa tarde! Aqui é da VS Growth Hub. Estamos ajudando empresas como a {{nome}} a otimizar marketing e vendas. Você teria 2 minutos para eu entender seus principais desafios hoje?`,
+      c: `Oi {{decisor}}! Tudo certo? Sou consultor da VS Growth Hub e trabalho com empresas de {{cidade}}. Queria entender: qual o maior gargalo da {{nome}} hoje quando o assunto é atrair e converter clientes?`,
     };
-    let mensagem = scriptMap[script.toLowerCase()];
-    if (!mensagem) throw new Error(`Script "${script}" vazio para nicho "${config.nicho}"`);
+
+    let mensagem: string;
+    let configNicho = "genérico";
+
+    if (config) {
+      configNicho = config.nicho as string;
+      const scriptMap: Record<string, string> = {
+        a: (config.script_a as string) ?? "",
+        b: (config.script_b as string) ?? "",
+        c: (config.script_c as string) ?? "",
+      };
+      mensagem = scriptMap[script.toLowerCase()] || genericScripts[script.toLowerCase()] || genericScripts.a;
+    } else {
+      console.log(`[abordar] Sem config para nicho "${prospect.nicho}" — usando script genérico`);
+      mensagem = genericScripts[script.toLowerCase()] || genericScripts.a;
+    }
 
     mensagem = mensagem
       .replace(/\{\{nome\}\}/gi, prospect.nome_negocio)
@@ -119,7 +130,7 @@ serve(async (req) => {
 
     const evolutionUrl = Deno.env.get("EVOLUTION_API_URL");
     const evolutionKey = Deno.env.get("EVOLUTION_API_KEY");
-    const instancia = config.instancia_evolution as string;
+    const instancia = config ? (config.instancia_evolution as string) : null;
 
     let messageId: string | null = null;
     let enviado = false;
@@ -130,8 +141,8 @@ serve(async (req) => {
       console.log("[abordar] instancia_evolution vazia — salvando sem enviar");
     } else {
       const hora = new Date().getHours();
-      const horaInicio = (config.horario_inicio as number) ?? 8;
-      const horaFim = (config.horario_fim as number) ?? 18;
+      const horaInicio = config ? (config.horario_inicio as number) ?? 8 : 8;
+      const horaFim = config ? (config.horario_fim as number) ?? 18 : 18;
       if (hora < horaInicio || hora >= horaFim) {
         await upsertState(supabase, prospect_id, "send", ["draft", "validate"], "pending", { reason: "fora_horario" });
         return new Response(
@@ -182,11 +193,11 @@ serve(async (req) => {
 
     // Checkpoint: complete
     await upsertState(supabase, prospect_id, "await_reply", ["draft", "validate", "send"], "completed", {
-      enviado, message_id: messageId, config_nicho: config.nicho
+      enviado, message_id: messageId, config_nicho: configNicho
     });
 
     return new Response(
-      JSON.stringify({ success: true, enviado, message_id: messageId, config_nicho: config.nicho }),
+      JSON.stringify({ success: true, enviado, message_id: messageId, config_nicho: configNicho }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
