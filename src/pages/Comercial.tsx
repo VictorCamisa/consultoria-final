@@ -47,17 +47,33 @@ export default function Comercial() {
     },
   });
 
+  // Track "last seen" per prospect in localStorage
+  const getLastSeen = (prospectId: string) => {
+    const key = `vs_lastSeen_${user?.id}_${prospectId}`;
+    return localStorage.getItem(key);
+  };
+
+  const markAsSeen = (prospectId: string) => {
+    const key = `vs_lastSeen_${user?.id}_${prospectId}`;
+    localStorage.setItem(key, new Date().toISOString());
+    queryClient.invalidateQueries({ queryKey: ["unread-counts"] });
+  };
+
   const { data: unreadCounts } = useQuery({
     queryKey: ["unread-counts"],
     queryFn: async () => {
       const { data } = await supabase
         .from("consultoria_conversas")
-        .select("prospect_id")
+        .select("prospect_id, created_at")
         .eq("direcao", "entrada")
-        .eq("processado_ia", false);
+        .order("created_at", { ascending: false });
       const counts: Record<string, number> = {};
       data?.forEach(m => {
-        if (m.prospect_id) counts[m.prospect_id] = (counts[m.prospect_id] ?? 0) + 1;
+        if (!m.prospect_id) return;
+        const lastSeen = getLastSeen(m.prospect_id);
+        if (!lastSeen || new Date(m.created_at!) > new Date(lastSeen)) {
+          counts[m.prospect_id] = (counts[m.prospect_id] ?? 0) + 1;
+        }
       });
       return counts;
     },
@@ -154,7 +170,10 @@ export default function Comercial() {
         <UnreadNotifications
           prospects={prospects}
           unreadCounts={unreadCounts}
-          onSelectProspect={p => setSelectedProspect(p)}
+          onSelectProspect={p => {
+            markAsSeen(p.id);
+            setSelectedProspect(p);
+          }}
         />
       )}
 
@@ -222,7 +241,7 @@ export default function Comercial() {
                       loadingAbordar={loadingAbordar === p.id}
                       loadingCadencia={loadingCadencia === p.id}
                       loadingReativar={loadingReativar === p.id}
-                      onSelect={() => setSelectedProspect(p)}
+                      onSelect={() => { markAsSeen(p.id); setSelectedProspect(p); }}
                       onAbordar={() => handleAbordar(p)}
                       onCadencia={() => handleIniciarCadencia(p)}
                       onReativar={() => handleReativar(p)}
