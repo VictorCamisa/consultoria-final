@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import {
   Send, Sparkles, Loader2, BrainCircuit, CheckCircle2, XCircle,
-  ExternalLink,
+  ExternalLink, RefreshCw,
 } from "lucide-react";
 import { Prospect, PIPELINE_STAGES, classificacaoConfig, scoreColor } from "./types";
 
