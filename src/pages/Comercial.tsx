@@ -57,7 +57,7 @@ export default function Comercial() {
   });
 
   const filtered = prospects?.filter(p => {
-    if (filterNicho !== "todos" && p.nicho !== filterNicho) return false;
+    if (!matchesNichoFilter(p.nicho, filterNicho)) return false;
     if (filterClassificacao !== "todos" && p.classificacao_ia !== filterClassificacao) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();

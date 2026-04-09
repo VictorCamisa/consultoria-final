@@ -1,4 +1,4 @@
-import { Prospect, classificacaoConfig, scoreColor, timeAgo } from "./types";
+import { Prospect, classificacaoConfig, scoreColor, timeAgo, nichoCategory } from "./types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
