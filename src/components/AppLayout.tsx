@@ -3,6 +3,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { Outlet, useLocation } from "react-router-dom";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { useEffect } from "react";
+import WhatsAppOnboarding from "@/components/WhatsAppOnboarding";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 
