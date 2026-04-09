@@ -178,7 +178,13 @@ export default function Comercial() {
       )}
 
       {/* Stats */}
-      <PipelineStats prospects={prospects} />
+      <PipelineStats
+        prospects={filtered}
+        onStageClick={(key) => {
+          const el = document.getElementById(`kanban-col-${key}`);
+          if (el) el.scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" });
+        }}
+      />
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-card rounded-lg border border-border p-2">
@@ -219,7 +225,7 @@ export default function Comercial() {
           {PIPELINE_STAGES.map(col => {
             const items = filtered?.filter(p => p.status === col.key) ?? [];
             return (
-              <div key={col.key} className="kanban-col">
+              <div key={col.key} id={`kanban-col-${col.key}`} className="kanban-col">
                 {/* Column header */}
                 <div className="flex items-center gap-2 mb-3 px-1">
                   <div className={`w-2 h-2 rounded-full shrink-0 ${col.color}`} />
