@@ -14,6 +14,7 @@ import {
   Megaphone, PlayCircle, RotateCcw, ChevronRight, Copy,
   AlertTriangle, Target, Lightbulb, ArrowRight, Zap, MessageSquare,
 } from "lucide-react";
+import { StickyNote, Plus, Trash2, Clock } from "lucide-react";
 import { Prospect, PIPELINE_STAGES, classificacaoConfig, scoreColor, timeAgo } from "./types";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -58,6 +59,8 @@ export function ProspectWorkspace({
   const [lastInboundId, setLastInboundId] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<"chat" | "ai" | "acoes">("chat");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [novaNota, setNovaNota] = useState("");
+  const [savingNota, setSavingNota] = useState(false);
 
   const { data: conversas, refetch: refetchConversas } = useQuery({
     queryKey: ["conversas", prospect?.id],
@@ -107,6 +110,48 @@ export function ProspectWorkspace({
       return data;
     },
   });
+
+  const { data: notas, refetch: refetchNotas } = useQuery({
+    queryKey: ["prospect-notas", prospect?.id],
+    enabled: !!prospect?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("prospect_notas" as any).select("*")
+        .eq("prospect_id", prospect!.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  const handleAddNota = async () => {
+    if (!prospect || !novaNota.trim()) return;
+    setSavingNota(true);
+    try {
+      const { error } = await supabase.from("prospect_notas" as any).insert({
+        prospect_id: prospect.id,
+        conteudo: novaNota.trim(),
+        tipo: "nota",
+        autor: null,
+      } as any);
+      if (error) throw error;
+      setNovaNota("");
+      refetchNotas();
+      toast({ title: "Nota salva" });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao salvar nota", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    } finally {
+      setSavingNota(false);
+    }
+  };
+
+  const handleDeleteNota = async (notaId: string) => {
+    const { error } = await supabase.from("prospect_notas" as any).delete().eq("id", notaId);
+    if (!error) {
+      refetchNotas();
+      toast({ title: "Nota removida" });
+    }
+  };
 
   // Auto-suggest
   const triggerAutoSuggest = useCallback(async () => {
@@ -658,6 +703,54 @@ export function ProspectWorkspace({
                   </p>
                 </div>
               )}
+
+              {/* Notas / Anotações */}
+              <div>
+                <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <StickyNote className="h-3 w-3" />
+                  Anotações
+                  {notas && notas.length > 0 && (
+                    <Badge variant="secondary" className="text-[9px] h-4 px-1">{notas.length}</Badge>
+                  )}
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex gap-1.5">
+                    <Textarea
+                      value={novaNota}
+                      onChange={e => setNovaNota(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleAddNota(); } }}
+                      placeholder="Escreva uma anotação sobre a negociação..."
+                      className="min-h-[60px] max-h-[100px] resize-none text-[11px] bg-background"
+                    />
+                  </div>
+                  <Button size="sm" variant="outline" className="w-full text-xs h-7 gap-1.5" onClick={handleAddNota} disabled={savingNota || !novaNota.trim()}>
+                    {savingNota ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                    Salvar Nota
+                  </Button>
+                  {notas && notas.length > 0 && (
+                    <div className="space-y-1.5 mt-2">
+                      {notas.map((nota: any) => (
+                        <div key={nota.id} className="rounded-lg border border-border p-2.5 group relative">
+                          <p className="text-[11px] text-foreground/90 whitespace-pre-wrap leading-relaxed pr-5">{nota.conteudo}</p>
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            <Clock className="h-2.5 w-2.5 text-muted-foreground" />
+                            <span className="text-[9px] text-muted-foreground">
+                              {new Date(nota.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                            {nota.autor && <span className="text-[9px] text-muted-foreground">· {nota.autor}</span>}
+                          </div>
+                          <button
+                            onClick={() => handleDeleteNota(nota.id)}
+                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {/* Cadência history */}
               {cadenciaHistory && cadenciaHistory.length > 0 && (
