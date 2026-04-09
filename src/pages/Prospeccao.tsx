@@ -25,6 +25,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useEvolutionInstances } from "@/hooks/useEvolutionInstances";
+import type { Tables } from "@/integrations/supabase/types";
+import { buildLeadIdentityKey, normalizePhone } from "@/lib/utils";
+
+type ProspectIdentity = Pick<Tables<"consultoria_prospects">, "id" | "whatsapp" | "nome_negocio" | "cidade" | "site">;
 
 type ScrapeResult = {
   name: string | null; phone: string | null; email: string | null;
@@ -200,6 +204,17 @@ export default function Prospeccao() {
     },
   });
 
+  const { data: prospectIdentities = [] } = useQuery({
+    queryKey: ["prospect-identities"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("consultoria_prospects")
+        .select("id, whatsapp, nome_negocio, cidade, site");
+      if (error) throw error;
+      return (data || []) as ProspectIdentity[];
+    },
+  });
+
   const formatPhone = (phone: string) => {
     const digits = phone.replace(/\D/g, "");
     if (digits.startsWith("55") && digits.length >= 12) return `+${digits}`;
@@ -254,13 +269,48 @@ export default function Prospeccao() {
 
     setPromotingIds(prev => { const n = new Set(prev); leadIds.forEach(id => n.add(id)); return n; });
     try {
-      const prospects = leads.map(l => {
+      const existingProspectKeys = new Set(
+        prospectIdentities
+          .map((prospect) => buildLeadIdentityKey({
+            phone: prospect.whatsapp,
+            name: prospect.nome_negocio,
+            city: prospect.cidade,
+            website: prospect.site,
+          }))
+          .filter(Boolean) as string[]
+      );
+
+      const batchKeys = new Set<string>();
+      const prospectsToInsert: any[] = [];
+      const leadIdsToMarkPromoted: string[] = [];
+      let skippedExisting = 0;
+
+      leads.forEach((l) => {
         const enrichment = (l.enrichment_data as any) || {};
-        return {
+        const normalizedWhatsapp = normalizePhone(l.phone);
+        const identityKey = buildLeadIdentityKey({
+          phone: normalizedWhatsapp,
+          email: l.email,
+          name: l.name || enrichment.company || "Lead sem nome",
+          city: enrichment.city || enrichment.scraped_location || null,
+          website: enrichment.website || null,
+        });
+
+        if (!normalizedWhatsapp || !identityKey) return;
+
+        leadIdsToMarkPromoted.push(l.id);
+
+        if (existingProspectKeys.has(identityKey) || batchKeys.has(identityKey)) {
+          skippedExisting += 1;
+          return;
+        }
+
+        batchKeys.add(identityKey);
+        prospectsToInsert.push({
           nome_negocio: l.name || enrichment.company || "Lead sem nome",
           nicho: enrichment.segment || enrichment.scraped_niche || "Não definido",
           cidade: enrichment.city || enrichment.scraped_location || "Não informada",
-          whatsapp: l.phone || "",
+          whatsapp: normalizedWhatsapp,
           site: enrichment.website || null,
           decisor: l.name || null,
           observacoes: enrichment.icp_reason || null,
@@ -268,25 +318,39 @@ export default function Prospeccao() {
           origem: l.source === "web" ? "prospeccao_web" : l.source === "whatsapp" ? "whatsapp" : "manual",
           status: "novo",
           responsavel: "danilo",
-        };
-      }).filter(p => p.whatsapp);
+        });
+      });
 
-      if (prospects.length === 0) {
+      if (prospectsToInsert.length === 0 && leadIdsToMarkPromoted.length === 0) {
         toast({ title: "Nenhum lead com telefone", description: "Leads sem telefone não podem ser enviados ao pipeline.", variant: "destructive" });
         return;
       }
 
-      const { error } = await supabase.from("consultoria_prospects").insert(prospects);
-      if (error) throw error;
+      if (prospectsToInsert.length > 0) {
+        const { error } = await supabase.from("consultoria_prospects").insert(prospectsToInsert);
+        if (error) throw error;
+      }
 
-      await supabase.from("leads_raw").update({ status: "promoted" } as any).in("id", leadIds);
+      if (leadIdsToMarkPromoted.length > 0) {
+        const { error: markError } = await supabase
+          .from("leads_raw")
+          .update({ status: "promoted" } as any)
+          .in("id", leadIdsToMarkPromoted);
+        if (markError) throw markError;
+      }
 
-      toast({ title: `${prospects.length} lead(s) enviados ao pipeline! 🎯`, description: "Veja na aba Comercial." });
+      toast({
+        title: `${prospectsToInsert.length} lead(s) enviados ao pipeline! 🎯`,
+        description: skippedExisting > 0
+          ? `${skippedExisting} já existiam no CRM e foram marcados para não duplicar.`
+          : "Veja na aba Comercial.",
+      });
       setSelectedLeadIds(new Set());
       setPromoteDialogOpen(false);
       setPromoteTargetIds([]);
       queryClient.invalidateQueries({ queryKey: ["leads_raw"] });
       queryClient.invalidateQueries({ queryKey: ["prospects_count_metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["prospects"] });
     } catch (error: any) {
       toast({ title: "Erro ao enviar", description: error.message, variant: "destructive" });
     } finally {
