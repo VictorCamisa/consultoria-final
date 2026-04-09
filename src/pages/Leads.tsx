@@ -12,7 +12,7 @@ import {
   ChevronDown, ChevronRight, ExternalLink, Eye, TrendingUp,
   Flame, Snowflake, Thermometer, X, Building2, Calendar,
   ArrowUpDown, LayoutGrid, LayoutList, SlidersHorizontal,
-  Database, UserCheck, Inbox, Rocket, Loader2, Megaphone, PlayCircle,
+  Database, UserCheck, Inbox, Rocket, Loader2, Megaphone, PlayCircle, Trash2,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
@@ -321,7 +321,24 @@ export default function Leads() {
     }
   }, [queryClient]);
 
-  /* ── Unified list ──────────────────────────────── */
+  /* ── Excluir lead ────────────────────────────────── */
+  const handleDeleteLead = useCallback(async (lead: UnifiedLead) => {
+    if (!confirm(`Excluir "${lead.nome}"? Esta ação não pode ser desfeita.`)) return;
+    try {
+      const table = lead.fonte === "lead_raw" ? "leads_raw" : "consultoria_prospects";
+      const { error } = await supabase.from(table).delete().eq("id", lead.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["all-prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["all-leads-raw"] });
+      queryClient.invalidateQueries({ queryKey: ["prospects"] });
+      if (selectedLead?.id === lead.id) setSelectedLead(null);
+      toast({ title: `"${lead.nome}" excluído com sucesso` });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : typeof err === "object" && err !== null ? JSON.stringify(err) : String(err);
+      toast({ title: "Erro ao excluir", description: msg, variant: "destructive" });
+    }
+  }, [queryClient, selectedLead]);
+
   const allLeads = useMemo(() => {
     const deduped = new Map<string, UnifiedLead>();
 
@@ -711,6 +728,7 @@ export default function Leads() {
               onAbordar={handleAbordar}
               promotingId={promotingId}
               abordandoId={abordandoId}
+              onDelete={handleDeleteLead}
             />
           ))}
         </div>
@@ -805,6 +823,7 @@ function LeadCard({
   isSelected,
   onPromote,
   onAbordar,
+  onDelete,
   promotingId,
   abordandoId,
 }: {
@@ -818,6 +837,7 @@ function LeadCard({
   isSelected: boolean;
   onPromote: (lead: UnifiedLead) => void;
   onAbordar: (lead: UnifiedLead) => void;
+  onDelete: (lead: UnifiedLead) => void;
   promotingId: string | null;
   abordandoId: string | null;
 }) {
@@ -953,6 +973,15 @@ function LeadCard({
             <UserCheck className="h-3 w-3 mr-1" /> Já no CRM
           </Badge>
         )}
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-[11px] h-7 w-7 px-0 ml-auto text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10"
+          onClick={() => onDelete(lead)}
+          title="Excluir lead"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
       </div>
     </div>
   );
