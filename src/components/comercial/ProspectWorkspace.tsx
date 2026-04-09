@@ -266,34 +266,7 @@ export function ProspectWorkspace({
   }, [prospect?.id]);
 
   const handleSuggestReply = async () => {
-    if (!prospect) return;
-    setLoadingSuggest(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("suggest-reply", {
-        body: { prospect_id: prospect.id },
-      });
-      if (error) throw error;
-      if (data?.sugestao) {
-        setCoaching({
-          sugestao: data.sugestao,
-          intent: data.intent ?? "padrao",
-          phase: data.phase ?? "unknown",
-          phase_label: data.phase_label ?? "—",
-          phase_desc: data.phase_desc ?? "",
-          active_script: data.active_script ?? "",
-          script_content: data.script_content ?? "",
-          insights: data.insights ?? [],
-          proximo_passo: data.proximo_passo ?? "",
-          alerta: data.alerta ?? "",
-          tom_recomendado: data.tom_recomendado ?? "",
-        });
-        toast({ title: "Coaching IA atualizado" });
-      }
-    } catch (err: unknown) {
-      toast({ title: "Erro ao gerar sugestão", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
-    } finally {
-      setLoadingSuggest(false);
-    }
+    triggerAutoSuggest(0);
   };
 
   const handleUseSuggestion = () => {

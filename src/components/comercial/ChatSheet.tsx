@@ -125,6 +125,10 @@ export function ChatSheet({ prospect, onClose, onProspectUpdate }: Props) {
         body: { prospect_id: prospect.id },
       });
       if (error) throw error;
+      if (data?.error && data.error.includes?.("Rate limit")) {
+        toast({ title: "Limite de requisições atingido", description: "Aguarde alguns segundos e tente novamente.", variant: "destructive" });
+        return;
+      }
       if (data?.sugestao) {
         setMensagem(data.sugestao);
         toast({ title: "Sugestão gerada pela IA" });
