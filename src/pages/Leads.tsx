@@ -357,16 +357,18 @@ export default function Leads() {
 
   /* ── Derived filter options ────────────────────── */
   const filterOptions = useMemo(() => {
-    const nichos = new Set<string>();
     const cidades = new Set<string>();
     const origens = new Set<string>();
+    let hasUncategorizedNicho = false;
     allLeads.forEach((l) => {
-      if (l.nicho) nichos.add(l.nicho);
+      if (l.nicho && !nichoCategory(l.nicho)) hasUncategorizedNicho = true;
       if (l.cidade) cidades.add(l.cidade);
       if (l.origem) origens.add(l.origem);
     });
+    const nichoOptions = NICHO_CATEGORIES.map(c => c.label);
+    if (hasUncategorizedNicho) nichoOptions.push("Não definido");
     return {
-      nichos: Array.from(nichos).sort(),
+      nichos: nichoOptions,
       cidades: Array.from(cidades).sort(),
       origens: Array.from(origens).sort(),
     };
@@ -389,7 +391,16 @@ export default function Leads() {
       );
     }
     if (statusFilter !== "todos") result = result.filter((l) => l.status === statusFilter || l.raw_status === statusFilter);
-    if (nichoFilter !== "todos") result = result.filter((l) => l.nicho === nichoFilter);
+    if (nichoFilter !== "todos") {
+      if (nichoFilter === "Não definido") {
+        result = result.filter((l) => !l.nicho || !nichoCategory(l.nicho));
+      } else {
+        const cat = NICHO_CATEGORIES.find(c => c.label === nichoFilter);
+        if (cat) {
+          result = result.filter((l) => l.nicho && cat.keywords.some(k => l.nicho!.toLowerCase().includes(k)));
+        }
+      }
+    }
     if (cidadeFilter !== "todos") result = result.filter((l) => l.cidade === cidadeFilter);
     if (origemFilter !== "todos") result = result.filter((l) => l.origem === origemFilter);
     if (classificacaoFilter !== "todos") result = result.filter((l) => l.classificacao_ia === classificacaoFilter);
