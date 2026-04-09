@@ -114,9 +114,10 @@ serve(async (req) => {
       }
     }
 
-    // Salva mensagem
+    // Salva mensagem — fromMe = saida, senão = entrada
+    const direcao = isFromMe ? "saida" : "entrada";
     const { error: insertErr } = await supabase.from("consultoria_conversas").insert({
-      prospect_id: prospect.id, direcao: "entrada", conteudo, message_id: messageId, processado_ia: false,
+      prospect_id: prospect.id, direcao, conteudo, message_id: messageId, processado_ia: isFromMe,
     });
 
     // Se falhar por duplicata (race condition), ignora
