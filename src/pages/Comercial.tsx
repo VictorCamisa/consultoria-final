@@ -16,6 +16,7 @@ import { ProspectCard } from "@/components/comercial/ProspectCard";
 import { ProspectWorkspace } from "@/components/comercial/ProspectWorkspace";
 import { NewProspectDialog } from "@/components/comercial/NewProspectDialog";
 import { KanbanSkeleton } from "@/components/PageSkeleton";
+import { UnreadNotifications } from "@/components/comercial/UnreadNotifications";
 
 export default function Comercial() {
   const queryClient = useQueryClient();
