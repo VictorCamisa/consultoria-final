@@ -149,6 +149,15 @@ export default function Comercial() {
         </div>
       </div>
 
+      {/* Unread Notifications */}
+      {prospects && unreadCounts && (
+        <UnreadNotifications
+          prospects={prospects}
+          unreadCounts={unreadCounts}
+          onSelectProspect={p => setSelectedProspect(p)}
+        />
+      )}
+
       {/* Stats */}
       <PipelineStats prospects={prospects} />
 
