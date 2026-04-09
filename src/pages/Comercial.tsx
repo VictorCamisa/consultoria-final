@@ -241,7 +241,7 @@ export default function Comercial() {
                       loadingAbordar={loadingAbordar === p.id}
                       loadingCadencia={loadingCadencia === p.id}
                       loadingReativar={loadingReativar === p.id}
-                      onSelect={() => setSelectedProspect(p)}
+                      onSelect={() => { markAsSeen(p.id); setSelectedProspect(p); }}
                       onAbordar={() => handleAbordar(p)}
                       onCadencia={() => handleIniciarCadencia(p)}
                       onReativar={() => handleReativar(p)}
