@@ -75,6 +75,12 @@ Analise a mensagem proposta e verifique:
 4. COMPLIANCE: Não faz promessas financeiras específicas? Não garante resultados? Não pressiona agressivamente?
 5. COMPRIMENTO: Adequada para WhatsApp? (máximo ~500 caracteres, 3 parágrafos)
 
+REGRAS CRÍTICAS para revised_message:
+- NUNCA use placeholders como [seu nome], [nome do negócio], [cidade], etc. Use SEMPRE os dados reais do prospect fornecidos abaixo.
+- O nome do negócio é: "${prospect?.nome_negocio ?? ""}". Use esse nome real na mensagem revisada.
+- A cidade é: "${prospect?.cidade ?? ""}". Use a cidade real se necessário.
+- Se a mensagem original já contém os dados corretos, mantenha-os na revisão.
+
 Se a mensagem tiver problemas, reescreva uma versão corrigida em revised_message.
 Se estiver OK, approved=true e revised_message vazio.`;
 

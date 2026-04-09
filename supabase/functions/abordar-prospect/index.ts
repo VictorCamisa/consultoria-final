@@ -151,7 +151,37 @@ serve(async (req) => {
 
     const evolutionUrl = Deno.env.get("EVOLUTION_API_URL");
     const evolutionKey = Deno.env.get("EVOLUTION_API_KEY");
-    const instancia = config ? (config.instancia_evolution as string) : fallbackInstancia;
+
+    // Resolve instância pelo responsável do prospect (cada sócio usa seu próprio WhatsApp)
+    let instancia: string | null = null;
+    const responsavel = prospect.responsavel ?? "danilo";
+
+    // Busca o user_id do responsável na vs_users
+    const { data: vsUser } = await supabase
+      .from("vs_users")
+      .select("id")
+      .eq("role", responsavel)
+      .maybeSingle();
+
+    if (vsUser) {
+      const { data: userInstance } = await supabase
+        .from("evolution_instances")
+        .select("instance_name")
+        .eq("created_by", vsUser.id)
+        .eq("state", "open")
+        .limit(1)
+        .maybeSingle();
+      if (userInstance) {
+        instancia = userInstance.instance_name;
+        console.log(`[abordar] Usando instância do responsável "${responsavel}": ${instancia}`);
+      }
+    }
+
+    // Fallback: config do nicho → qualquer config
+    if (!instancia) {
+      instancia = config ? (config.instancia_evolution as string) : fallbackInstancia;
+      console.log(`[abordar] Fallback para instância da config: ${instancia}`);
+    }
 
     let messageId: string | null = null;
     let enviado = false;
