@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ import {
 import { toast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 import { buildLeadIdentityKey } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { NICHO_CATEGORIES, nichoCategory } from "@/components/comercial/types";
 
 type Prospect = Tables<"consultoria_prospects">;
 type LeadRaw = Tables<"leads_raw">;
@@ -181,10 +183,12 @@ type FonteFilter = "todos" | "lead_raw" | "prospect";
 
 export default function Leads() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const nichoStorageKey = user ? `vs_leads_filterNicho_${user.id}` : "vs_leads_filterNicho";
   const [search, setSearch] = useState("");
   const [fonteFilter, setFonteFilter] = useState<FonteFilter>("todos");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
-  const [nichoFilter, setNichoFilter] = useState<string>("todos");
+  const [nichoFilter, setNichoFilter] = useState(() => localStorage.getItem(nichoStorageKey) || "todos");
   const [cidadeFilter, setCidadeFilter] = useState<string>("todos");
   const [origemFilter, setOrigemFilter] = useState<string>("todos");
   const [classificacaoFilter, setClassificacaoFilter] = useState<string>("todos");
@@ -195,6 +199,10 @@ export default function Leads() {
   const [selectedLead, setSelectedLead] = useState<UnifiedLead | null>(null);
   const [promotingId, setPromotingId] = useState<string | null>(null);
   const [abordandoId, setAbordandoId] = useState<string | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem(nichoStorageKey, nichoFilter);
+  }, [nichoFilter, nichoStorageKey]);
 
   /* ── Fetch both tables ─────────────────────────── */
   const { data: prospects = [], isLoading: loadingProspects } = useQuery({
