@@ -141,24 +141,8 @@ serve(async (req) => {
     const evolutionUrl = Deno.env.get("EVOLUTION_API_URL");
     const evolutionKey = Deno.env.get("EVOLUTION_API_KEY");
 
-    let instancia: string | null = null;
-
-    if (authUserId) {
-      instancia = await resolveInstanceByUserId(supabase, authUserId);
-      if (!instancia) {
-        throw new Error("Nenhuma instância Evolution conectada para seu usuário. Vá em Configurações > WhatsApp e conecte sua instância.");
-      }
-      console.log(`[abordar] usando instância do usuário autenticado ${authUserId}`);
-    } else {
-      const responsavel = prospect.responsavel ?? "danilo";
-      instancia = await resolveInstanceByResponsavel(supabase, responsavel);
-
-      // Fallback: config do nicho → qualquer config
-      if (!instancia) {
-        instancia = config ? (config.instancia_evolution as string) : fallbackInstancia;
-        console.log(`[abordar] fallback para instância da config: ${instancia}`);
-      }
-    }
+    // Use centralized instance resolver
+    const instancia = await resolveSendInstance(supabase, prospect);
 
     let messageId: string | null = null;
     let enviado = false;
@@ -168,7 +152,6 @@ serve(async (req) => {
     } else if (!instancia) {
       console.log("[abordar] instancia_evolution vazia — salvando sem enviar");
     } else {
-      // Usa horário de Brasília (America/Sao_Paulo) para checagem
       const brTime = new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" });
       const hora = new Date(brTime).getHours();
       const horaInicio = config ? (config.horario_inicio as number) ?? 8 : 8;
@@ -181,8 +164,7 @@ serve(async (req) => {
         );
       }
 
-      const rawPhone = prospect.whatsapp.replace(/\D/g, "");
-      const phone = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`;
+      const phone = normalizePhone(prospect.whatsapp);
 
       const evoRes = await fetch(`${evolutionUrl}/message/sendText/${instancia}`, {
         method: "POST",
@@ -206,6 +188,7 @@ serve(async (req) => {
 
     await supabase.from("consultoria_conversas").insert({
       prospect_id, direcao: "saida", conteudo: mensagem, message_id: messageId, processado_ia: false,
+      origem: "system_send", instance_name: instancia || null,
     });
 
     await supabase.from("consultoria_cadencia").insert({
