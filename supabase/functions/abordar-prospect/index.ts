@@ -71,18 +71,29 @@ serve(async (req) => {
     if (pErr) throw pErr;
 
     const config = await findConfig(supabase, prospect.nicho);
-    if (!config) {
-      await upsertState(supabase, prospect_id, "draft", [], "error", {}, `Config não encontrada para nicho "${prospect.nicho}"`);
-      throw new Error(`Nenhuma config encontrada para nicho "${prospect.nicho}".`);
-    }
 
-    const scriptMap: Record<string, string> = {
-      a: (config.script_a as string) ?? "",
-      b: (config.script_b as string) ?? "",
-      c: (config.script_c as string) ?? "",
+    // Fallback genérico quando não há config para o nicho
+    const genericScripts: Record<string, string> = {
+      a: `Olá, {{decisor}}! Tudo bem? Sou da VS Growth Hub. Vi que a {{nome}} atua em {{cidade}} e gostaria de entender melhor o seu negócio. Posso te fazer algumas perguntas rápidas para ver se consigo te ajudar a crescer?`,
+      b: `{{decisor}}, boa tarde! Aqui é da VS Growth Hub. Estamos ajudando empresas como a {{nome}} a otimizar marketing e vendas. Você teria 2 minutos para eu entender seus principais desafios hoje?`,
+      c: `Oi {{decisor}}! Tudo certo? Sou consultor da VS Growth Hub e trabalho com empresas de {{cidade}}. Queria entender: qual o maior gargalo da {{nome}} hoje quando o assunto é atrair e converter clientes?`,
     };
-    let mensagem = scriptMap[script.toLowerCase()];
-    if (!mensagem) throw new Error(`Script "${script}" vazio para nicho "${config.nicho}"`);
+
+    let mensagem: string;
+    let configNicho = "genérico";
+
+    if (config) {
+      configNicho = config.nicho as string;
+      const scriptMap: Record<string, string> = {
+        a: (config.script_a as string) ?? "",
+        b: (config.script_b as string) ?? "",
+        c: (config.script_c as string) ?? "",
+      };
+      mensagem = scriptMap[script.toLowerCase()] || genericScripts[script.toLowerCase()] || genericScripts.a;
+    } else {
+      console.log(`[abordar] Sem config para nicho "${prospect.nicho}" — usando script genérico`);
+      mensagem = genericScripts[script.toLowerCase()] || genericScripts.a;
+    }
 
     mensagem = mensagem
       .replace(/\{\{nome\}\}/gi, prospect.nome_negocio)
