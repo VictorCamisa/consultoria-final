@@ -224,7 +224,9 @@ serve(async (req) => {
     } else if (!instancia) {
       console.log("[abordar] instancia_evolution vazia — salvando sem enviar");
     } else {
-      const hora = new Date().getHours();
+      // Usa horário de Brasília (America/Sao_Paulo) para checagem
+      const brTime = new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" });
+      const hora = new Date(brTime).getHours();
       const horaInicio = config ? (config.horario_inicio as number) ?? 8 : 8;
       const horaFim = config ? (config.horario_fim as number) ?? 18 : 18;
       if (hora < horaInicio || hora >= horaFim) {
