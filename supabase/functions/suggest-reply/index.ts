@@ -131,9 +131,18 @@ serve(async (req) => {
       else { scriptRef = `Follow-up D30: ${config.followup_d30}`; activeScript = "Follow-up D30 — Último contato"; }
     }
 
-    const systemPrompt = `${config?.system_prompt ?? "Você é um especialista em vendas consultivas para o mercado brasileiro."}
+    const isGenericNicho = !prospect.nicho || prospect.nicho === "Não definido" || prospect.nicho.toLowerCase() === "não definido";
 
-NICHO: "${prospect.nicho}". Adapte completamente ao contexto deste nicho.
+    const baseSystemPrompt = config?.system_prompt
+      ?? "Você é um especialista em vendas consultivas para o mercado brasileiro. Fale de forma natural, como um consultor real de negócios.";
+
+    const nichoContext = isGenericNicho
+      ? `NICHO: Ainda não identificado. O objetivo agora é DESCOBRIR o nicho/segmento do prospect através da conversa. Faça perguntas sobre o negócio dele de forma natural. NÃO mencione "nicho" ou "segmento" — pergunte sobre o que ele faz, como funciona o dia a dia, de onde vêm os clientes, etc.`
+      : `NICHO: "${prospect.nicho}". Adapte completamente ao contexto deste nicho.`;
+
+    const systemPrompt = `${baseSystemPrompt}
+
+${nichoContext}
 
 ${persona}
 
@@ -142,10 +151,13 @@ FASE: ${phaseInfo.phaseLabel} — ${phaseInfo.phaseDesc}
 
 Analise a conversa e forneça coaching completo para o vendedor usando a ferramenta fornecida.
 
-Regras para a mensagem sugerida:
-- Português informal, WhatsApp real, máximo 1-2 emojis
-- Máximo 3 parágrafos curtos, direto ao ponto
-- NÃO repita frases de mensagens anteriores
+Regras RÍGIDAS para a mensagem sugerida:
+- Português informal e natural, como se fosse um WhatsApp real entre profissionais
+- NO MÁXIMO 1 emoji por mensagem (pode ter zero)
+- NO MÁXIMO 2 parágrafos curtos
+- NÃO use gírias excessivas, NÃO seja "animado demais", NÃO use múltiplas exclamações
+- NÃO repita frases ou estruturas de mensagens anteriores
+- Tom profissional e consultivo — você é um consultor de negócios, não um vendedor insistente
 - Avance no pipeline: marcar call, gerar interesse, tratar objeção
 
 ${scriptRef ? `\nReferência (adapte, não copie):\n${scriptRef}` : ""}`;
