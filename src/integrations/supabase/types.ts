@@ -248,7 +248,9 @@ export type Database = {
           created_at: string | null
           direcao: string
           id: string
+          instance_name: string | null
           message_id: string | null
+          origem: string | null
           processado_ia: boolean | null
           prospect_id: string | null
         }
@@ -257,7 +259,9 @@ export type Database = {
           created_at?: string | null
           direcao: string
           id?: string
+          instance_name?: string | null
           message_id?: string | null
+          origem?: string | null
           processado_ia?: boolean | null
           prospect_id?: string | null
         }
@@ -266,7 +270,9 @@ export type Database = {
           created_at?: string | null
           direcao?: string
           id?: string
+          instance_name?: string | null
           message_id?: string | null
+          origem?: string | null
           processado_ia?: boolean | null
           prospect_id?: string | null
         }
@@ -706,10 +712,12 @@ export type Database = {
           handoff_reason: string | null
           id: string
           instagram: string | null
+          linked_instance: string | null
           nicho: string
           nome_negocio: string
           observacoes: string | null
           origem: string | null
+          remote_jid: string | null
           responsavel: string
           resumo_conversa: string | null
           score_qualificacao: number | null
@@ -733,10 +741,12 @@ export type Database = {
           handoff_reason?: string | null
           id?: string
           instagram?: string | null
+          linked_instance?: string | null
           nicho: string
           nome_negocio: string
           observacoes?: string | null
           origem?: string | null
+          remote_jid?: string | null
           responsavel?: string
           resumo_conversa?: string | null
           score_qualificacao?: number | null
@@ -760,10 +770,12 @@ export type Database = {
           handoff_reason?: string | null
           id?: string
           instagram?: string | null
+          linked_instance?: string | null
           nicho?: string
           nome_negocio?: string
           observacoes?: string | null
           origem?: string | null
+          remote_jid?: string | null
           responsavel?: string
           resumo_conversa?: string | null
           score_qualificacao?: number | null
