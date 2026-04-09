@@ -28,6 +28,7 @@ export function ChatSheet({ prospect, onClose, onProspectUpdate }: Props) {
   const [loadingSuggest, setLoadingSuggest] = useState(false);
   const [loadingClassify, setLoadingClassify] = useState(false);
   const [loadingSend, setLoadingSend] = useState(false);
+  const [loadingSync, setLoadingSync] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: conversas, refetch: refetchConversas } = useQuery({
