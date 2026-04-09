@@ -5,50 +5,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { normalizePhone, resolveSendInstance } from "../_shared/instance-resolver.ts";
 
-async function resolveInstanceByUserId(supabase: ReturnType<typeof createClient>, userId: string) {
-  const { data: inst } = await supabase
-    .from("evolution_instances").select("instance_name")
-    .eq("created_by", userId).eq("state", "open").limit(1).maybeSingle();
-  return (inst?.instance_name as string | undefined) ?? null;
-}
-
-async function resolveInstanceByResponsavel(supabase: ReturnType<typeof createClient>, responsavel: string) {
-  const { data: vsUser } = await supabase
-    .from("vs_users").select("id, email").eq("role", responsavel).maybeSingle();
-  if (vsUser) {
-    const { data: inst } = await supabase
-      .from("evolution_instances").select("instance_name")
-      .eq("created_by", vsUser.id).eq("state", "open").limit(1).maybeSingle();
-    if (inst) return inst.instance_name as string;
-    if (vsUser.email) {
-      const { data: authData } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
-      const authUser = authData?.users?.find((u: any) => u.email?.toLowerCase() === vsUser.email.toLowerCase());
-      if (authUser) {
-        const { data: inst2 } = await supabase
-          .from("evolution_instances").select("instance_name")
-          .eq("created_by", authUser.id).eq("state", "open").limit(1).maybeSingle();
-        if (inst2) return inst2.instance_name as string;
-      }
-    }
-  }
-  return null;
-}
-
-async function getAuthenticatedUserId(req: Request) {
-  const authHeader = req.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) return null;
-
-  const supabaseUser = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
-
-  const { data: { user }, error } = await supabaseUser.auth.getUser();
-  if (error || !user) return null;
-  return user.id;
-}
 
 async function findConfig(supabase: ReturnType<typeof createClient>, nicho: string) {
   const { data: exactConfig } = await supabase
