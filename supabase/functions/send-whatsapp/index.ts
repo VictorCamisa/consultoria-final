@@ -28,28 +28,52 @@ serve(async (req) => {
     // Busca prospect
     const { data: prospect, error: pErr } = await supabase
       .from("consultoria_prospects")
-      .select("id, whatsapp, nicho, status")
+      .select("id, whatsapp, nicho, status, responsavel")
       .eq("id", prospect_id)
       .single();
     if (pErr) throw pErr;
 
-    // Busca instância Evolution: exato → parcial → fallback
+    // Resolve instância pelo responsável do prospect
     let instancia: string | null = null;
-    const { data: exactConfig } = await supabase
-      .from("consultoria_config")
-      .select("instancia_evolution")
-      .eq("nicho", prospect.nicho)
+    const realResponsavel = prospect.responsavel ?? "danilo";
+
+    // Busca user_id do responsável
+    const { data: vsUser } = await supabase
+      .from("vs_users")
+      .select("id")
+      .eq("role", realResponsavel)
       .maybeSingle();
-    
-    if (exactConfig?.instancia_evolution) {
-      instancia = exactConfig.instancia_evolution;
-    } else {
-      const { data: allConfigs } = await supabase
+
+    if (vsUser) {
+      const { data: userInstance } = await supabase
+        .from("evolution_instances")
+        .select("instance_name")
+        .eq("created_by", vsUser.id)
+        .eq("state", "open")
+        .limit(1)
+        .maybeSingle();
+      if (userInstance) {
+        instancia = userInstance.instance_name;
+      }
+    }
+
+    // Fallback: config do nicho → qualquer config
+    if (!instancia) {
+      const { data: exactConfig } = await supabase
         .from("consultoria_config")
-        .select("instancia_evolution, nicho");
-      if (allConfigs?.length) {
-        const match = allConfigs.find((c: any) => c.instancia_evolution);
-        instancia = match?.instancia_evolution ?? null;
+        .select("instancia_evolution")
+        .eq("nicho", prospect.nicho)
+        .maybeSingle();
+      if (exactConfig?.instancia_evolution) {
+        instancia = exactConfig.instancia_evolution;
+      } else {
+        const { data: allConfigs } = await supabase
+          .from("consultoria_config")
+          .select("instancia_evolution, nicho");
+        if (allConfigs?.length) {
+          const match = allConfigs.find((c: any) => c.instancia_evolution);
+          instancia = match?.instancia_evolution ?? null;
+        }
       }
     }
     if (!instancia) {
