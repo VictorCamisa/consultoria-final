@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
+import { buildLeadIdentityKey } from "@/lib/utils";
 
 type Prospect = Tables<"consultoria_prospects">;
 type LeadRaw = Tables<"leads_raw">;
@@ -52,6 +53,32 @@ type UnifiedLead = {
   fonte: "prospect" | "lead_raw";
   raw_status: string;
 };
+
+function getLeadPriority(lead: UnifiedLead) {
+  if (lead.fonte === "prospect") return 3;
+  if (lead.raw_status === "promoted") return 1;
+  return 2;
+}
+
+function mergeLeadData(primary: UnifiedLead, secondary: UnifiedLead): UnifiedLead {
+  return {
+    ...secondary,
+    ...primary,
+    email: primary.email ?? secondary.email,
+    cidade: primary.cidade ?? secondary.cidade,
+    nicho: primary.nicho ?? secondary.nicho,
+    site: primary.site ?? secondary.site,
+    instagram: primary.instagram ?? secondary.instagram,
+    decisor: primary.decisor ?? secondary.decisor,
+    score: primary.score ?? secondary.score,
+    origem: primary.origem ?? secondary.origem,
+    observacoes: primary.observacoes ?? secondary.observacoes,
+    resumo_conversa: primary.resumo_conversa ?? secondary.resumo_conversa,
+    faturamento_estimado: primary.faturamento_estimado ?? secondary.faturamento_estimado,
+    tags: primary.tags ?? secondary.tags,
+    enrichment_data: primary.enrichment_data ?? secondary.enrichment_data,
+  };
+}
 
 function prospectToUnified(p: Prospect): UnifiedLead {
   return {
@@ -205,6 +232,41 @@ export default function Leads() {
     }
     setPromotingId(lead.id);
     try {
+      const leadIdentity = buildLeadIdentityKey({
+        phone: lead.telefone,
+        email: lead.email,
+        name: lead.nome,
+        city: lead.cidade,
+        website: lead.site,
+      });
+
+      const existingProspect = prospects.find((prospect) => {
+        const prospectIdentity = buildLeadIdentityKey({
+          phone: prospect.whatsapp,
+          name: prospect.nome_negocio,
+          city: prospect.cidade,
+          website: prospect.site,
+        });
+
+        return leadIdentity && prospectIdentity === leadIdentity;
+      });
+
+      if (existingProspect) {
+        const { error: updateExistingError } = await supabase
+          .from("leads_raw")
+          .update({ status: "promoted" })
+          .eq("id", lead.id);
+
+        if (updateExistingError) throw updateExistingError;
+
+        queryClient.invalidateQueries({ queryKey: ["all-prospects"] });
+        queryClient.invalidateQueries({ queryKey: ["all-leads-raw"] });
+        queryClient.invalidateQueries({ queryKey: ["prospects"] });
+        setSelectedLead(null);
+        toast({ title: `${lead.nome} já estava no CRM`, description: "Marquei o lead da lista como promovido para não duplicar novamente." });
+        return;
+      }
+
       const { error: insertError } = await supabase.from("consultoria_prospects").insert({
         nome_negocio: lead.nome,
         whatsapp: lead.telefone || "",
@@ -257,9 +319,32 @@ export default function Leads() {
 
   /* ── Unified list ──────────────────────────────── */
   const allLeads = useMemo(() => {
-    const fromProspects = prospects.map(prospectToUnified);
-    const fromRaw = leadsRaw.map(leadRawToUnified);
-    return [...fromRaw, ...fromProspects];
+    const deduped = new Map<string, UnifiedLead>();
+
+    [...leadsRaw.map(leadRawToUnified), ...prospects.map(prospectToUnified)].forEach((lead) => {
+      const identity = buildLeadIdentityKey({
+        phone: lead.telefone,
+        email: lead.email,
+        name: lead.nome,
+        city: lead.cidade,
+        website: lead.site,
+      }) ?? `${lead.fonte}:${lead.id}`;
+
+      const current = deduped.get(identity);
+      if (!current) {
+        deduped.set(identity, lead);
+        return;
+      }
+
+      if (getLeadPriority(lead) > getLeadPriority(current)) {
+        deduped.set(identity, mergeLeadData(lead, current));
+        return;
+      }
+
+      deduped.set(identity, mergeLeadData(current, lead));
+    });
+
+    return Array.from(deduped.values());
   }, [prospects, leadsRaw]);
 
   /* ── Derived filter options ────────────────────── */
