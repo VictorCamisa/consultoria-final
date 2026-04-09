@@ -275,6 +275,12 @@ export function ChatSheet({ prospect, onClose, onProspectUpdate }: Props) {
           </TabsList>
 
           <TabsContent value="conversa" className="flex-1 flex flex-col min-h-0 mt-0">
+            <div className="flex items-center justify-end px-5 pt-2">
+              <Button size="sm" variant="ghost" className="text-[10px] h-6 px-2 text-muted-foreground" onClick={handleSync} disabled={loadingSync}>
+                {loadingSync ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                Sincronizar WhatsApp
+              </Button>
+            </div>
             <ScrollArea className="flex-1 px-5 py-3" ref={scrollRef}>
               <div className="space-y-2">
                 {conversas?.length === 0 && (
