@@ -836,6 +836,7 @@ function LeadCard({
   isSelected: boolean;
   onPromote: (lead: UnifiedLead) => void;
   onAbordar: (lead: UnifiedLead) => void;
+  onDelete: (lead: UnifiedLead) => void;
   promotingId: string | null;
   abordandoId: string | null;
 }) {
