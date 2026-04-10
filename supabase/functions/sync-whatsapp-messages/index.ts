@@ -6,6 +6,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { buildJidCandidates, getAllOpenInstances, resolveSendInstance } from "../_shared/instance-resolver.ts";
+import { isAudioMessage, processAudioMessage } from "../_shared/audio-transcriber.ts";
 
 function extractMessages(rawResult: any): any[] {
   if (Array.isArray(rawResult)) return rawResult;
@@ -134,12 +135,30 @@ serve(async (req) => {
       .eq("prospect_id", prospect_id).not("message_id", "is", null);
     const existingIds = new Set((existing ?? []).map(e => e.message_id));
 
+    const evolutionBaseUrl = (Deno.env.get("EVOLUTION_API_URL") || "").replace(/\/$/, "");
+    const evolutionApiKey = Deno.env.get("EVOLUTION_API_KEY") || "";
+
     const toInsert: any[] = [];
     for (const msg of messages) {
       const msgId = msg.key?.id;
       if (!msgId || existingIds.has(msgId)) continue;
 
-      const content = msg.message?.conversation ?? msg.message?.extendedTextMessage?.text ?? msg.message?.imageMessage?.caption ?? null;
+      const msgMessage = msg.message;
+      let content = msgMessage?.conversation ?? msgMessage?.extendedTextMessage?.text ?? msgMessage?.imageMessage?.caption ?? null;
+      const hasAudio = isAudioMessage(msgMessage);
+
+      // Try to transcribe audio messages
+      if (hasAudio && evolutionBaseUrl && evolutionApiKey && matchedInstances[0]) {
+        try {
+          const audioResult = await processAudioMessage(msgMessage, msg, evolutionBaseUrl, evolutionApiKey, matchedInstances[0]);
+          if (audioResult) content = audioResult;
+          else content = "[🎤 Áudio recebido — falha na transcrição]";
+        } catch (e) {
+          console.warn("[sync] Audio transcription error:", e);
+          content = "[🎤 Áudio recebido — erro na transcrição]";
+        }
+      }
+
       if (!content) continue;
 
       const isFromMe = msg.key?.fromMe === true;
