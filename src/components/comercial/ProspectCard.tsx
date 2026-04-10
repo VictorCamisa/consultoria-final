@@ -2,8 +2,9 @@ import { Prospect, classificacaoConfig, scoreColor, timeAgo, nichoCategory } fro
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  MessageSquare, Phone, Megaphone, PlayCircle, RotateCcw, Loader2, Trash2,
+  MessageSquare, Phone, Megaphone, PlayCircle, RotateCcw, Loader2, Trash2, AlertTriangle,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Props {
   prospect: Prospect;
@@ -67,16 +68,28 @@ export function ProspectCard({
       </div>
 
       {/* Row 3: WhatsApp */}
-      <a
-        href={`https://wa.me/${p.whatsapp.replace(/\D/g, "")}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-1.5 text-[11px] text-primary/70 hover:text-primary transition-colors"
-        onClick={e => e.stopPropagation()}
-      >
-        <Phone className="h-3 w-3 shrink-0" />
-        <span className="truncate">{p.whatsapp}</span>
-      </a>
+      <div className="flex items-center gap-1.5">
+        <a
+          href={`https://wa.me/${p.whatsapp.replace(/\D/g, "")}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`flex items-center gap-1.5 text-[11px] transition-colors ${(p as any).whatsapp_valido === false ? "text-destructive/70 hover:text-destructive line-through" : "text-primary/70 hover:text-primary"}`}
+          onClick={e => e.stopPropagation()}
+        >
+          <Phone className="h-3 w-3 shrink-0" />
+          <span className="truncate">{p.whatsapp}</span>
+        </a>
+        {(p as any).whatsapp_valido === false && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-xs">
+              Número não encontrado no WhatsApp
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
 
       {/* Row 4: Resumo (if exists) */}
       {p.resumo_conversa && (
