@@ -1,11 +1,11 @@
 /**
  * Vendedor Chat — Simulador de treinamento de vendas.
- * Migrado para Lovable AI Gateway.
+ * Usa OpenAI API diretamente.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -15,8 +15,8 @@ serve(async (req) => {
   try {
     const { messages, profile, scenario, knowledge } = await req.json();
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY não configurada");
 
     const systemParts: string[] = [];
     systemParts.push(`Você é um cliente simulado para treino de vendas. Seu papel é agir como um potencial cliente que está sendo abordado por um vendedor.`);
@@ -58,14 +58,14 @@ serve(async (req) => {
     systemParts.push(`- Reaja de acordo com o nível de dificuldade definido`);
     systemParts.push(`- Use os aprendizados anteriores para testar os pontos fracos do vendedor`);
 
-    const response = await fetch(AI_GATEWAY_URL, {
+    const response = await fetch(OPENAI_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemParts.join("\n") },
           ...messages,
@@ -80,14 +80,9 @@ serve(async (req) => {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos insuficientes. Adicione fundos no workspace." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
       const t = await response.text();
-      console.error("AI gateway error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Erro no gateway de IA" }), {
+      console.error("OpenAI error:", response.status, t);
+      return new Response(JSON.stringify({ error: "Erro na API OpenAI" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

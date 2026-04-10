@@ -6,7 +6,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
 const PERSONAS: Record<string, string> = {
   interesse: `PERSONA: Gancho Imediato. Direto, sem saudações vazias. Abra com dado relevante. Confiante mas não arrogante.`,
@@ -58,8 +58,8 @@ serve(async (req) => {
     const { prospect_id } = await req.json();
     if (!prospect_id) throw new Error("prospect_id obrigatório");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY não configurada");
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -172,11 +172,11 @@ ${meddicBlock}${sessionBlock}${longTermBlock}
 Conversa recente:
 ${workingMemory}`;
 
-    const aiRes = await fetch(AI_GATEWAY_URL, {
+    const aiRes = await fetch(OPENAI_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${LOVABLE_API_KEY}` },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${OPENAI_API_KEY}` },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
@@ -215,12 +215,12 @@ ${workingMemory}`;
         });
       }
       if (aiRes.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos em Settings > Workspace > Usage." }), {
+        return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const errText = await aiRes.text();
-      throw new Error(`AI Gateway error (${aiRes.status}): ${errText}`);
+      throw new Error(`OpenAI error (${aiRes.status}): ${errText}`);
     }
 
     const aiData = await aiRes.json();
@@ -248,7 +248,6 @@ ${workingMemory}`;
       sugestao: coaching.sugestao,
       intent,
       persona: intent,
-      // New structured coaching fields
       phase: phaseInfo.phase,
       phase_label: phaseInfo.phaseLabel,
       phase_desc: phaseInfo.phaseDesc,

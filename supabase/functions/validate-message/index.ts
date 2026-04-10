@@ -6,7 +6,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
 const VALIDATION_TOOL = {
   type: "function" as const,
@@ -18,11 +18,7 @@ const VALIDATION_TOOL = {
       properties: {
         approved: { type: "boolean", description: "true se a mensagem é adequada para envio" },
         reason: { type: "string", description: "Motivo da aprovação ou rejeição" },
-        issues: {
-          type: "array",
-          items: { type: "string" },
-          description: "Lista de problemas encontrados"
-        },
+        issues: { type: "array", items: { type: "string" }, description: "Lista de problemas encontrados" },
         revised_message: { type: "string", description: "Mensagem revisada (se reprovada). Vazio se aprovada." }
       },
       required: ["approved", "reason", "issues", "revised_message"],
@@ -40,28 +36,19 @@ serve(async (req) => {
     const { prospect_id, mensagem } = await req.json();
     if (!prospect_id || !mensagem) throw new Error("prospect_id e mensagem obrigatórios");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY não configurada");
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const { data: prospect } = await supabase
-      .from("consultoria_prospects")
-      .select("nome_negocio, nicho, cidade")
-      .eq("id", prospect_id)
-      .single();
+      .from("consultoria_prospects").select("nome_negocio, nicho, cidade")
+      .eq("id", prospect_id).single();
 
-    // Últimas 10 mensagens enviadas pela VS
     const { data: sentMsgs } = await supabase
-      .from("consultoria_conversas")
-      .select("conteudo")
-      .eq("prospect_id", prospect_id)
-      .eq("direcao", "saida")
-      .order("created_at", { ascending: false })
-      .limit(10);
+      .from("consultoria_conversas").select("conteudo")
+      .eq("prospect_id", prospect_id).eq("direcao", "saida")
+      .order("created_at", { ascending: false }).limit(10);
 
     const previousMessages = sentMsgs?.map(m => m.conteudo).join("\n---\n") ?? "Nenhuma mensagem anterior.";
 
@@ -93,14 +80,14 @@ ${previousMessages}
 
 Prospect: ${prospect?.nome_negocio ?? "?"} | Nicho: ${prospect?.nicho ?? "?"} | Cidade: ${prospect?.cidade ?? "?"}`;
 
-    const aiRes = await fetch(AI_GATEWAY_URL, {
+    const aiRes = await fetch(OPENAI_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
@@ -111,13 +98,9 @@ Prospect: ${prospect?.nome_negocio ?? "?"} | Nicho: ${prospect?.nicho ?? "?"} | 
     });
 
     if (!aiRes.ok) {
-      // Se o validador falhar, aprova por padrão (fail-open)
       console.error("[validate] AI error, fail-open:", await aiRes.text());
       return new Response(JSON.stringify({
-        approved: true,
-        reason: "Validador indisponível — fail-open",
-        issues: [],
-        revised_message: "",
+        approved: true, reason: "Validador indisponível — fail-open", issues: [], revised_message: "",
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -126,10 +109,7 @@ Prospect: ${prospect?.nome_negocio ?? "?"} | Nicho: ${prospect?.nicho ?? "?"} | 
 
     if (!toolCall) {
       return new Response(JSON.stringify({
-        approved: true,
-        reason: "Validador não retornou resultado — fail-open",
-        issues: [],
-        revised_message: "",
+        approved: true, reason: "Validador não retornou resultado — fail-open", issues: [], revised_message: "",
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -141,12 +121,8 @@ Prospect: ${prospect?.nome_negocio ?? "?"} | Nicho: ${prospect?.nicho ?? "?"} | 
     });
   } catch (err) {
     console.error("[validate] Error:", (err as Error).message);
-    // Fail-open
     return new Response(JSON.stringify({
-      approved: true,
-      reason: `Erro no validador: ${(err as Error).message}`,
-      issues: [],
-      revised_message: "",
+      approved: true, reason: `Erro no validador: ${(err as Error).message}`, issues: [], revised_message: "",
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });

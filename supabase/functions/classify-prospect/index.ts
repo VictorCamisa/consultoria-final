@@ -1,12 +1,12 @@
 /**
  * Classifica prospect usando MEDDIC estruturado via tool calling.
- * Usa Lovable AI Gateway. Salva pilares MEDDIC + classificação.
+ * Usa OpenAI API. Salva pilares MEDDIC + classificação.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
 const MEDDIC_TOOL = {
   type: "function" as const,
@@ -23,60 +23,12 @@ const MEDDIC_TOOL = {
         meddic: {
           type: "object",
           properties: {
-            metrics: {
-              type: "object",
-              properties: {
-                score: { type: "number" },
-                evidence: { type: "string" },
-                confidence: { type: "number" }
-              },
-              required: ["score", "evidence", "confidence"]
-            },
-            economic_buyer: {
-              type: "object",
-              properties: {
-                score: { type: "number" },
-                evidence: { type: "string" },
-                confidence: { type: "number" }
-              },
-              required: ["score", "evidence", "confidence"]
-            },
-            decision_criteria: {
-              type: "object",
-              properties: {
-                score: { type: "number" },
-                evidence: { type: "string" },
-                confidence: { type: "number" }
-              },
-              required: ["score", "evidence", "confidence"]
-            },
-            decision_process: {
-              type: "object",
-              properties: {
-                score: { type: "number" },
-                evidence: { type: "string" },
-                confidence: { type: "number" }
-              },
-              required: ["score", "evidence", "confidence"]
-            },
-            identify_pain: {
-              type: "object",
-              properties: {
-                score: { type: "number" },
-                evidence: { type: "string" },
-                confidence: { type: "number" }
-              },
-              required: ["score", "evidence", "confidence"]
-            },
-            champion: {
-              type: "object",
-              properties: {
-                score: { type: "number" },
-                evidence: { type: "string" },
-                confidence: { type: "number" }
-              },
-              required: ["score", "evidence", "confidence"]
-            }
+            metrics: { type: "object", properties: { score: { type: "number" }, evidence: { type: "string" }, confidence: { type: "number" } }, required: ["score", "evidence", "confidence"] },
+            economic_buyer: { type: "object", properties: { score: { type: "number" }, evidence: { type: "string" }, confidence: { type: "number" } }, required: ["score", "evidence", "confidence"] },
+            decision_criteria: { type: "object", properties: { score: { type: "number" }, evidence: { type: "string" }, confidence: { type: "number" } }, required: ["score", "evidence", "confidence"] },
+            decision_process: { type: "object", properties: { score: { type: "number" }, evidence: { type: "string" }, confidence: { type: "number" } }, required: ["score", "evidence", "confidence"] },
+            identify_pain: { type: "object", properties: { score: { type: "number" }, evidence: { type: "string" }, confidence: { type: "number" } }, required: ["score", "evidence", "confidence"] },
+            champion: { type: "object", properties: { score: { type: "number" }, evidence: { type: "string" }, confidence: { type: "number" } }, required: ["score", "evidence", "confidence"] }
           },
           required: ["metrics", "economic_buyer", "decision_criteria", "decision_process", "identify_pain", "champion"]
         }
@@ -96,50 +48,33 @@ serve(async (req) => {
     const { prospect_id } = await req.json();
     if (!prospect_id) throw new Error("prospect_id obrigatório");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY não configurada");
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const { data: prospect, error: pErr } = await supabase
-      .from("consultoria_prospects")
-      .select("*")
-      .eq("id", prospect_id)
-      .single();
+      .from("consultoria_prospects").select("*").eq("id", prospect_id).single();
     if (pErr) throw pErr;
 
     const { data: conversas } = await supabase
-      .from("consultoria_conversas")
-      .select("direcao, conteudo, created_at")
-      .eq("prospect_id", prospect_id)
-      .order("created_at", { ascending: true })
-      .limit(30);
+      .from("consultoria_conversas").select("direcao, conteudo, created_at")
+      .eq("prospect_id", prospect_id).order("created_at", { ascending: true }).limit(30);
 
-    // Busca session memory
     const { data: memories } = await supabase
-      .from("prospect_session_memory")
-      .select("fact_key, fact_value, confidence")
-      .eq("prospect_id", prospect_id)
-      .order("confidence", { ascending: false })
-      .limit(20);
+      .from("prospect_session_memory").select("fact_key, fact_value, confidence")
+      .eq("prospect_id", prospect_id).order("confidence", { ascending: false }).limit(20);
 
-    // Busca config por nicho
     let config: Record<string, unknown> | null = null;
     const { data: exactConfig } = await supabase
-      .from("consultoria_config")
-      .select("system_prompt, criterios_qualificacao, nicho")
-      .ilike("nicho", prospect.nicho)
-      .maybeSingle();
+      .from("consultoria_config").select("system_prompt, criterios_qualificacao, nicho")
+      .ilike("nicho", prospect.nicho).maybeSingle();
 
     if (exactConfig) {
       config = exactConfig;
     } else {
       const { data: allConfigs } = await supabase
-        .from("consultoria_config")
-        .select("system_prompt, criterios_qualificacao, nicho");
+        .from("consultoria_config").select("system_prompt, criterios_qualificacao, nicho");
       if (allConfigs?.length) {
         const nichoLower = prospect.nicho.toLowerCase().trim();
         config = allConfigs.find((c: Record<string, unknown>) => {
@@ -189,14 +124,14 @@ ${memoryBlock}
 Histórico de conversa:
 ${historico}`;
 
-    const aiRes = await fetch(AI_GATEWAY_URL, {
+    const aiRes = await fetch(OPENAI_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
@@ -207,8 +142,13 @@ ${historico}`;
     });
 
     if (!aiRes.ok) {
+      if (aiRes.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit excedido. Tente novamente em alguns segundos." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const errText = await aiRes.text();
-      throw new Error(`AI Gateway error (${aiRes.status}): ${errText}`);
+      throw new Error(`OpenAI error (${aiRes.status}): ${errText}`);
     }
 
     const aiData = await aiRes.json();
@@ -217,7 +157,6 @@ ${historico}`;
 
     const result = JSON.parse(toolCall.function.arguments);
 
-    // Salva classificação no prospect
     await supabase
       .from("consultoria_prospects")
       .update({
@@ -228,7 +167,6 @@ ${historico}`;
       })
       .eq("id", prospect_id);
 
-    // Salva MEDDIC (upsert por pilar)
     const meddicRows = Object.entries(result.meddic).map(([pilar, data]: [string, any]) => ({
       prospect_id,
       pilar,
@@ -239,17 +177,11 @@ ${historico}`;
     }));
 
     for (const row of meddicRows) {
-      await supabase
-        .from("prospect_meddic")
-        .upsert(row, { onConflict: "prospect_id,pilar" });
+      await supabase.from("prospect_meddic").upsert(row, { onConflict: "prospect_id,pilar" });
     }
 
-    // Marca conversas como processadas
     if (conversas?.length) {
-      await supabase
-        .from("consultoria_conversas")
-        .update({ processado_ia: true })
-        .eq("prospect_id", prospect_id);
+      await supabase.from("consultoria_conversas").update({ processado_ia: true }).eq("prospect_id", prospect_id);
     }
 
     return new Response(JSON.stringify({ success: true, result }), {
