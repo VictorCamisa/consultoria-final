@@ -60,6 +60,9 @@ export default function AppLayout() {
                 <Breadcrumbs />
               </div>
             )}
+            <div className="ml-auto">
+              <ThemeToggle />
+            </div>
           </header>
 
           {/* Content */}
