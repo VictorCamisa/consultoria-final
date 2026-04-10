@@ -1044,9 +1044,10 @@ function LeadCard({
   );
 }
 
-/* ── Lead Detail Panel ───────────────────────────── */
-function LeadDetailPanel({
+/* ── Lead Detail Modal ────────────────────────────── */
+function LeadDetailModal({
   lead,
+  open,
   onClose,
   formatDate,
   formatPhone,
@@ -1057,7 +1058,8 @@ function LeadDetailPanel({
   promotingId,
   abordandoId,
 }: {
-  lead: UnifiedLead;
+  lead: UnifiedLead | null;
+  open: boolean;
   onClose: () => void;
   formatDate: (d: string | null) => string;
   formatPhone: (p: string | null) => string;
@@ -1068,77 +1070,76 @@ function LeadDetailPanel({
   promotingId: string | null;
   abordandoId: string | null;
 }) {
+  if (!lead) return null;
+
   const st = STATUS_MAP[lead.status] || { label: lead.status, color: "bg-muted text-muted-foreground border-border" };
   const cl = lead.classificacao_ia ? CLASSIFICACAO_MAP[lead.classificacao_ia] : null;
   const fb = getFonteBadge(lead.fonte);
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[420px] bg-card border-l border-border shadow-2xl z-50 flex flex-col animate-in slide-in-from-right-10 duration-200">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
-        <div className="flex items-center gap-2 min-w-0">
-          <Badge variant="outline" className={`text-[9px] flex-shrink-0 ${fb.color}`}>{fb.label}</Badge>
-          <h2
-            className="text-lg font-bold text-foreground truncate"
-            style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
-          >
-            {lead.nome}
-          </h2>
-        </div>
-        <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0">
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Action bar */}
-      <div className="px-4 py-3 border-b border-border flex gap-2">
-        {lead.fonte === "lead_raw" && lead.raw_status !== "promoted" && (
-          <Button
-            className="flex-1 gap-1.5"
-            size="sm"
-            onClick={() => onPromote(lead)}
-            disabled={promotingId === lead.id}
-          >
-            {promotingId === lead.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
-            Enviar para o CRM
-          </Button>
-        )}
-        {lead.fonte === "lead_raw" && lead.raw_status === "promoted" && (
-          <Badge variant="secondary" className="text-xs py-1.5 px-3">
-            <UserCheck className="h-3.5 w-3.5 mr-1.5" /> Já promovido para o CRM
-          </Badge>
-        )}
-        {lead.fonte === "prospect" && lead.status === "novo" && (
-          <Button
-            className="flex-1 gap-1.5"
-            size="sm"
-            onClick={() => onAbordar(lead)}
-            disabled={abordandoId === lead.id}
-          >
-            {abordandoId === lead.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Megaphone className="h-3.5 w-3.5" />}
-            Abordar via WhatsApp
-          </Button>
-        )}
-        {lead.fonte === "prospect" && lead.telefone && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5"
-            asChild
-          >
-            <a
-              href={`https://wa.me/${lead.telefone.replace(/\D/g, "")}`}
-              target="_blank"
-              rel="noopener noreferrer"
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto p-0 gap-0">
+        {/* Header */}
+        <DialogHeader className="p-4 pb-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className={`text-[9px] flex-shrink-0 ${fb.color}`}>{fb.label}</Badge>
+            <DialogTitle
+              className="text-lg font-bold text-foreground truncate"
+              style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
             >
-              <Phone className="h-3.5 w-3.5" />
-              WhatsApp
-            </a>
-          </Button>
-        )}
-      </div>
+              {lead.nome}
+            </DialogTitle>
+          </div>
+        </DialogHeader>
 
-      <ScrollArea className="flex-1">
+        {/* Action bar */}
+        <div className="px-4 py-3 border-b border-border flex gap-2">
+          {lead.fonte === "lead_raw" && lead.raw_status !== "promoted" && (
+            <Button
+              className="flex-1 gap-1.5"
+              size="sm"
+              onClick={() => onPromote(lead)}
+              disabled={promotingId === lead.id}
+            >
+              {promotingId === lead.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Rocket className="h-3.5 w-3.5" />}
+              Enviar para o CRM
+            </Button>
+          )}
+          {lead.fonte === "lead_raw" && lead.raw_status === "promoted" && (
+            <Badge variant="secondary" className="text-xs py-1.5 px-3">
+              <UserCheck className="h-3.5 w-3.5 mr-1.5" /> Já promovido para o CRM
+            </Badge>
+          )}
+          {lead.fonte === "prospect" && lead.status === "novo" && (
+            <Button
+              className="flex-1 gap-1.5"
+              size="sm"
+              onClick={() => onAbordar(lead)}
+              disabled={abordandoId === lead.id}
+            >
+              {abordandoId === lead.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Megaphone className="h-3.5 w-3.5" />}
+              Abordar via WhatsApp
+            </Button>
+          )}
+          {lead.fonte === "prospect" && lead.telefone && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              asChild
+            >
+              <a
+                href={`https://wa.me/${lead.telefone.replace(/\D/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Phone className="h-3.5 w-3.5" />
+                WhatsApp
+              </a>
+            </Button>
+          )}
+        </div>
+
         <div className="p-4 space-y-5">
           {/* Status + Score */}
           <div className="flex items-center gap-3">
@@ -1332,7 +1333,7 @@ function LeadDetailPanel({
             </div>
           )}
         </div>
-      </ScrollArea>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
