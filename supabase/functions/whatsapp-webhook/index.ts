@@ -134,6 +134,19 @@ serve(async (req) => {
       }
     }
 
+    // Transcribe audio if present
+    if (hasAudio && webhookInstance) {
+      const evolutionBaseUrl = (Deno.env.get("EVOLUTION_API_URL") || "").replace(/\/$/, "");
+      const evolutionApiKey = Deno.env.get("EVOLUTION_API_KEY") || "";
+      if (evolutionBaseUrl && evolutionApiKey) {
+        const audioResult = await processAudioMessage(msgContent, data, evolutionBaseUrl, evolutionApiKey, webhookInstance);
+        if (audioResult) conteudo = audioResult;
+        else if (!conteudo) conteudo = "[🎤 Áudio recebido — transcrição indisponível]";
+      } else if (!conteudo) {
+        conteudo = "[🎤 Áudio recebido — Evolution API não configurada]";
+      }
+    }
+
     // Determine origin: fromMe via webhook = cellphone (manual send) or system_send
     const direcao = isFromMe ? "saida" : "entrada";
     const origem = isFromMe ? "cellphone" : "webhook";
