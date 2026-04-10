@@ -1,6 +1,6 @@
 /**
  * Envia script de abordagem inicial para prospect via Evolution API.
- * Integra: máquina de estados, validador anti-eco, checkpointing.
+ * Integra: máquina de estados, validador anti-eco, checkpointing, validação onWhatsApp.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -48,6 +48,42 @@ async function upsertState(
   }, { onConflict: "prospect_id" });
 }
 
+/** Validate number exists on WhatsApp via Evolution API */
+async function checkWhatsAppExists(
+  evolutionUrl: string,
+  evolutionKey: string,
+  instance: string,
+  phone: string
+): Promise<{ exists: boolean; jid?: string }> {
+  try {
+    const res = await fetch(`${evolutionUrl}/chat/whatsappNumbers/${instance}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: evolutionKey },
+      body: JSON.stringify({ numbers: [phone] }),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`[abordar] onWhatsApp check failed (${res.status}): ${errText}`);
+      // Try to parse error for exists: false pattern
+      try {
+        const parsed = JSON.parse(errText);
+        const msg = parsed?.response?.message;
+        if (Array.isArray(msg) && msg.length > 0 && msg[0].exists === false) {
+          return { exists: false };
+        }
+      } catch { /* ignore parse error */ }
+      return { exists: false };
+    }
+    const data = await res.json();
+    // Response is array: [{ exists: true, jid: "...", number: "..." }]
+    const result = Array.isArray(data) ? data[0] : data;
+    return { exists: result?.exists === true, jid: result?.jid };
+  } catch (e) {
+    console.error("[abordar] onWhatsApp check error:", e);
+    return { exists: false };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -74,6 +110,46 @@ serve(async (req) => {
 
     const config = await findConfig(supabase, prospect.nicho);
 
+    const evolutionUrl = Deno.env.get("EVOLUTION_API_URL");
+    const evolutionKey = Deno.env.get("EVOLUTION_API_KEY");
+    const instancia = await resolveSendInstance(supabase, prospect);
+
+    // === PRE-VALIDATION: Check if number exists on WhatsApp ===
+    if (evolutionUrl && evolutionKey && instancia) {
+      const phone = normalizePhone(prospect.whatsapp);
+      const whatsappCheck = await checkWhatsAppExists(evolutionUrl, evolutionKey, instancia, phone);
+
+      if (!whatsappCheck.exists) {
+        console.log(`[abordar] Número ${phone} NÃO existe no WhatsApp — abortando`);
+
+        // Mark as invalid in DB
+        await supabase.from("consultoria_prospects").update({
+          whatsapp_valido: false,
+          updated_at: new Date().toISOString(),
+        }).eq("id", prospect_id);
+
+        // Checkpoint: failed
+        await upsertState(supabase, prospect_id, "validate_number", ["draft"], "failed", {
+          reason: "numero_invalido", phone
+        }, "Número não encontrado no WhatsApp");
+
+        return new Response(
+          JSON.stringify({
+            success: false,
+            enviado: false,
+            reason: "numero_invalido",
+            message: `Número ${prospect.whatsapp} não encontrado no WhatsApp`,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Number is valid — cache it
+      await supabase.from("consultoria_prospects").update({
+        whatsapp_valido: true,
+      }).eq("id", prospect_id);
+    }
+
     // Fallback genérico quando não há config para o nicho
     const genericScripts: Record<string, string> = {
       a: `Olá{{decisor_greeting}}! Tudo bem? Sou da VS Growth Hub. Gostaria de entender melhor o seu negócio{{cidade_ref}}. Posso te fazer algumas perguntas rápidas para ver se consigo te ajudar a crescer?`,
@@ -97,7 +173,7 @@ serve(async (req) => {
       mensagem = genericScripts[script.toLowerCase()] || genericScripts.a;
     }
 
-    // Sanitiza valores de placeholder — evita mostrar dados crus inválidos
+    // Sanitiza valores de placeholder
     const decisorNome = (prospect.decisor && prospect.decisor !== prospect.nome_negocio && prospect.decisor !== "Não informado")
       ? prospect.decisor : "";
     const cidadeValida = (prospect.cidade && !["não informada", "não informado", ""].includes(prospect.cidade.toLowerCase().trim()))
@@ -138,12 +214,6 @@ serve(async (req) => {
     // Checkpoint: send
     await upsertState(supabase, prospect_id, "send", ["draft", "validate"], "in_progress", { mensagem_final: mensagem });
 
-    const evolutionUrl = Deno.env.get("EVOLUTION_API_URL");
-    const evolutionKey = Deno.env.get("EVOLUTION_API_KEY");
-
-    // Use centralized instance resolver
-    const instancia = await resolveSendInstance(supabase, prospect);
-
     let messageId: string | null = null;
     let enviado = false;
 
@@ -179,6 +249,32 @@ serve(async (req) => {
       } else {
         const errText = await evoRes.text();
         console.error(`[abordar] Evolution error (${evoRes.status}): ${errText}`);
+
+        // Check if error is "number does not exist on WhatsApp"
+        try {
+          const parsed = JSON.parse(errText);
+          const msg = parsed?.response?.message;
+          if (Array.isArray(msg) && msg.length > 0 && msg[0].exists === false) {
+            await supabase.from("consultoria_prospects").update({
+              whatsapp_valido: false,
+              updated_at: new Date().toISOString(),
+            }).eq("id", prospect_id);
+
+            await upsertState(supabase, prospect_id, "send", ["draft", "validate"], "failed", {
+              reason: "numero_invalido"
+            }, "Número não existe no WhatsApp");
+
+            return new Response(
+              JSON.stringify({
+                success: false,
+                enviado: false,
+                reason: "numero_invalido",
+                message: `Número ${prospect.whatsapp} não encontrado no WhatsApp`,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        } catch { /* not a JSON error, continue normally */ }
       }
     }
 

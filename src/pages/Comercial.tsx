@@ -106,8 +106,17 @@ export default function Comercial() {
   const handleAbordar = async (prospect: Prospect) => {
     setLoadingAbordar(prospect.id);
     try {
-      const { error } = await supabase.functions.invoke("abordar-prospect", { body: { prospect_id: prospect.id } });
+      const { data, error } = await supabase.functions.invoke("abordar-prospect", { body: { prospect_id: prospect.id } });
       if (error) throw error;
+      if (data?.reason === "numero_invalido") {
+        queryClient.invalidateQueries({ queryKey: ["prospects"] });
+        toast({ title: "Número inválido", description: data.message || "Número não encontrado no WhatsApp", variant: "destructive" });
+        return;
+      }
+      if (data?.reason === "fora_horario") {
+        toast({ title: "Fora do horário", description: data.message, variant: "destructive" });
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["prospects"] });
       toast({ title: `Script enviado para ${prospect.nome_negocio}` });
     } catch (err: unknown) {
