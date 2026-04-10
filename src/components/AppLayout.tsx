@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import WhatsAppOnboarding from "@/components/WhatsAppOnboarding";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const routeTitles: Record<string, string> = {
   "/": "Dashboard — VS Growth Hub",
@@ -59,6 +60,9 @@ export default function AppLayout() {
                 <Breadcrumbs />
               </div>
             )}
+            <div className="ml-auto">
+              <ThemeToggle />
+            </div>
           </header>
 
           {/* Content */}

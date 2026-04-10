@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { WhatsAppNotificationListener } from "@/components/WhatsAppNotificationListener";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -36,38 +37,40 @@ const queryClient = new QueryClient({
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <AuthProvider>
-          <WhatsAppNotificationListener />
-          <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route
-                element={
-                  <ProtectedRoute>
-                    <AppLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route path="/" element={<Dashboard />} />
-                <Route path="/comercial" element={<Comercial />} />
-                <Route path="/agente-ia" element={<AgenteIA />} />
-                <Route path="/prospeccao" element={<Prospeccao />} />
-                <Route path="/leads" element={<Leads />} />
-                <Route path="/meu-vendedor" element={<MeuVendedor />} />
-                <Route path="/clientes" element={<Clientes />} />
-                <Route path="/clientes/:id" element={<ClienteDetalhe />} />
-                <Route path="/acompanhamento" element={<Acompanhamento />} />
-                <Route path="/operacional" element={<Operacional />} />
-                <Route path="/configuracoes" element={<Configuracoes />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </AuthProvider>
-      </TooltipProvider>
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <AuthProvider>
+            <WhatsAppNotificationListener />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route
+                  element={
+                    <ProtectedRoute>
+                      <AppLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/comercial" element={<Comercial />} />
+                  <Route path="/agente-ia" element={<AgenteIA />} />
+                  <Route path="/prospeccao" element={<Prospeccao />} />
+                  <Route path="/leads" element={<Leads />} />
+                  <Route path="/meu-vendedor" element={<MeuVendedor />} />
+                  <Route path="/clientes" element={<Clientes />} />
+                  <Route path="/clientes/:id" element={<ClienteDetalhe />} />
+                  <Route path="/acompanhamento" element={<Acompanhamento />} />
+                  <Route path="/operacional" element={<Operacional />} />
+                  <Route path="/configuracoes" element={<Configuracoes />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </AuthProvider>
+        </TooltipProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   </ErrorBoundary>
 );

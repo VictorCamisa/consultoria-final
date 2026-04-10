@@ -10,6 +10,61 @@
 
 @layer base {
   :root {
+    --background:           210 20% 96%;
+    --foreground:           222 47% 11%;
+
+    --card:                 0 0% 100%;
+    --card-foreground:      222 47% 11%;
+
+    --popover:              0 0% 100%;
+    --popover-foreground:   222 47% 11%;
+
+    --primary:              215 63% 49%;
+    --primary-foreground:   0 0% 100%;
+
+    --secondary:            214 20% 92%;
+    --secondary-foreground: 222 30% 35%;
+
+    --muted:                214 20% 93%;
+    --muted-foreground:     215 12% 45%;
+
+    --accent:               213 71% 50%;
+    --accent-foreground:    0 0% 100%;
+
+    --destructive:          0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --success:              160 72% 38%;
+    --success-foreground:   0 0% 100%;
+    --warning:              38 92% 50%;
+    --warning-foreground:   30 95% 10%;
+
+    --border:               214 20% 88%;
+    --input:                214 20% 85%;
+    --ring:                 215 63% 49%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background:         0 0% 100%;
+    --sidebar-foreground:         215 12% 45%;
+    --sidebar-primary:            215 63% 49%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent:             214 20% 95%;
+    --sidebar-accent-foreground:  222 47% 11%;
+    --sidebar-border:             214 20% 90%;
+    --sidebar-ring:               215 63% 49%;
+
+    /* Semantic surface helpers — light */
+    --surface-danger:       0 50% 96%;
+    --surface-danger-fg:    0 72% 45%;
+    --surface-warning:      38 50% 95%;
+    --surface-warning-fg:   38 80% 35%;
+    --surface-success:      152 40% 94%;
+    --surface-success-fg:   160 60% 35%;
+    --surface-info:         213 40% 95%;
+    --surface-info-fg:      215 63% 45%;
+  }
+
+  .dark {
     --background:           222 47% 8%;
     --foreground:           210 20% 92%;
 
@@ -41,8 +96,6 @@
     --border:               222 20% 18%;
     --input:                222 20% 20%;
     --ring:                 215 63% 52%;
-
-    --radius: 0.5rem;
 
     --sidebar-background:         223 40% 10%;
     --sidebar-foreground:         215 12% 55%;
