@@ -7,6 +7,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { buildPhoneMatchFilter, phoneToJid } from "../_shared/instance-resolver.ts";
+import { isAudioMessage, processAudioMessage } from "../_shared/audio-transcriber.ts";
 
 function detectHandoffTrigger(
   conteudo: string,
@@ -72,12 +73,18 @@ serve(async (req) => {
 
     const rawPhone = remoteJid.replace("@s.whatsapp.net", "").replace(/\D/g, "");
     const msgContent = data?.message;
-    const conteudo: string =
+    let conteudo: string =
       msgContent?.conversation ??
       msgContent?.extendedTextMessage?.text ??
       msgContent?.imageMessage?.caption ??
-      "[mídia não suportada]";
+      "";
     const messageId: string = key?.id ?? null;
+    const hasAudio = isAudioMessage(msgContent);
+
+    // If no text content and no audio, mark as unsupported media
+    if (!conteudo && !hasAudio) {
+      conteudo = "[mídia não suportada]";
+    }
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -124,6 +131,19 @@ serve(async (req) => {
         return new Response(JSON.stringify({ skipped: true, reason: "duplicate" }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+      }
+    }
+
+    // Transcribe audio if present
+    if (hasAudio && webhookInstance) {
+      const evolutionBaseUrl = (Deno.env.get("EVOLUTION_API_URL") || "").replace(/\/$/, "");
+      const evolutionApiKey = Deno.env.get("EVOLUTION_API_KEY") || "";
+      if (evolutionBaseUrl && evolutionApiKey) {
+        const audioResult = await processAudioMessage(msgContent, data, evolutionBaseUrl, evolutionApiKey, webhookInstance);
+        if (audioResult) conteudo = audioResult;
+        else if (!conteudo) conteudo = "[🎤 Áudio recebido — transcrição indisponível]";
+      } else if (!conteudo) {
+        conteudo = "[🎤 Áudio recebido — Evolution API não configurada]";
       }
     }
 
