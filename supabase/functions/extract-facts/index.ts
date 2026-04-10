@@ -6,7 +6,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const AI_GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
 const EXTRACT_TOOL = {
   type: "function" as const,
@@ -45,22 +45,15 @@ serve(async (req) => {
     const { prospect_id, message_id } = await req.json();
     if (!prospect_id) throw new Error("prospect_id obrigatório");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurada");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY não configurada");
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
-    // Busca últimas mensagens não processadas
     const { data: messages } = await supabase
-      .from("consultoria_conversas")
-      .select("id, direcao, conteudo, message_id, created_at")
-      .eq("prospect_id", prospect_id)
-      .eq("direcao", "entrada")
-      .order("created_at", { ascending: false })
-      .limit(5);
+      .from("consultoria_conversas").select("id, direcao, conteudo, message_id, created_at")
+      .eq("prospect_id", prospect_id).eq("direcao", "entrada")
+      .order("created_at", { ascending: false }).limit(5);
 
     if (!messages?.length) {
       return new Response(JSON.stringify({ success: true, facts_extracted: 0 }), {
@@ -69,15 +62,11 @@ serve(async (req) => {
     }
 
     const { data: prospect } = await supabase
-      .from("consultoria_prospects")
-      .select("nome_negocio, nicho")
-      .eq("id", prospect_id)
-      .single();
+      .from("consultoria_prospects").select("nome_negocio, nicho")
+      .eq("id", prospect_id).single();
 
-    // Busca fatos existentes para evitar duplicatas
     const { data: existingFacts } = await supabase
-      .from("prospect_session_memory")
-      .select("fact_key, fact_value")
+      .from("prospect_session_memory").select("fact_key, fact_value")
       .eq("prospect_id", prospect_id);
 
     const existingBlock = existingFacts?.length
@@ -110,14 +99,14 @@ Regras:
 
 Nicho: ${prospect?.nicho ?? "desconhecido"}`;
 
-    const aiRes = await fetch(AI_GATEWAY_URL, {
+    const aiRes = await fetch(OPENAI_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Mensagens do prospect "${prospect?.nome_negocio ?? "?"}":\n\n${msgsText}${existingBlock}` },
@@ -152,7 +141,6 @@ Nicho: ${prospect?.nicho ?? "desconhecido"}`;
         confidence: f.confidence,
         source_message_id: message_id ?? null,
       }));
-
       await supabase.from("prospect_session_memory").insert(rows);
     }
 
