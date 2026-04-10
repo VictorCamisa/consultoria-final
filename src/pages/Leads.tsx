@@ -851,20 +851,19 @@ export default function Leads() {
       })()}
 
       {/* ── Detail slide ── */}
-      {selectedLead && (
-        <LeadDetailPanel
-          lead={selectedLead}
-          onClose={() => setSelectedLead(null)}
-          formatDate={formatDate}
-          formatPhone={formatPhone}
-          getScoreColor={getScoreColor}
-          getFonteBadge={getFonteBadge}
-          onPromote={handlePromote}
-          onAbordar={handleAbordar}
-          promotingId={promotingId}
-          abordandoId={abordandoId}
-        />
-      )}
+      <LeadDetailModal
+        lead={selectedLead}
+        open={!!selectedLead}
+        onClose={() => setSelectedLead(null)}
+        formatDate={formatDate}
+        formatPhone={formatPhone}
+        getScoreColor={getScoreColor}
+        getFonteBadge={getFonteBadge}
+        onPromote={handlePromote}
+        onAbordar={handleAbordar}
+        promotingId={promotingId}
+        abordandoId={abordandoId}
+      />
     </div>
   );
 }
