@@ -726,6 +726,7 @@ export type Database = {
           status: string
           updated_at: string | null
           whatsapp: string
+          whatsapp_valido: boolean | null
         }
         Insert: {
           cidade: string
@@ -755,6 +756,7 @@ export type Database = {
           status?: string
           updated_at?: string | null
           whatsapp: string
+          whatsapp_valido?: boolean | null
         }
         Update: {
           cidade?: string
@@ -784,6 +786,7 @@ export type Database = {
           status?: string
           updated_at?: string | null
           whatsapp?: string
+          whatsapp_valido?: boolean | null
         }
         Relationships: []
       }
