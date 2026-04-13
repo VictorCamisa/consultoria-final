@@ -128,10 +128,8 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
 
     if (!FIRECRAWL_API_KEY) return json({ error: "Firecrawl não configurado." }, 400);
-    if (!OPENAI_API_KEY) return json({ error: "OpenAI API Key não configurada." }, 400);
 
     const authHeader = req.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
@@ -328,30 +326,19 @@ Responda APENAS com JSON válido:
 
     const systemPrompt = `Você é um especialista em prospecção B2B e qualificação de leads para a Consultoria VS Growth Hub. Sua missão: encontrar TODOS os contatos empresariais nas páginas fornecidas E qualificar cada lead com um score de aderência ao ICP da consultoria. ${locationStr ? `Priorize contatos de ${locationStr}.` : ""} Retorne APENAS JSON válido, sem markdown, sem explicações.`;
 
-    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: extractionPrompt },
-        ],
-        max_tokens: 16384,
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const status = aiResponse.status;
-      const errorText = await aiResponse.text();
-      console.error("AI extraction error:", status, errorText);
-      if (status === 429) return json({ error: "Limite de requisições OpenAI atingido. Tente em 1 minuto." }, 429);
-      if (status === 402 || status === 401) return json({ error: "Erro na API OpenAI. Verifique sua API Key e créditos." }, 402);
-      return json({ error: `Erro na extração por IA: Status ${status}` }, 502);
+    let aiContent = "";
+    try {
+      const { callClaude } = await import("../_shared/ai-client.ts");
+      const aiResult = await callClaude({
+        system: systemPrompt,
+        messages: [{ role: "user", content: extractionPrompt }],
+        max_tokens: 8192,
+      });
+      aiContent = aiResult.text ?? "";
+    } catch (aiErr: any) {
+      if (aiErr.message === "RATE_LIMIT") return json({ error: "Limite de requisições IA atingido. Tente em 1 minuto." }, 429);
+      throw aiErr;
     }
-
-    const aiData = await aiResponse.json();
-    const aiContent = aiData.choices?.[0]?.message?.content || "";
 
     let contacts: any[] = [];
     try {

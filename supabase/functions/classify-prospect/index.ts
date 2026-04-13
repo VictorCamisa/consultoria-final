@@ -6,7 +6,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
 const MEDDIC_TOOL = {
   type: "function" as const,
@@ -48,8 +47,7 @@ serve(async (req) => {
     const { prospect_id } = await req.json();
     if (!prospect_id) throw new Error("prospect_id obrigatório");
 
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY não configurada");
+    // AI client will use ANTHROPIC_API_KEY from env
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -124,38 +122,32 @@ ${memoryBlock}
 Histórico de conversa:
 ${historico}`;
 
-    const aiRes = await fetch(OPENAI_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        tools: [MEDDIC_TOOL],
-        tool_choice: { type: "function", function: { name: "classify_prospect_meddic" } },
-      }),
-    });
+    const { callClaude } = await import("../_shared/ai-client.ts");
 
-    if (!aiRes.ok) {
-      if (aiRes.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit excedido. Tente novamente em alguns segundos." }), {
+    let result: any;
+    try {
+      const aiResult = await callClaude({
+        system: systemPrompt,
+        messages: [{ role: "user", content: userMessage }],
+        tools: [{
+          name: "classify_prospect_meddic",
+          description: "Classifica prospect com MEDDIC estruturado e classificação geral",
+          input_schema: MEDDIC_TOOL.function.parameters,
+        }],
+        tool_choice: { type: "tool", name: "classify_prospect_meddic" },
+        max_tokens: 2048,
+      });
+
+      if (!aiResult.toolUse) throw new Error("AI não retornou tool use");
+      result = aiResult.toolUse.input;
+    } catch (aiErr: any) {
+      if (aiErr.message === "RATE_LIMIT") {
+        return new Response(JSON.stringify({ error: "Rate limit excedido. Tente em alguns segundos." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errText = await aiRes.text();
-      throw new Error(`OpenAI error (${aiRes.status}): ${errText}`);
+      throw aiErr;
     }
-
-    const aiData = await aiRes.json();
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("AI não retornou tool call");
-
-    const result = JSON.parse(toolCall.function.arguments);
 
     await supabase
       .from("consultoria_prospects")
