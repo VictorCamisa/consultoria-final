@@ -6,7 +6,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
 
 const PERSONAS: Record<string, string> = {
   interesse: `PERSONA: Gancho Imediato. Direto, sem saudações vazias. Abra com dado relevante. Confiante mas não arrogante.`,
@@ -58,8 +57,7 @@ serve(async (req) => {
     const { prospect_id } = await req.json();
     if (!prospect_id) throw new Error("prospect_id obrigatório");
 
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY não configurada");
+    // AI client will use ANTHROPIC_API_KEY from env
 
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
@@ -172,75 +170,49 @@ ${meddicBlock}${sessionBlock}${longTermBlock}
 Conversa recente:
 ${workingMemory}`;
 
-    const aiRes = await fetch(OPENAI_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${OPENAI_API_KEY}` },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "coaching_response",
-            description: "Retorna coaching completo para o vendedor",
-            parameters: {
-              type: "object",
-              properties: {
-                sugestao: { type: "string", description: "Mensagem sugerida para enviar ao prospect via WhatsApp" },
-                insights: {
-                  type: "array",
-                  items: { type: "string" },
-                  description: "2-4 insights curtos sobre o lead baseados na conversa (ex: 'Demonstrou interesse em automação', 'Ticket alto — priorizar')"
-                },
-                proximo_passo: { type: "string", description: "O que o vendedor deve buscar como próximo passo concreto (ex: 'Agendar call de diagnóstico', 'Enviar proposta')" },
-                alerta: { type: "string", description: "Alerta ou cuidado importante, se houver (ex: 'Lead pode esfriar — responder rápido', 'Não pressionar preço agora'). Vazio se não houver." },
-                tom_recomendado: { type: "string", description: "Tom recomendado para a próxima mensagem (ex: 'Consultivo e empático', 'Direto e urgente')" },
-              },
-              required: ["sugestao", "insights", "proximo_passo", "tom_recomendado"],
-              additionalProperties: false,
-            }
-          }
-        }],
-        tool_choice: { type: "function", function: { name: "coaching_response" } },
-      }),
-    });
+    const { callClaude } = await import("../_shared/ai-client.ts");
 
-    if (!aiRes.ok) {
-      if (aiRes.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit excedido. Tente novamente em alguns segundos." }), {
+    let coaching: any = {};
+    try {
+      const aiResult = await callClaude({
+        system: systemPrompt,
+        messages: [{ role: "user", content: userMessage }],
+        tools: [{
+          name: "coaching_response",
+          description: "Retorna coaching completo para o vendedor",
+          input_schema: {
+            type: "object",
+            properties: {
+              sugestao: { type: "string", description: "Mensagem sugerida para enviar ao prospect via WhatsApp" },
+              insights: { type: "array", items: { type: "string" }, description: "2-4 insights curtos sobre o lead" },
+              proximo_passo: { type: "string", description: "Próximo passo concreto" },
+              alerta: { type: "string", description: "Alerta importante, se houver. Vazio se não houver." },
+              tom_recomendado: { type: "string", description: "Tom recomendado para a próxima mensagem" },
+            },
+            required: ["sugestao", "insights", "proximo_passo", "tom_recomendado"],
+          },
+        }],
+        tool_choice: { type: "tool", name: "coaching_response" },
+        max_tokens: 1024,
+      });
+
+      if (aiResult.toolUse) {
+        coaching = aiResult.toolUse.input;
+      } else {
+        coaching = { sugestao: aiResult.text ?? "", insights: [], proximo_passo: "", tom_recomendado: "" };
+      }
+    } catch (aiErr: any) {
+      if (aiErr.message === "RATE_LIMIT") {
+        return new Response(JSON.stringify({ error: "Rate limit excedido. Tente em alguns segundos." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (aiRes.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      if (aiErr.message?.includes("AUTH_ERROR")) {
+        return new Response(JSON.stringify({ error: "Erro de autenticação na API de IA." }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const errText = await aiRes.text();
-      throw new Error(`OpenAI error (${aiRes.status}): ${errText}`);
-    }
-
-    const aiData = await aiRes.json();
-    
-    // Extract tool call result
-    let coaching: any = {};
-    const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall?.function?.arguments) {
-      try {
-        coaching = JSON.parse(toolCall.function.arguments);
-      } catch {
-        // Fallback: regex extract
-        const raw = toolCall.function.arguments;
-        const sugestaoMatch = raw.match(/"sugestao"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        coaching = { sugestao: sugestaoMatch ? sugestaoMatch[1].replace(/\\"/g, '"').replace(/\\n/g, '\n') : raw, insights: [], proximo_passo: "", tom_recomendado: "" };
-      }
-    } else {
-      // Fallback to plain content
-      const content = aiData.choices?.[0]?.message?.content?.trim() ?? "";
-      coaching = { sugestao: content, insights: [], proximo_passo: "", tom_recomendado: "" };
+      throw aiErr;
     }
 
     return new Response(JSON.stringify({
