@@ -290,19 +290,22 @@ export function ChatSheet({ prospect, onClose, onProspectUpdate }: Props) {
                 {conversas?.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-12">Nenhuma mensagem ainda.</p>
                 )}
-                {conversas?.map(msg => (
-                  <div key={msg.id} className={`rounded-2xl px-3.5 py-2.5 text-sm max-w-[82%] ${
-                    msg.direcao === "saida"
-                      ? "bg-primary text-primary-foreground ml-auto rounded-br-md"
-                      : "bg-muted mr-auto rounded-bl-md"
-                  }`}>
-                    <p className="text-[10px] opacity-50 mb-0.5">
-                      {msg.direcao === "saida" ? "Você" : prospect.nome_negocio} ·{" "}
-                      {new Date(msg.created_at!).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                    <p className="whitespace-pre-wrap leading-relaxed">{msg.conteudo}</p>
-                  </div>
-                ))}
+                {conversas?.map(msg => {
+                  const isMedia = msg.conteudo.startsWith("[📷") || msg.conteudo.startsWith("[🎤") || msg.conteudo.startsWith("[📎");
+                  return (
+                    <div key={msg.id} className={`rounded-2xl px-3.5 py-2.5 text-sm max-w-[82%] ${
+                      msg.direcao === "saida"
+                        ? "bg-primary text-primary-foreground ml-auto rounded-br-md"
+                        : "bg-muted mr-auto rounded-bl-md"
+                    }`}>
+                      <p className="text-[10px] opacity-50 mb-0.5">
+                        {msg.direcao === "saida" ? "Você" : prospect.nome_negocio} ·{" "}
+                        {new Date(msg.created_at!).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                      <p className={`whitespace-pre-wrap leading-relaxed ${isMedia ? "italic text-xs opacity-80" : ""}`}>{msg.conteudo}</p>
+                    </div>
+                  );
+                })}
                 {(loadingSuggest || loadingSend) && (
                   <div className="bg-muted mr-auto rounded-2xl rounded-bl-md px-4 py-3 max-w-[82%]">
                     <div className="flex items-center gap-1.5">

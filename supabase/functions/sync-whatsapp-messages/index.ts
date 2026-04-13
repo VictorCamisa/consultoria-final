@@ -7,6 +7,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { buildJidCandidates, getAllOpenInstances, resolveSendInstance } from "../_shared/instance-resolver.ts";
 import { isAudioMessage, processAudioMessage } from "../_shared/audio-transcriber.ts";
+import { isImageMessage, processImageMessage, getMediaTypeLabel } from "../_shared/image-processor.ts";
 
 function extractMessages(rawResult: any): any[] {
   if (Array.isArray(rawResult)) return rawResult;
@@ -146,6 +147,7 @@ serve(async (req) => {
       const msgMessage = msg.message;
       let content = msgMessage?.conversation ?? msgMessage?.extendedTextMessage?.text ?? msgMessage?.imageMessage?.caption ?? null;
       const hasAudio = isAudioMessage(msgMessage);
+      const hasImage = isImageMessage(msgMessage);
 
       // Try to transcribe audio messages
       if (hasAudio && evolutionBaseUrl && evolutionApiKey && matchedInstances[0]) {
@@ -157,6 +159,24 @@ serve(async (req) => {
           console.warn("[sync] Audio transcription error:", e);
           content = "[🎤 Áudio recebido — erro na transcrição]";
         }
+      }
+
+      // Try to describe image messages
+      if (hasImage && evolutionBaseUrl && evolutionApiKey && matchedInstances[0]) {
+        try {
+          const imageResult = await processImageMessage(msgMessage, msg, evolutionBaseUrl, evolutionApiKey, matchedInstances[0]);
+          if (imageResult) content = imageResult;
+          else if (!content) content = "[📷 Imagem recebida — descrição indisponível]";
+        } catch (e) {
+          console.warn("[sync] Image processing error:", e);
+          if (!content) content = "[📷 Imagem recebida — erro no processamento]";
+        }
+      }
+
+      // Label other media types
+      if (!content && !hasAudio && !hasImage) {
+        const mediaLabel = getMediaTypeLabel(msgMessage);
+        if (mediaLabel) content = `[📎 ${mediaLabel} recebido]`;
       }
 
       if (!content) continue;

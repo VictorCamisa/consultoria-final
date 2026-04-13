@@ -8,6 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { buildPhoneMatchFilter, phoneToJid } from "../_shared/instance-resolver.ts";
 import { isAudioMessage, processAudioMessage } from "../_shared/audio-transcriber.ts";
+import { isImageMessage, processImageMessage, getMediaTypeLabel } from "../_shared/image-processor.ts";
 
 function detectHandoffTrigger(
   conteudo: string,
@@ -80,10 +81,12 @@ serve(async (req) => {
       "";
     const messageId: string = key?.id ?? null;
     const hasAudio = isAudioMessage(msgContent);
+    const hasImage = isImageMessage(msgContent);
 
-    // If no text content and no audio, mark as unsupported media
-    if (!conteudo && !hasAudio) {
-      conteudo = "[mídia não suportada]";
+    // If no text content and no audio/image, check for other media types
+    if (!conteudo && !hasAudio && !hasImage) {
+      const mediaLabel = getMediaTypeLabel(msgContent);
+      conteudo = mediaLabel ? `[📎 ${mediaLabel} recebido]` : "[mídia não suportada]";
     }
 
     const supabase = createClient(
@@ -134,16 +137,28 @@ serve(async (req) => {
       }
     }
 
+    const evolutionBaseUrl = (Deno.env.get("EVOLUTION_API_URL") || "").replace(/\/$/, "");
+    const evolutionApiKey = Deno.env.get("EVOLUTION_API_KEY") || "";
+
     // Transcribe audio if present
     if (hasAudio && webhookInstance) {
-      const evolutionBaseUrl = (Deno.env.get("EVOLUTION_API_URL") || "").replace(/\/$/, "");
-      const evolutionApiKey = Deno.env.get("EVOLUTION_API_KEY") || "";
       if (evolutionBaseUrl && evolutionApiKey) {
         const audioResult = await processAudioMessage(msgContent, data, evolutionBaseUrl, evolutionApiKey, webhookInstance);
         if (audioResult) conteudo = audioResult;
         else if (!conteudo) conteudo = "[🎤 Áudio recebido — transcrição indisponível]";
       } else if (!conteudo) {
         conteudo = "[🎤 Áudio recebido — Evolution API não configurada]";
+      }
+    }
+
+    // Process image if present
+    if (hasImage && webhookInstance) {
+      if (evolutionBaseUrl && evolutionApiKey) {
+        const imageResult = await processImageMessage(msgContent, data, evolutionBaseUrl, evolutionApiKey, webhookInstance);
+        if (imageResult) conteudo = imageResult;
+        else if (!conteudo) conteudo = "[📷 Imagem recebida — descrição indisponível]";
+      } else if (!conteudo) {
+        conteudo = "[📷 Imagem recebida — Evolution API não configurada]";
       }
     }
 
