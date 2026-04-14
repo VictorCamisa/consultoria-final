@@ -39,11 +39,12 @@ export async function callClaude(params: {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada");
 
+  const cleanMessages = sanitizeMessages(params.messages.filter(m => m.role !== "system"));
   const body: Record<string, unknown> = {
     model: "claude-haiku-4-5-20251001",
     max_tokens: params.max_tokens ?? 4096,
-    system: params.system,
-    messages: params.messages.filter(m => m.role !== "system"),
+    system: sanitizeText(params.system),
+    messages: cleanMessages,
   };
 
   if (params.tools?.length) {
