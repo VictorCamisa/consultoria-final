@@ -11,7 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   Send, Sparkles, Loader2, BrainCircuit, CheckCircle2, XCircle,
   X, Phone, MapPin, Instagram, Globe, User,
-  Megaphone, PlayCircle, RotateCcw, ChevronRight, Copy,
+  Megaphone, PlayCircle, RotateCcw, ChevronRight, Copy, PanelRight, PanelRightClose,
   AlertTriangle, Target, Lightbulb, ArrowRight, Zap, MessageSquare, RefreshCw,
 } from "lucide-react";
 import { StickyNote, Plus, Trash2, Clock } from "lucide-react";
@@ -668,8 +668,20 @@ export function ProspectWorkspace({
           </ScrollArea>
         </div>
 
+        {/* Toggle button for right panel */}
+        <button
+          onClick={() => setRightPanelOpen(!rightPanelOpen)}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-card border border-border rounded-l-lg p-1.5 shadow-md hover:bg-muted transition-colors"
+          style={{ right: rightPanelOpen ? (window.innerWidth >= 1024 ? '320px' : '300px') : '0px' }}
+          title={rightPanelOpen ? "Fechar painel" : "Abrir painel"}
+        >
+          {rightPanelOpen ? <PanelRightClose className="h-4 w-4 text-muted-foreground" /> : <PanelRight className="h-4 w-4 text-muted-foreground" />}
+        </button>
+
         {/* RIGHT: Actions Panel */}
-        <div className={`w-full md:w-[300px] lg:w-[320px] shrink-0 flex flex-col min-h-0 bg-card/30 ${isMobile && mobileTab !== "acoes" ? "hidden" : ""}`}>
+        <div className={`shrink-0 flex flex-col min-h-0 bg-card/30 border-l border-border transition-all duration-300 ${
+          isMobile && mobileTab !== "acoes" ? "hidden" : ""
+        } ${rightPanelOpen ? "w-full md:w-[300px] lg:w-[320px]" : "w-0 overflow-hidden"}`}>
           <ScrollArea className="flex-1">
             <div className="p-4 space-y-4 min-w-[400px]">
               {/* Quick Actions */}
