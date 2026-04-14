@@ -235,6 +235,7 @@ interface ChatBubbleProps {
     created_at: string | null;
   };
   prospectName: string;
+  profilePhoto?: string | null;
 }
 
 export function ChatBubble({ msg, prospectName }: ChatBubbleProps) {
