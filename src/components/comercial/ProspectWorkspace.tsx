@@ -509,19 +509,12 @@ export function ProspectWorkspace({
 
         {/* Toggle + CENTER: AI Copilot Panel */}
         <div className={`flex min-h-0 transition-all duration-300 ${isMobile && mobileTab !== "ai" ? "hidden" : ""}`}>
-          {/* Toggle button */}
-          <button
-            onClick={() => setCenterPanelOpen(!centerPanelOpen)}
-            className="shrink-0 flex items-center justify-center w-6 bg-card/50 border-l border-border hover:bg-muted transition-colors"
-            title={centerPanelOpen ? "Fechar painel IA" : "Abrir painel IA"}
-          >
-            {centerPanelOpen ? <PanelLeftClose className="h-3.5 w-3.5 text-muted-foreground" /> : <PanelLeft className="h-3.5 w-3.5 text-muted-foreground" />}
-          </button>
-
           {/* Panel content */}
           <div className={`flex-1 flex flex-col min-h-0 border-r border-border bg-gradient-to-b from-primary/[0.02] to-transparent transition-all duration-300 overflow-hidden ${
             centerPanelOpen ? "min-w-[340px]" : "w-0 min-w-0 border-r-0"
           }`}>
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-4 min-w-[480px]">
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-4 min-w-[480px]">
               {/* Phase indicator */}
@@ -677,13 +670,16 @@ export function ProspectWorkspace({
                   </div>
                 </div>
               )}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
           </div>
+          {/* Toggle button */}
+          <button
+            onClick={() => setCenterPanelOpen(!centerPanelOpen)}
+            className="shrink-0 flex items-center justify-center w-6 bg-card/50 border-l border-border hover:bg-muted transition-colors"
+            title={centerPanelOpen ? "Fechar painel IA" : "Abrir painel IA"}
+          >
+            {centerPanelOpen ? <PanelRightClose className="h-3.5 w-3.5 text-muted-foreground" /> : <PanelRight className="h-3.5 w-3.5 text-muted-foreground" />}
+          </button>
         </div>
-
-        {/* Toggle + RIGHT: Actions Panel */}
         <div className={`shrink-0 flex min-h-0 transition-all duration-300 ${isMobile && mobileTab !== "acoes" ? "hidden" : ""}`}>
           {/* Toggle button */}
           <button
