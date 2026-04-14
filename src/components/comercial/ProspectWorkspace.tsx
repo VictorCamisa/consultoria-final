@@ -819,6 +819,7 @@ export function ProspectWorkspace({
             </div>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
+          </div>
         </div>
       </div>
     </div>,
