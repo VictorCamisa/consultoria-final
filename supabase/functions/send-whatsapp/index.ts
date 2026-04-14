@@ -1,5 +1,5 @@
 /**
- * Envia mensagem via Evolution API e salva em consultoria_conversas.
+ * Envia mensagem (texto, áudio ou mídia) via Evolution API e salva em consultoria_conversas.
  * Usa helper centralizado para resolução de instância.
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -13,9 +13,9 @@ serve(async (req) => {
   }
 
   try {
-    const { prospect_id, mensagem } = await req.json();
-    if (!prospect_id || !mensagem) {
-      throw new Error("prospect_id e mensagem são obrigatórios");
+    const { prospect_id, mensagem, media_url, media_type, file_name } = await req.json();
+    if (!prospect_id || (!mensagem && !media_url)) {
+      throw new Error("prospect_id e (mensagem ou media_url) são obrigatórios");
     }
 
     const supabase = createClient(
@@ -44,26 +44,77 @@ serve(async (req) => {
     }
 
     const phone = normalizePhone(prospect.whatsapp);
+    let evoData: any;
+    let conteudoSalvo = mensagem || "";
 
-    // Envia mensagem via Evolution API v2
-    const evoRes = await fetch(
-      `${evolutionUrl}/message/sendText/${instancia}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: evolutionKey,
-        },
-        body: JSON.stringify({ number: phone, text: mensagem }),
+    if (media_url) {
+      // Determine Evolution API endpoint based on media type
+      let endpoint = "sendMedia";
+      let body: any = {
+        number: phone,
+        media: media_url,
+        caption: mensagem || "",
+        fileName: file_name || "arquivo",
+      };
+
+      if (media_type === "audio") {
+        endpoint = "sendWhatsAppAudio";
+        body = {
+          number: phone,
+          audio: media_url,
+        };
+        conteudoSalvo = "🎤 Áudio";
+      } else if (media_type?.startsWith("image")) {
+        body.mediatype = "image";
+        conteudoSalvo = mensagem ? `📷 ${mensagem}` : "📷 Imagem";
+      } else if (media_type?.startsWith("video")) {
+        body.mediatype = "video";
+        conteudoSalvo = mensagem ? `🎥 ${mensagem}` : "🎥 Vídeo";
+      } else {
+        body.mediatype = "document";
+        conteudoSalvo = `📎 ${file_name || "Documento"}`;
       }
-    );
 
-    if (!evoRes.ok) {
-      const errText = await evoRes.text();
-      throw new Error(`Evolution API error (${evoRes.status}): ${errText}`);
+      const evoRes = await fetch(
+        `${evolutionUrl}/message/${endpoint}/${instancia}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: evolutionKey,
+          },
+          body: JSON.stringify(body),
+        }
+      );
+
+      if (!evoRes.ok) {
+        const errText = await evoRes.text();
+        throw new Error(`Evolution API error (${evoRes.status}): ${errText}`);
+      }
+
+      evoData = await evoRes.json();
+    } else {
+      // Envia mensagem de texto via Evolution API v2
+      const evoRes = await fetch(
+        `${evolutionUrl}/message/sendText/${instancia}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: evolutionKey,
+          },
+          body: JSON.stringify({ number: phone, text: mensagem }),
+        }
+      );
+
+      if (!evoRes.ok) {
+        const errText = await evoRes.text();
+        throw new Error(`Evolution API error (${evoRes.status}): ${errText}`);
+      }
+
+      evoData = await evoRes.json();
     }
 
-    const evoData = await evoRes.json();
     const messageId = evoData?.key?.id ?? null;
 
     // Salva mensagem enviada no histórico
@@ -73,7 +124,7 @@ serve(async (req) => {
       .insert({
         prospect_id,
         direcao: "saida",
-        conteudo: mensagem,
+        conteudo: conteudoSalvo,
         message_id: messageId,
         processado_ia: false,
         origem: "system_send",
