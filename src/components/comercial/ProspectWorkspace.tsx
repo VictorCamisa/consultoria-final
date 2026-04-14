@@ -11,7 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   Send, Sparkles, Loader2, BrainCircuit, CheckCircle2, XCircle,
   X, Phone, MapPin, Instagram, Globe, User,
-  Megaphone, PlayCircle, RotateCcw, ChevronRight, Copy,
+  Megaphone, PlayCircle, RotateCcw, ChevronRight, Copy, PanelRight, PanelRightClose,
   AlertTriangle, Target, Lightbulb, ArrowRight, Zap, MessageSquare, RefreshCw,
 } from "lucide-react";
 import { StickyNote, Plus, Trash2, Clock } from "lucide-react";
@@ -52,6 +52,7 @@ export function ProspectWorkspace({
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [mensagem, setMensagem] = useState("");
+  const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [loadingSuggest, setLoadingSuggest] = useState(false);
   const [loadingClassify, setLoadingClassify] = useState(false);
   const [loadingSend, setLoadingSend] = useState(false);
@@ -667,10 +668,23 @@ export function ProspectWorkspace({
           </ScrollArea>
         </div>
 
-        {/* RIGHT: Actions Panel */}
-        <div className={`w-full md:w-[300px] lg:w-[320px] shrink-0 flex flex-col min-h-0 bg-card/30 ${isMobile && mobileTab !== "acoes" ? "hidden" : ""}`}>
-          <ScrollArea className="flex-1">
-            <div className="p-4 space-y-4 min-w-[400px]">
+        {/* Toggle + RIGHT: Actions Panel */}
+        <div className={`shrink-0 flex min-h-0 transition-all duration-300 ${isMobile && mobileTab !== "acoes" ? "hidden" : ""}`}>
+          {/* Toggle button */}
+          <button
+            onClick={() => setRightPanelOpen(!rightPanelOpen)}
+            className="shrink-0 flex items-center justify-center w-6 bg-card/50 border-l border-border hover:bg-muted transition-colors"
+            title={rightPanelOpen ? "Fechar painel" : "Abrir painel"}
+          >
+            {rightPanelOpen ? <PanelRightClose className="h-3.5 w-3.5 text-muted-foreground" /> : <PanelRight className="h-3.5 w-3.5 text-muted-foreground" />}
+          </button>
+
+          {/* Panel content */}
+          <div className={`flex flex-col min-h-0 bg-card/30 border-l border-border transition-all duration-300 overflow-hidden ${
+            rightPanelOpen ? "w-[300px] lg:w-[320px]" : "w-0 border-l-0"
+          }`}>
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-4 min-w-[400px]">
               {/* Quick Actions */}
               <div>
                 <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ações Rápidas</h3>
@@ -805,6 +819,7 @@ export function ProspectWorkspace({
             </div>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
+          </div>
         </div>
       </div>
     </div>,
