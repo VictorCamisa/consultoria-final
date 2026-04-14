@@ -4,6 +4,17 @@
  * GPT-4o-mini is kept only for the vendedor-chat roleplay simulator.
  */
 
+/** Remove lone surrogates and other invalid Unicode that breaks JSON serialization */
+function sanitizeText(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "")
+             .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "")
+             .replace(/[\uFFFE\uFFFF]/g, "");
+}
+
+function sanitizeMessages(msgs: AIMessage[]): AIMessage[] {
+  return msgs.map(m => ({ ...m, content: sanitizeText(m.content) }));
+}
 export interface AIMessage {
   role: "system" | "user" | "assistant";
   content: string;
