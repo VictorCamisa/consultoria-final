@@ -11,7 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   Send, Sparkles, Loader2, BrainCircuit, CheckCircle2, XCircle,
   X, Phone, MapPin, Instagram, Globe, User,
-  Megaphone, PlayCircle, RotateCcw, ChevronRight, Copy, PanelRight, PanelRightClose,
+  Megaphone, PlayCircle, RotateCcw, ChevronRight, Copy, PanelRight, PanelRightClose, PanelLeft, PanelLeftClose,
   AlertTriangle, Target, Lightbulb, ArrowRight, Zap, MessageSquare, RefreshCw,
 } from "lucide-react";
 import { StickyNote, Plus, Trash2, Clock } from "lucide-react";
@@ -53,6 +53,7 @@ export function ProspectWorkspace({
   const isMobile = useIsMobile();
   const [mensagem, setMensagem] = useState("");
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const [centerPanelOpen, setCenterPanelOpen] = useState(true);
   const [loadingSuggest, setLoadingSuggest] = useState(false);
   const [loadingClassify, setLoadingClassify] = useState(false);
   const [loadingSend, setLoadingSend] = useState(false);
@@ -506,10 +507,23 @@ export function ProspectWorkspace({
           </div>
         </div>
 
-        {/* CENTER: AI Copilot Panel */}
-        <div className={`flex-1 shrink-0 flex flex-col min-h-0 border-r border-border bg-gradient-to-b from-primary/[0.02] to-transparent ${isMobile && mobileTab !== "ai" ? "hidden" : ""}`}>
-          <ScrollArea className="flex-1">
-            <div className="p-4 space-y-4 min-w-[480px]">
+        {/* Toggle + CENTER: AI Copilot Panel */}
+        <div className={`flex min-h-0 transition-all duration-300 ${isMobile && mobileTab !== "ai" ? "hidden" : ""}`}>
+          {/* Toggle button */}
+          <button
+            onClick={() => setCenterPanelOpen(!centerPanelOpen)}
+            className="shrink-0 flex items-center justify-center w-6 bg-card/50 border-l border-border hover:bg-muted transition-colors"
+            title={centerPanelOpen ? "Fechar painel IA" : "Abrir painel IA"}
+          >
+            {centerPanelOpen ? <PanelLeftClose className="h-3.5 w-3.5 text-muted-foreground" /> : <PanelLeft className="h-3.5 w-3.5 text-muted-foreground" />}
+          </button>
+
+          {/* Panel content */}
+          <div className={`flex-1 flex flex-col min-h-0 border-r border-border bg-gradient-to-b from-primary/[0.02] to-transparent transition-all duration-300 overflow-hidden ${
+            centerPanelOpen ? "min-w-[340px]" : "w-0 min-w-0 border-r-0"
+          }`}>
+            <ScrollArea className="flex-1">
+              <div className="p-4 space-y-4 min-w-[480px]">
               {/* Phase indicator */}
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5">
                 <div className="flex items-center gap-2 mb-1.5">
@@ -663,9 +677,10 @@ export function ProspectWorkspace({
                   </div>
                 </div>
               )}
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </div>
         </div>
 
         {/* Toggle + RIGHT: Actions Panel */}
