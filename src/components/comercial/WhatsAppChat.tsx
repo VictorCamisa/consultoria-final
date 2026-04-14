@@ -238,7 +238,7 @@ interface ChatBubbleProps {
   profilePhoto?: string | null;
 }
 
-export function ChatBubble({ msg, prospectName }: ChatBubbleProps) {
+export function ChatBubble({ msg, prospectName, profilePhoto }: ChatBubbleProps) {
   const isSent = msg.direcao === "saida";
   const time = msg.created_at
     ? new Date(msg.created_at).toLocaleString("pt-BR", { hour: "2-digit", minute: "2-digit" })
