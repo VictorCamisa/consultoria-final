@@ -91,6 +91,20 @@ export default function Comercial() {
   });
 
   // --- Actions ---
+  const handleMoveStage = async (prospect: Prospect, newStatus: string) => {
+    try {
+      const { error } = await supabase.from("consultoria_prospects").update({
+        status: newStatus, updated_at: new Date().toISOString(),
+      }).eq("id", prospect.id);
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["prospects"] });
+      const label = PIPELINE_STAGES.find(s => s.key === newStatus)?.label ?? newStatus;
+      toast({ title: `${prospect.nome_negocio} movido para ${label}` });
+    } catch (err: unknown) {
+      toast({ title: "Erro ao mover", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    }
+  };
+
   const handleDelete = async (prospect: Prospect) => {
     if (!confirm(`Tem certeza que deseja excluir "${prospect.nome_negocio}"?`)) return;
     try {
@@ -273,6 +287,7 @@ export default function Comercial() {
                       onCadencia={() => handleIniciarCadencia(p)}
                       onReativar={() => handleReativar(p)}
                       onDelete={() => handleDelete(p)}
+                      onMoveStage={(newStatus) => handleMoveStage(p, newStatus)}
                     />
                   ))}
                   {items.length === 0 && (

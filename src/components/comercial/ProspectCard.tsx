@@ -1,10 +1,11 @@
-import { Prospect, classificacaoConfig, scoreColor, timeAgo, nichoCategory } from "./types";
+import { Prospect, classificacaoConfig, scoreColor, timeAgo, nichoCategory, PIPELINE_STAGES } from "./types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  MessageSquare, Phone, Megaphone, PlayCircle, RotateCcw, Loader2, Trash2, AlertTriangle,
+  MessageSquare, Phone, Megaphone, PlayCircle, RotateCcw, Loader2, Trash2, AlertTriangle, ArrowRightLeft,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Props {
   prospect: Prospect;
@@ -17,11 +18,12 @@ interface Props {
   onCadencia: () => void;
   onReativar: () => void;
   onDelete?: () => void;
+  onMoveStage?: (newStatus: string) => void;
 }
 
 export function ProspectCard({
   prospect: p, unread, loadingAbordar, loadingCadencia, loadingReativar,
-  onSelect, onAbordar, onCadencia, onReativar, onDelete,
+  onSelect, onAbordar, onCadencia, onReativar, onDelete, onMoveStage,
 }: Props) {
   const classif = classificacaoConfig(p.classificacao_ia);
   const nichoCat = nichoCategory(p.nicho);
@@ -99,11 +101,11 @@ export function ProspectCard({
       )}
 
       {/* Row 5: Actions */}
-      <div className="flex gap-1.5 pt-0.5" onClick={e => e.stopPropagation()}>
+      <div className="flex items-center gap-1.5 pt-0.5" onClick={e => e.stopPropagation()}>
         <Button
           size="sm"
           variant={unread > 0 ? "default" : "outline"}
-          className="text-[11px] h-7 px-2.5 flex-1"
+          className="text-[11px] h-7 px-2.5"
           onClick={onSelect}
         >
           <MessageSquare className="h-3 w-3 mr-1" />
@@ -133,11 +135,40 @@ export function ProspectCard({
           </Button>
         )}
 
-        {onDelete && (
+        {onMoveStage && (
+          <Select value={p.status} onValueChange={(v) => onMoveStage(v)}>
+            <SelectTrigger className="h-7 w-7 px-0 border-none bg-transparent hover:bg-muted ml-auto shrink-0 [&>svg:last-child]:hidden" title="Mover estágio">
+              <ArrowRightLeft className="h-3.5 w-3.5 text-muted-foreground" />
+            </SelectTrigger>
+            <SelectContent align="end">
+              {PIPELINE_STAGES.map(s => (
+                <SelectItem key={s.key} value={s.key} disabled={s.key === p.status}>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${s.color}`} />
+                    <span className="text-xs">{s.label}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {onDelete && !onMoveStage && (
           <Button
             size="sm"
             variant="ghost"
             className="text-[11px] h-7 w-7 px-0 ml-auto text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10"
+            onClick={onDelete}
+            title="Excluir prospect"
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        )}
+        {onDelete && onMoveStage && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-[11px] h-7 w-7 px-0 text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10"
             onClick={onDelete}
             title="Excluir prospect"
           >
