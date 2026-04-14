@@ -18,6 +18,7 @@ interface Props {
   onCadencia: () => void;
   onReativar: () => void;
   onDelete?: () => void;
+  onMoveStage?: (newStatus: string) => void;
 }
 
 export function ProspectCard({
