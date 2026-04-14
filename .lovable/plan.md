@@ -1,49 +1,34 @@
 
 
-## Diagnóstico
+## Problema
 
-O problema atual: os botões de toggle foram colocados como barras verticais **à direita de cada painel**, criando faixas cinzas feias entre os blocos. O layout ficou amador.
+Atualmente o campo "Nicho" no cadastro de prospect é um `Select` fixo com apenas 4 opções (Estética, Odonto, Advocacia, Revendas). Prospects como "Massas Quiririm" e "Pneuvip" não se encaixam e ficam invisíveis nos filtros.
 
-## Solução: Redesign profissional dos toggles
+## Solução: Nicho Personalizado + Filtro "Sem config."
 
-A abordagem correta é:
+### 1. Campo de Nicho no cadastro (NewProspectDialog)
 
-1. **Remover as barras verticais de toggle** — eliminar os `<button>` de 6px de largura que ficam entre os painéis
-2. **Colocar os toggles no header de cada painel** — botões discretos no topo de cada bloco (IA Coach e Ações), integrados ao título da seção
-3. **Quando fechado, mostrar uma aba mínima** — uma aba vertical fina (tipo tab lateral) colada à borda direita da tela com o nome do painel, clicável para reabrir
-4. **Painel central (IA Coach)**: quando fecha, colapsa para a direita e o chat expande; uma aba "IA Coach" aparece na borda
-5. **Painel direito (Ações)**: quando fecha, colapsa para a direita e some; uma aba "Ações" aparece na borda direita
+Trocar o `Select` fixo por um campo híbrido:
+- Manter os 4 nichos pré-definidos como **sugestões rápidas** (botões/chips clicáveis)
+- Adicionar um `Input` de texto livre abaixo para digitar qualquer nicho personalizado (ex: "Alimentação", "Automotivo")
+- Se o usuário clicar em um chip, preenche o input; se digitar manualmente, aceita qualquer valor
 
-### Estrutura visual
+### 2. Filtro no Pipeline (Comercial.tsx)
 
-```text
-Aberto:
-┌──────────┬─────────────────┬──────────────┐
-│  Chat    │  IA Coach  [×]  │  Ações  [×]  │
-│  (fixo)  │  (flex-1)       │  (320px)     │
-└──────────┴─────────────────┴──────────────┘
+No dropdown de filtro de nichos, adicionar uma nova opção **"Sem config."** (ou "Outros") que filtra prospects cujo nicho não corresponde a nenhuma das 4 categorias pré-definidas. Esses prospects continuam aparecendo normalmente quando "Todos nichos" está selecionado.
 
-Centro fechado:
-┌──────────┬──────────────┬───┐
-│  Chat    │  Ações  [×]  │IA │  ← aba vertical "IA"
-│  (fixo)  │  (flex-1)    │   │
-└──────────┴──────────────┴───┘
+### 3. Alterações em types.ts
 
-Ambos fechados:
-┌────────────────────────┬───┬───┐
-│  Chat (fixo, não exp.) │IA │Aç │  ← abas verticais
-└────────────────────────┴───┴───┘
-```
+- Adicionar função `isNichoConfigurado(nicho: string): boolean` que retorna `true` se o nicho bate com alguma das keywords das 4 categorias
+- Atualizar `matchesNichoFilter` para suportar o valor especial `"sem_config"` que filtra nichos não reconhecidos
 
-### Mudanças no arquivo
+### Arquivos afetados
 
-**`src/components/comercial/ProspectWorkspace.tsx`**:
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/comercial/types.ts` | Adicionar `isNichoConfigurado()`, atualizar `matchesNichoFilter` |
+| `src/components/comercial/NewProspectDialog.tsx` | Input híbrido (chips + texto livre) |
+| `src/pages/Comercial.tsx` | Adicionar "Sem config." no dropdown de filtro |
 
-- Remover as `<button>` strips verticais dos dois painéis
-- Adicionar botão de fechar (ícone X ou PanelRightClose) no **header interno** de cada painel
-- Quando painel está fechado, renderizar uma **aba vertical rotacionada** (`writing-mode: vertical-rl`) na borda direita com texto + ícone, clicável para reabrir
-- Manter `transition-all duration-300` para animação suave
-- Chat permanece com largura fixa (`w-[400px] lg:w-[440px]`) — nunca expande
-- Painel central usa `flex-1` quando aberto
-- Remover `min-w-[480px]` e `min-w-[400px]` do conteúdo interno (causa scroll horizontal desnecessário agora que o painel central é flex-1)
+Nenhuma migração de banco necessária — o campo `nicho` já é `text` livre.
 
