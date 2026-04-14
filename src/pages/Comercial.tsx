@@ -287,6 +287,7 @@ export default function Comercial() {
                       onCadencia={() => handleIniciarCadencia(p)}
                       onReativar={() => handleReativar(p)}
                       onDelete={() => handleDelete(p)}
+                      onMoveStage={(newStatus) => handleMoveStage(p, newStatus)}
                     />
                   ))}
                   {items.length === 0 && (
