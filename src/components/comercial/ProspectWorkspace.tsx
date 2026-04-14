@@ -508,7 +508,7 @@ export function ProspectWorkspace({
         {/* CENTER: AI Copilot Panel */}
         <div className={`w-full md:w-[340px] lg:w-[380px] shrink-0 flex flex-col min-h-0 border-r border-border bg-gradient-to-b from-primary/[0.02] to-transparent ${isMobile && mobileTab !== "ai" ? "hidden" : ""}`}>
           <ScrollArea className="flex-1">
-            <div className="p-4 space-y-4" style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}>
+            <div className="p-4 space-y-4 min-w-[480px]">
               {/* Phase indicator */}
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5">
                 <div className="flex items-center gap-2 mb-1.5">
@@ -663,13 +663,14 @@ export function ProspectWorkspace({
                 </div>
               )}
             </div>
+            <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </div>
 
         {/* RIGHT: Actions Panel */}
-        <div className={`w-full md:w-[300px] lg:w-[320px] shrink-0 flex flex-col min-h-0 overflow-hidden bg-card/30 ${isMobile && mobileTab !== "acoes" ? "hidden" : ""}`}>
+        <div className={`w-full md:w-[300px] lg:w-[320px] shrink-0 flex flex-col min-h-0 bg-card/30 ${isMobile && mobileTab !== "acoes" ? "hidden" : ""}`}>
           <ScrollArea className="flex-1">
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4 min-w-[400px]">
               {/* Quick Actions */}
               <div>
                 <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ações Rápidas</h3>
@@ -802,6 +803,7 @@ export function ProspectWorkspace({
                 </div>
               )}
             </div>
+            <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </div>
       </div>
@@ -830,7 +832,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between px-3 py-1.5">
       <span className="text-[11px] text-muted-foreground">{label}</span>
-      <span className="text-[11px] text-foreground font-medium truncate ml-2 max-w-[150px] text-right">{value}</span>
+      <span className="text-[11px] text-foreground font-medium ml-2 text-right">{value}</span>
     </div>
   );
 }
