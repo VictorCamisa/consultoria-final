@@ -507,14 +507,22 @@ export function ProspectWorkspace({
           </div>
         </div>
 
-        {/* Toggle + CENTER: AI Copilot Panel */}
-        <div className={`flex min-h-0 transition-all duration-300 ${isMobile && mobileTab !== "ai" ? "hidden" : ""}`}>
-          {/* Panel content */}
-          <div className={`flex-1 flex flex-col min-h-0 border-r border-border bg-gradient-to-b from-primary/[0.02] to-transparent transition-all duration-300 overflow-hidden ${
-            centerPanelOpen ? "min-w-[340px]" : "w-0 min-w-0 border-r-0"
-          }`}>
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-4 min-w-[480px]">
+        {/* CENTER: AI Copilot Panel */}
+        <div className={`flex flex-col min-h-0 border-r border-border bg-gradient-to-b from-primary/[0.02] to-transparent transition-all duration-300 overflow-hidden ${
+          isMobile && mobileTab !== "ai" ? "hidden" : ""
+        } ${centerPanelOpen ? "flex-1 min-w-[340px]" : "w-0 min-w-0 border-r-0"}`}>
+          {/* Header with close button */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0">
+            <h3 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <BrainCircuit className="h-3.5 w-3.5 text-primary" />
+              IA Coach
+            </h3>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setCenterPanelOpen(false)}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-4">
               {/* Phase indicator */}
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5">
                 <div className="flex items-center gap-2 mb-1.5">
@@ -668,28 +676,27 @@ export function ProspectWorkspace({
                   </div>
                 </div>
               )}
-              </div>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
-          </div>
-          {/* Toggle button center */}
-          <button
-            onClick={() => setCenterPanelOpen(!centerPanelOpen)}
-            className="shrink-0 flex items-center justify-center w-6 bg-card/50 border-l border-border hover:bg-muted transition-colors"
-            title={centerPanelOpen ? "Fechar painel IA" : "Abrir painel IA"}
-          >
-            {centerPanelOpen ? <PanelRightClose className="h-3.5 w-3.5 text-muted-foreground" /> : <PanelRight className="h-3.5 w-3.5 text-muted-foreground" />}
-          </button>
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
         </div>
 
-        {/* Toggle + RIGHT: Actions Panel */}
-        <div className={`shrink-0 flex min-h-0 transition-all duration-300 ${isMobile && mobileTab !== "acoes" ? "hidden" : ""}`}>
-          {/* Panel content */}
-          <div className={`flex flex-col min-h-0 bg-card/30 border-l border-border transition-all duration-300 overflow-hidden ${
-            rightPanelOpen ? "w-[300px] lg:w-[320px]" : "w-0 border-l-0"
-          }`}>
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-4 min-w-[400px]">
+        {/* RIGHT: Actions Panel */}
+        <div className={`shrink-0 flex flex-col min-h-0 bg-card/30 border-l border-border transition-all duration-300 overflow-hidden ${
+          isMobile && mobileTab !== "acoes" ? "hidden" : ""
+        } ${rightPanelOpen ? "w-[300px] lg:w-[320px]" : "w-0 min-w-0 border-l-0"}`}>
+          {/* Header with close button */}
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0">
+            <h3 className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+              <Zap className="h-3.5 w-3.5 text-primary" />
+              Ações
+            </h3>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setRightPanelOpen(false)}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-4 space-y-4">
               {/* Quick Actions */}
               <div>
                 <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ações Rápidas</h3>
@@ -824,16 +831,37 @@ export function ProspectWorkspace({
             </div>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
-          </div>
-          {/* Toggle button right */}
-          <button
-            onClick={() => setRightPanelOpen(!rightPanelOpen)}
-            className="shrink-0 flex items-center justify-center w-6 bg-card/50 border-l border-border hover:bg-muted transition-colors"
-            title={rightPanelOpen ? "Fechar painel" : "Abrir painel"}
-          >
-            {rightPanelOpen ? <PanelRightClose className="h-3.5 w-3.5 text-muted-foreground" /> : <PanelRight className="h-3.5 w-3.5 text-muted-foreground" />}
-          </button>
         </div>
+
+        {/* Collapsed tabs on the right edge */}
+        {(!centerPanelOpen || !rightPanelOpen) && (
+          <div className="shrink-0 flex flex-col border-l border-border bg-card/50">
+            {!centerPanelOpen && (
+              <button
+                onClick={() => setCenterPanelOpen(true)}
+                className="flex-1 flex items-center justify-center px-1.5 hover:bg-muted transition-colors border-b border-border min-w-[28px]"
+                title="Abrir IA Coach"
+              >
+                <span className="text-[10px] font-semibold text-muted-foreground tracking-wider flex items-center gap-1" style={{ writingMode: 'vertical-rl' }}>
+                  <BrainCircuit className="h-3.5 w-3.5 rotate-90" />
+                  IA Coach
+                </span>
+              </button>
+            )}
+            {!rightPanelOpen && (
+              <button
+                onClick={() => setRightPanelOpen(true)}
+                className="flex-1 flex items-center justify-center px-1.5 hover:bg-muted transition-colors min-w-[28px]"
+                title="Abrir Ações"
+              >
+                <span className="text-[10px] font-semibold text-muted-foreground tracking-wider flex items-center gap-1" style={{ writingMode: 'vertical-rl' }}>
+                  <Zap className="h-3.5 w-3.5 rotate-90" />
+                  Ações
+                </span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>,
     document.body
