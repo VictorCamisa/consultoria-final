@@ -4,6 +4,17 @@
  * GPT-4o-mini is kept only for the vendedor-chat roleplay simulator.
  */
 
+/** Remove lone surrogates and other invalid Unicode that breaks JSON serialization */
+function sanitizeText(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "")
+             .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "")
+             .replace(/[\uFFFE\uFFFF]/g, "");
+}
+
+function sanitizeMessages(msgs: AIMessage[]): AIMessage[] {
+  return msgs.map(m => ({ ...m, content: sanitizeText(m.content) }));
+}
 export interface AIMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -28,11 +39,12 @@ export async function callClaude(params: {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada");
 
+  const cleanMessages = sanitizeMessages(params.messages.filter(m => m.role !== "system"));
   const body: Record<string, unknown> = {
     model: "claude-haiku-4-5-20251001",
     max_tokens: params.max_tokens ?? 4096,
-    system: params.system,
-    messages: params.messages.filter(m => m.role !== "system"),
+    system: sanitizeText(params.system),
+    messages: cleanMessages,
   };
 
   if (params.tools?.length) {
