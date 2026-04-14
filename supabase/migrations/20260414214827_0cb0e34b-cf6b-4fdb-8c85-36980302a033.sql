@@ -1,0 +1,1 @@
+ALTER TABLE public.consultoria_conversas ADD COLUMN reactions jsonb DEFAULT '[]'::jsonb;
