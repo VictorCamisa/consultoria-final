@@ -233,6 +233,7 @@ interface ChatBubbleProps {
     direcao: string;
     conteudo: string;
     created_at: string | null;
+    reactions?: { from: string; emoji: string; fromMe: boolean }[] | null;
   };
   prospectName: string;
   profilePhoto?: string | null;
