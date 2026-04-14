@@ -52,6 +52,7 @@ export function ProspectWorkspace({
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const [mensagem, setMensagem] = useState("");
+  const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [loadingSuggest, setLoadingSuggest] = useState(false);
   const [loadingClassify, setLoadingClassify] = useState(false);
   const [loadingSend, setLoadingSend] = useState(false);
