@@ -464,69 +464,73 @@ export function ProspectWorkspace({
       {/* ── Main: 3 columns on desktop ── */}
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
-        {/* LEFT: Chat (always visible on desktop, tab on mobile) */}
+        {/* LEFT: Chat — WhatsApp Style */}
         <div className={`flex flex-col border-r border-border min-w-0 min-h-0 ${isMobile && mobileTab !== "chat" ? "hidden" : ""} ${
           centerPanelOpen || rightPanelOpen ? "w-full md:w-[400px] lg:w-[440px] shrink-0" : "flex-1"
         }`}>
-          <ScrollArea className="flex-1 px-3 sm:px-5 py-3" ref={scrollRef}>
-            <div className="max-w-2xl mx-auto space-y-3">
+          {/* WhatsApp chat header */}
+          <div className="flex items-center gap-3 px-4 py-2 bg-[#f0f2f5] border-b border-[#e9edef] shrink-0">
+            <div className="w-8 h-8 rounded-full bg-[#dfe5e7] flex items-center justify-center">
+              <span className="text-xs font-bold text-[#54656f]">{prospect.nome_negocio.charAt(0).toUpperCase()}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-[#111b21] truncate">{prospect.nome_negocio}</p>
+              <p className="text-[11px] text-[#667781]">
+                {prospect.whatsapp}
+              </p>
+            </div>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] text-[#54656f]" onClick={handleSuggestReply} disabled={loadingSuggest}>
+              {loadingSuggest ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              <span className="ml-1 hidden sm:inline">IA</span>
+            </Button>
+          </div>
+
+          {/* Messages area with WhatsApp background */}
+          <div
+            className="flex-1 overflow-y-auto px-[5%] py-2"
+            ref={scrollRef}
+            style={{
+              backgroundColor: "#efeae2",
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='300' height='300' viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d1c9b8' fill-opacity='0.15'%3E%3Ccircle cx='50' cy='50' r='2'/%3E%3Ccircle cx='150' cy='80' r='1.5'/%3E%3Ccircle cx='250' cy='30' r='2'/%3E%3Ccircle cx='100' cy='150' r='1'/%3E%3Ccircle cx='200' cy='180' r='2'/%3E%3Ccircle cx='30' cy='220' r='1.5'/%3E%3Ccircle cx='270' cy='250' r='1'/%3E%3Ccircle cx='130' cy='280' r='2'/%3E%3C/g%3E%3C/svg%3E")`,
+            }}
+          >
+            <div className="max-w-2xl mx-auto space-y-0.5">
               {conversas?.length === 0 && (
-                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                  <MessageBubbleEmpty />
-                  <p className="text-sm mt-3">Nenhuma mensagem ainda</p>
-                  <p className="text-xs mt-1">Inicie a conversa com uma abordagem ou mensagem manual</p>
+                <div className="flex flex-col items-center justify-center py-20">
+                  <div className="bg-[#fcf4cb] rounded-lg px-4 py-2 shadow-sm text-center">
+                    <p className="text-[12.5px] text-[#54656f]">
+                      As mensagens são protegidas com criptografia de ponta a ponta.
+                    </p>
+                  </div>
+                  <p className="text-xs text-[#8696a0] mt-4">Nenhuma mensagem ainda</p>
                 </div>
               )}
               {conversas?.map(msg => (
-                <div key={msg.id} className={`flex ${msg.direcao === "saida" ? "justify-end" : "justify-start"}`}>
-                  <div className={`rounded-2xl px-4 py-3 text-sm max-w-[85%] sm:max-w-[75%] ${
-                    msg.direcao === "saida"
-                      ? "bg-primary text-primary-foreground rounded-br-md"
-                      : "bg-card border border-border rounded-bl-md"
-                  }`}>
-                    <p className="text-[10px] opacity-50 mb-1">
-                      {msg.direcao === "saida" ? "Você" : prospect.nome_negocio} · {new Date(msg.created_at!).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                    </p>
-                    <p className="whitespace-pre-wrap leading-relaxed">{msg.conteudo}</p>
-                  </div>
-                </div>
+                <ChatBubble key={msg.id} msg={msg} prospectName={prospect.nome_negocio} />
               ))}
               {(loadingSuggest || loadingSend) && (
-                <div className="flex justify-start">
-                  <div className="bg-card border border-border rounded-2xl rounded-bl-md px-4 py-3">
+                <div className="flex justify-start mb-1">
+                  <div className="bg-white rounded-lg rounded-tl-none px-4 py-3 shadow-sm">
                     <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:0ms]" />
-                      <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:150ms]" />
-                      <span className="w-2 h-2 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:300ms]" />
+                      <span className="w-2 h-2 bg-[#8696a0] rounded-full animate-bounce [animation-delay:0ms]" />
+                      <span className="w-2 h-2 bg-[#8696a0] rounded-full animate-bounce [animation-delay:150ms]" />
+                      <span className="w-2 h-2 bg-[#8696a0] rounded-full animate-bounce [animation-delay:300ms]" />
                     </div>
                   </div>
                 </div>
               )}
             </div>
-          </ScrollArea>
-
-          {/* Input */}
-          <div className="border-t border-border px-3 sm:px-5 py-2.5 bg-card/50 shrink-0">
-            <div className="max-w-2xl mx-auto space-y-2">
-              <Textarea
-                value={mensagem}
-                onChange={e => setMensagem(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleSendMessage(); } }}
-                placeholder="Digite uma mensagem... (Ctrl+Enter para enviar)"
-                className="min-h-[56px] max-h-[100px] resize-none text-sm bg-background"
-              />
-              <div className="flex gap-2">
-                <Button variant="outline" className="text-xs h-8 flex-1" onClick={handleSuggestReply} disabled={loadingSuggest}>
-                  {loadingSuggest ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
-                  Atualizar IA
-                </Button>
-                <Button className="text-xs h-8 flex-1" onClick={handleSendMessage} disabled={loadingSend || !mensagem.trim()}>
-                  {loadingSend ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
-                  Enviar
-                </Button>
-              </div>
-            </div>
           </div>
+
+          {/* WhatsApp-style input bar */}
+          <ChatInputBar
+            mensagem={mensagem}
+            setMensagem={setMensagem}
+            onSendText={handleSendMessage}
+            onSendMedia={handleSendMedia}
+            loadingSend={loadingSend}
+            prospectId={prospect.id}
+          />
         </div>
 
         {/* CENTER: AI Copilot Panel */}
