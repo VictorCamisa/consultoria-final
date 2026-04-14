@@ -827,6 +827,14 @@ export function ProspectWorkspace({
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
           </div>
+          {/* Toggle button right */}
+          <button
+            onClick={() => setRightPanelOpen(!rightPanelOpen)}
+            className="shrink-0 flex items-center justify-center w-6 bg-card/50 border-l border-border hover:bg-muted transition-colors"
+            title={rightPanelOpen ? "Fechar painel" : "Abrir painel"}
+          >
+            {rightPanelOpen ? <PanelRightClose className="h-3.5 w-3.5 text-muted-foreground" /> : <PanelRight className="h-3.5 w-3.5 text-muted-foreground" />}
+          </button>
         </div>
       </div>
     </div>,
