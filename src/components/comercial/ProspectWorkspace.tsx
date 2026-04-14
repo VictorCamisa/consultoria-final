@@ -67,6 +67,20 @@ export function ProspectWorkspace({
   const [novaNota, setNovaNota] = useState("");
   const [savingNota, setSavingNota] = useState(false);
 
+  // Fetch WhatsApp profile photo
+  const { data: profilePhoto } = useQuery({
+    queryKey: ["whatsapp-profile-photo", prospect?.id],
+    enabled: !!prospect?.id,
+    staleTime: 1000 * 60 * 30, // 30 min cache
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("get-whatsapp-profile", {
+        body: { prospect_id: prospect!.id },
+      });
+      if (error) return null;
+      return data?.photo_url ?? null;
+    },
+  });
+
   const { data: conversas, refetch: refetchConversas } = useQuery({
     queryKey: ["conversas", prospect?.id],
     enabled: !!prospect?.id,
