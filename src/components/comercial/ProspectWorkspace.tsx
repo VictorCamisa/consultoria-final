@@ -524,7 +524,7 @@ export function ProspectWorkspace({
                 </div>
               )}
               {conversas?.map(msg => (
-                <ChatBubble key={msg.id} msg={msg} prospectName={prospect.nome_negocio} />
+                <ChatBubble key={msg.id} msg={msg} prospectName={prospect.nome_negocio} profilePhoto={profilePhoto} />
               ))}
               {(loadingSuggest || loadingSend) && (
                 <div className="flex justify-start mb-1">
