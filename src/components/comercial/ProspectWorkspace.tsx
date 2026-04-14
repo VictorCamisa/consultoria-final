@@ -323,6 +323,25 @@ export function ProspectWorkspace({
     }
   };
 
+  const handleSendMedia = async (mediaUrl: string, mediaType: string, fileName: string) => {
+    if (!prospect) return;
+    setLoadingSend(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+        body: { prospect_id: prospect.id, media_url: mediaUrl, media_type: mediaType, file_name: fileName },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        refetchConversas();
+        toast({ title: "Mídia enviada!" });
+      }
+    } catch (err: unknown) {
+      toast({ title: "Erro ao enviar mídia", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    } finally {
+      setLoadingSend(false);
+    }
+  };
+
   const handleSyncMessages = async (showToast = true) => {
     if (!prospect?.id) return;
     setLoadingSync(true);
