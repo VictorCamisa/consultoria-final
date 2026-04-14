@@ -506,9 +506,9 @@ export function ProspectWorkspace({
         </div>
 
         {/* CENTER: AI Copilot Panel */}
-        <div className={`w-full md:w-[340px] lg:w-[380px] shrink-0 flex flex-col min-h-0 overflow-hidden border-r border-border bg-gradient-to-b from-primary/[0.02] to-transparent ${isMobile && mobileTab !== "ai" ? "hidden" : ""}`}>
+        <div className={`w-full md:w-[340px] lg:w-[380px] shrink-0 flex flex-col min-h-0 border-r border-border bg-gradient-to-b from-primary/[0.02] to-transparent ${isMobile && mobileTab !== "ai" ? "hidden" : ""}`}>
           <ScrollArea className="flex-1">
-            <div className="p-4 space-y-4 break-words overflow-wrap-anywhere" style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}>
+            <div className="p-4 space-y-4" style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}>
               {/* Phase indicator */}
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5">
                 <div className="flex items-center gap-2 mb-1.5">
