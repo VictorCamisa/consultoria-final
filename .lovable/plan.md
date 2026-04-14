@@ -1,61 +1,49 @@
 
-Objetivo: corrigir exatamente o que você pediu no `ProspectWorkspace`: fazer o bloco do meio e o bloco da direita terem rolagem horizontal própria, cada um independente, para que o conteúdo possa ser lido quando ultrapassar a largura visível.
 
-O que identifiquei no código:
-- O painel do meio usa `ScrollArea` sem `ScrollBar orientation="horizontal"`.
-- O painel da direita também usa `ScrollArea` sem barra horizontal.
-- O componente base `src/components/ui/scroll-area.tsx` até suporta barra horizontal, mas hoje o atalho `ScrollArea` renderiza só a vertical por padrão.
-- No `ProspectWorkspace`, o conteúdo do meio ainda está sendo forçado a quebrar linha (`overflowWrap: "anywhere"` / `wordBreak: "break-word"`), que é o oposto do comportamento que você quer.
-- O painel direito também tem vários itens com `truncate`, então mesmo com espaço maior o texto ainda pode continuar cortado.
+## Diagnóstico
 
-Plano de implementação:
-1. Ajustar o `ProspectWorkspace` para que o painel central tenha duas direções de rolagem:
-   - vertical para descer/subir o conteúdo
-   - horizontal para arrastar lateralmente só o painel do meio
-   - remover a quebra forçada de linha no container central
-   - colocar o conteúdo interno com largura mínima baseada no conteúdo (`min-w-max` / wrapper interno apropriado)
+O problema atual: os botões de toggle foram colocados como barras verticais **à direita de cada painel**, criando faixas cinzas feias entre os blocos. O layout ficou amador.
 
-2. Fazer o mesmo no painel da direita:
-   - permitir scroll horizontal independente
-   - aplicar um wrapper interno que possa crescer além da largura fixa da coluna
-   - adicionar barra horizontal visível no próprio painel direito
+## Solução: Redesign profissional dos toggles
 
-3. Corrigir os elementos internos que hoje truncam ou comprimem demais:
-   - revisar `truncate` em campos como detalhes, etapas e botões
-   - manter truncamento apenas onde fizer sentido visualmente, e liberar largura real nos blocos em que o usuário precisa ler tudo
-   - garantir que cards como “Insights”, “Próximo Passo” e “Mensagem Sugerida” acompanhem a largura rolável
+A abordagem correta é:
 
-4. Validar o comportamento no layout atual desktop:
-   - confirmar que o chat à esquerda continua fixo
-   - confirmar que o painel central rola lateralmente sem mexer no direito
-   - confirmar que o painel direito rola lateralmente sem mexer no centro
-   - conferir especialmente os casos do seu print: alerta amarelo, insights, próxima ação, mensagem sugerida e tabela de detalhes
+1. **Remover as barras verticais de toggle** — eliminar os `<button>` de 6px de largura que ficam entre os painéis
+2. **Colocar os toggles no header de cada painel** — botões discretos no topo de cada bloco (IA Coach e Ações), integrados ao título da seção
+3. **Quando fechado, mostrar uma aba mínima** — uma aba vertical fina (tipo tab lateral) colada à borda direita da tela com o nome do painel, clicável para reabrir
+4. **Painel central (IA Coach)**: quando fecha, colapsa para a direita e o chat expande; uma aba "IA Coach" aparece na borda
+5. **Painel direito (Ações)**: quando fecha, colapsa para a direita e some; uma aba "Ações" aparece na borda direita
 
-Arquivos envolvidos:
-- `src/components/comercial/ProspectWorkspace.tsx`
-- possivelmente `src/components/ui/scroll-area.tsx` se eu precisar expor um padrão mais claro para scrollbar horizontal reutilizável
+### Estrutura visual
 
-Resultado esperado:
-- bloco do meio com barra horizontal própria
-- bloco da direita com barra horizontal própria
-- cada painel movendo sozinho
-- texto legível sem depender de quebra artificial
-
-Detalhe técnico:
-Provável abordagem:
-- importar `ScrollBar` junto com `ScrollArea`
-- em cada painel usar estrutura do tipo:
 ```text
-<ScrollArea className="flex-1">
-  <div className="min-w-max p-4 ...">
-    ...
-  </div>
-  <ScrollBar orientation="horizontal" />
-</ScrollArea>
+Aberto:
+┌──────────┬─────────────────┬──────────────┐
+│  Chat    │  IA Coach  [×]  │  Ações  [×]  │
+│  (fixo)  │  (flex-1)       │  (320px)     │
+└──────────┴─────────────────┴──────────────┘
+
+Centro fechado:
+┌──────────┬──────────────┬───┐
+│  Chat    │  Ações  [×]  │IA │  ← aba vertical "IA"
+│  (fixo)  │  (flex-1)    │   │
+└──────────┴──────────────┴───┘
+
+Ambos fechados:
+┌────────────────────────┬───┬───┐
+│  Chat (fixo, não exp.) │IA │Aç │  ← abas verticais
+└────────────────────────┴───┴───┘
 ```
-- no painel central, remover:
-```text
-overflowWrap: "anywhere"
-wordBreak: "break-word"
-```
-- revisar `truncate` em itens do painel direito para não continuar escondendo conteúdo mesmo com scroll horizontal
+
+### Mudanças no arquivo
+
+**`src/components/comercial/ProspectWorkspace.tsx`**:
+
+- Remover as `<button>` strips verticais dos dois painéis
+- Adicionar botão de fechar (ícone X ou PanelRightClose) no **header interno** de cada painel
+- Quando painel está fechado, renderizar uma **aba vertical rotacionada** (`writing-mode: vertical-rl`) na borda direita com texto + ícone, clicável para reabrir
+- Manter `transition-all duration-300` para animação suave
+- Chat permanece com largura fixa (`w-[400px] lg:w-[440px]`) — nunca expande
+- Painel central usa `flex-1` quando aberto
+- Remover `min-w-[480px]` e `min-w-[400px]` do conteúdo interno (causa scroll horizontal desnecessário agora que o painel central é flex-1)
+
