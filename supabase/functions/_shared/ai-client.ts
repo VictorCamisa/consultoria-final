@@ -29,7 +29,7 @@ export async function callClaude(params: {
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada");
 
   const body: Record<string, unknown> = {
-    model: "claude-haiku-4-5-20251001",
+    model: "claude-3-5-haiku-20241022",
     max_tokens: params.max_tokens ?? 4096,
     system: params.system,
     messages: params.messages.filter(m => m.role !== "system"),
