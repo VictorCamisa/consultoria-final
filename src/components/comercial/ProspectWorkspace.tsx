@@ -67,6 +67,20 @@ export function ProspectWorkspace({
   const [novaNota, setNovaNota] = useState("");
   const [savingNota, setSavingNota] = useState(false);
 
+  // Fetch WhatsApp profile photo
+  const { data: profilePhoto } = useQuery({
+    queryKey: ["whatsapp-profile-photo", prospect?.id],
+    enabled: !!prospect?.id,
+    staleTime: 1000 * 60 * 30, // 30 min cache
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke("get-whatsapp-profile", {
+        body: { prospect_id: prospect!.id },
+      });
+      if (error) return null;
+      return data?.photo_url ?? null;
+    },
+  });
+
   const { data: conversas, refetch: refetchConversas } = useQuery({
     queryKey: ["conversas", prospect?.id],
     enabled: !!prospect?.id,
@@ -470,9 +484,13 @@ export function ProspectWorkspace({
         }`}>
           {/* WhatsApp chat header */}
           <div className="flex items-center gap-3 px-4 py-2 bg-[#f0f2f5] border-b border-[#e9edef] shrink-0">
-            <div className="w-8 h-8 rounded-full bg-[#dfe5e7] flex items-center justify-center">
-              <span className="text-xs font-bold text-[#54656f]">{prospect.nome_negocio.charAt(0).toUpperCase()}</span>
-            </div>
+            {profilePhoto ? (
+              <img src={profilePhoto} alt={prospect.nome_negocio} className="w-10 h-10 rounded-full object-cover" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-[#dfe5e7] flex items-center justify-center">
+                <span className="text-sm font-bold text-[#54656f]">{prospect.nome_negocio.charAt(0).toUpperCase()}</span>
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-[#111b21] truncate">{prospect.nome_negocio}</p>
               <p className="text-[11px] text-[#667781]">
@@ -506,7 +524,7 @@ export function ProspectWorkspace({
                 </div>
               )}
               {conversas?.map(msg => (
-                <ChatBubble key={msg.id} msg={msg} prospectName={prospect.nome_negocio} />
+                <ChatBubble key={msg.id} msg={msg} prospectName={prospect.nome_negocio} profilePhoto={profilePhoto} />
               ))}
               {(loadingSuggest || loadingSend) && (
                 <div className="flex justify-start mb-1">

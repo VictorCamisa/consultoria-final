@@ -235,16 +235,26 @@ interface ChatBubbleProps {
     created_at: string | null;
   };
   prospectName: string;
+  profilePhoto?: string | null;
 }
 
-export function ChatBubble({ msg, prospectName }: ChatBubbleProps) {
+export function ChatBubble({ msg, prospectName, profilePhoto }: ChatBubbleProps) {
   const isSent = msg.direcao === "saida";
   const time = msg.created_at
     ? new Date(msg.created_at).toLocaleString("pt-BR", { hour: "2-digit", minute: "2-digit" })
     : "";
 
   return (
-    <div className={`flex ${isSent ? "justify-end" : "justify-start"} mb-1`}>
+    <div className={`flex ${isSent ? "justify-end" : "justify-start"} mb-1 gap-1.5`}>
+      {!isSent && (
+        profilePhoto ? (
+          <img src={profilePhoto} alt={prospectName} className="w-7 h-7 rounded-full object-cover shrink-0 mt-auto" />
+        ) : (
+          <div className="w-7 h-7 rounded-full bg-[#dfe5e7] flex items-center justify-center shrink-0 mt-auto">
+            <span className="text-[10px] font-bold text-[#54656f]">{prospectName.charAt(0).toUpperCase()}</span>
+          </div>
+        )
+      )}
       <div
         className={`relative max-w-[65%] rounded-lg px-3 py-1.5 text-[13.6px] leading-[19px] shadow-sm ${
           isSent
