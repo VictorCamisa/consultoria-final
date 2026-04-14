@@ -233,7 +233,7 @@ interface ChatBubbleProps {
     direcao: string;
     conteudo: string;
     created_at: string | null;
-    reactions?: { from: string; emoji: string; fromMe: boolean }[] | null;
+    reactions?: any;
   };
   prospectName: string;
   profilePhoto?: string | null;
@@ -244,6 +244,8 @@ export function ChatBubble({ msg, prospectName, profilePhoto }: ChatBubbleProps)
   const time = msg.created_at
     ? new Date(msg.created_at).toLocaleString("pt-BR", { hour: "2-digit", minute: "2-digit" })
     : "";
+
+  const reactions: { from: string; emoji: string; fromMe: boolean }[] = Array.isArray(msg.reactions) ? msg.reactions : [];
 
   return (
     <div className={`flex ${isSent ? "justify-end" : "justify-start"} mb-1 gap-1.5`}>
@@ -256,44 +258,58 @@ export function ChatBubble({ msg, prospectName, profilePhoto }: ChatBubbleProps)
           </div>
         )
       )}
-      <div
-        className={`relative max-w-[65%] rounded-lg px-3 py-1.5 text-[13.6px] leading-[19px] shadow-sm ${
-          isSent
-            ? "bg-[#d9fdd3] text-[#111b21] rounded-tr-none"
-            : "bg-white text-[#111b21] rounded-tl-none"
-        }`}
-      >
-        {/* WhatsApp tail */}
+      <div className="relative">
         <div
-          className={`absolute top-0 w-2 h-3 ${
+          className={`relative max-w-[65%] min-w-[80px] rounded-lg px-3 py-1.5 text-[13.6px] leading-[19px] shadow-sm ${
             isSent
-              ? "right-[-8px] text-[#d9fdd3]"
-              : "left-[-8px] text-white"
+              ? "bg-[#d9fdd3] text-[#111b21] rounded-tr-none ml-auto"
+              : "bg-white text-[#111b21] rounded-tl-none"
           }`}
         >
-          <svg viewBox="0 0 8 13" width="8" height="13">
-            {isSent ? (
-              <path fill="currentColor" d="M1.533 3.568 8 12.193V1H2.812C1.042 1 .474 2.156 1.533 3.568z" />
-            ) : (
-              <path fill="currentColor" d="M6.467 3.568 0 12.193V1h5.188c1.77 0 2.338 1.156 1.28 2.568z" />
-            )}
-          </svg>
+          {/* WhatsApp tail */}
+          <div
+            className={`absolute top-0 w-2 h-3 ${
+              isSent
+                ? "right-[-8px] text-[#d9fdd3]"
+                : "left-[-8px] text-white"
+            }`}
+          >
+            <svg viewBox="0 0 8 13" width="8" height="13">
+              {isSent ? (
+                <path fill="currentColor" d="M1.533 3.568 8 12.193V1H2.812C1.042 1 .474 2.156 1.533 3.568z" />
+              ) : (
+                <path fill="currentColor" d="M6.467 3.568 0 12.193V1h5.188c1.77 0 2.338 1.156 1.28 2.568z" />
+              )}
+            </svg>
+          </div>
+
+          {!isSent && (
+            <p className="text-[12.8px] font-medium text-[#1fa855] mb-0.5">{prospectName}</p>
+          )}
+          <p className="whitespace-pre-wrap break-words">
+            {msg.conteudo}
+            {/* Spacer for timestamp */}
+            <span className="inline-block w-[68px]" />
+          </p>
+          <span className={`float-right text-[11px] mt-[-14px] ml-2 flex items-center gap-0.5 text-[#667781]`}>
+            {time}
+            {isSent && <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb] ml-0.5" />}
+          </span>
         </div>
 
-        {!isSent && (
-          <p className="text-[12.8px] font-medium text-[#1fa855] mb-0.5">{prospectName}</p>
+        {/* Reactions */}
+        {reactions.length > 0 && (
+          <div className={`flex gap-0.5 mt-[-8px] ${isSent ? "justify-end mr-1" : "justify-start ml-1"}`}>
+            <div className="bg-white rounded-full px-1.5 py-0.5 shadow-sm border border-gray-100 flex items-center gap-0.5">
+              {reactions.map((r, i) => (
+                <span key={i} className="text-[14px]">{r.emoji}</span>
+              ))}
+              {reactions.length > 1 && (
+                <span className="text-[10px] text-[#667781] ml-0.5">{reactions.length}</span>
+              )}
+            </div>
+          </div>
         )}
-        <p className="whitespace-pre-wrap break-words">
-          {msg.conteudo}
-          {/* Spacer for timestamp */}
-          <span className="inline-block w-[68px]" />
-        </p>
-        <span className={`float-right text-[11px] mt-[-14px] ml-2 flex items-center gap-0.5 ${
-          isSent ? "text-[#667781]" : "text-[#667781]"
-        }`}>
-          {time}
-          {isSent && <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb] ml-0.5" />}
-        </span>
       </div>
     </div>
   );
