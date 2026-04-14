@@ -670,8 +670,11 @@ export function ProspectWorkspace({
                   </div>
                 </div>
               )}
+              </div>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
           </div>
-          {/* Toggle button */}
+          {/* Toggle button center */}
           <button
             onClick={() => setCenterPanelOpen(!centerPanelOpen)}
             className="shrink-0 flex items-center justify-center w-6 bg-card/50 border-l border-border hover:bg-muted transition-colors"
@@ -680,16 +683,9 @@ export function ProspectWorkspace({
             {centerPanelOpen ? <PanelRightClose className="h-3.5 w-3.5 text-muted-foreground" /> : <PanelRight className="h-3.5 w-3.5 text-muted-foreground" />}
           </button>
         </div>
-        <div className={`shrink-0 flex min-h-0 transition-all duration-300 ${isMobile && mobileTab !== "acoes" ? "hidden" : ""}`}>
-          {/* Toggle button */}
-          <button
-            onClick={() => setRightPanelOpen(!rightPanelOpen)}
-            className="shrink-0 flex items-center justify-center w-6 bg-card/50 border-l border-border hover:bg-muted transition-colors"
-            title={rightPanelOpen ? "Fechar painel" : "Abrir painel"}
-          >
-            {rightPanelOpen ? <PanelRightClose className="h-3.5 w-3.5 text-muted-foreground" /> : <PanelRight className="h-3.5 w-3.5 text-muted-foreground" />}
-          </button>
 
+        {/* Toggle + RIGHT: Actions Panel */}
+        <div className={`shrink-0 flex min-h-0 transition-all duration-300 ${isMobile && mobileTab !== "acoes" ? "hidden" : ""}`}>
           {/* Panel content */}
           <div className={`flex flex-col min-h-0 bg-card/30 border-l border-border transition-all duration-300 overflow-hidden ${
             rightPanelOpen ? "w-[300px] lg:w-[320px]" : "w-0 border-l-0"
