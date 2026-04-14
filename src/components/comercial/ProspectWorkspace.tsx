@@ -445,7 +445,9 @@ export function ProspectWorkspace({
       <div className="flex flex-1 min-h-0 overflow-hidden">
 
         {/* LEFT: Chat (always visible on desktop, tab on mobile) */}
-        <div className={`w-full md:w-[400px] lg:w-[440px] shrink-0 flex flex-col border-r border-border min-w-0 min-h-0 ${isMobile && mobileTab !== "chat" ? "hidden" : ""}`}>
+        <div className={`flex flex-col border-r border-border min-w-0 min-h-0 ${isMobile && mobileTab !== "chat" ? "hidden" : ""} ${
+          centerPanelOpen || rightPanelOpen ? "w-full md:w-[400px] lg:w-[440px] shrink-0" : "flex-1"
+        }`}>
           <ScrollArea className="flex-1 px-3 sm:px-5 py-3" ref={scrollRef}>
             <div className="max-w-2xl mx-auto space-y-3">
               {conversas?.length === 0 && (
