@@ -34,8 +34,15 @@ export function nichoCategory(nicho: string) {
   return NICHO_CATEGORIES.find(c => c.keywords.some(k => lower.includes(k))) ?? null;
 }
 
+export function isNichoConfigurado(nicho: string): boolean {
+  if (!nicho) return false;
+  const lower = nicho.toLowerCase();
+  return NICHO_CATEGORIES.some(c => c.keywords.some(k => lower.includes(k)));
+}
+
 export function matchesNichoFilter(prospectNicho: string, filterKey: string): boolean {
   if (filterKey === "todos") return true;
+  if (filterKey === "sem_config") return !isNichoConfigurado(prospectNicho);
   const cat = NICHO_CATEGORIES.find(c => c.label === filterKey);
   if (!cat) return false;
   const lower = prospectNicho.toLowerCase();

@@ -238,6 +238,7 @@ export default function Comercial() {
             <SelectContent>
               <SelectItem value="todos">Todos nichos</SelectItem>
               {NICHOS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+              <SelectItem value="sem_config">Sem config.</SelectItem>
             </SelectContent>
           </Select>
           <Select value={filterClassificacao} onValueChange={setFilterClassificacao}>

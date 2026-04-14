@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
 import { NICHOS, ProspectInsert } from "./types";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 export function NewProspectDialog() {
   const queryClient = useQueryClient();
@@ -24,6 +24,7 @@ export function NewProspectDialog() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["prospects"] });
       setOpen(false);
+      setNicho("");
       toast({ title: "Prospect adicionado!" });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
@@ -31,10 +32,14 @@ export function NewProspectDialog() {
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!nicho.trim()) {
+      toast({ title: "Preencha o nicho", variant: "destructive" });
+      return;
+    }
     const fd = new FormData(e.currentTarget);
     createProspect.mutate({
       nome_negocio: fd.get("nome_negocio") as string,
-      nicho,
+      nicho: nicho.trim(),
       cidade: fd.get("cidade") as string,
       whatsapp: fd.get("whatsapp") as string,
       instagram: (fd.get("instagram") as string) || null,
@@ -46,7 +51,7 @@ export function NewProspectDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setNicho(""); }}>
       <DialogTrigger asChild>
         <Button size="sm"><Plus className="h-4 w-4 mr-1.5" />Novo Prospect</Button>
       </DialogTrigger>
@@ -60,12 +65,29 @@ export function NewProspectDialog() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Nicho *</Label>
-              <Select value={nicho} onValueChange={setNicho} required>
-                <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {NICHOS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex flex-wrap gap-1.5 mb-1.5">
+                {NICHOS.map(n => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setNicho(n)}
+                    className={cn(
+                      "px-2.5 py-1 text-xs rounded-full border transition-colors",
+                      nicho === n
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted/50 text-muted-foreground border-border hover:bg-muted"
+                    )}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+              <Input
+                value={nicho}
+                onChange={(e) => setNicho(e.target.value)}
+                placeholder="ou digite um nicho personalizado"
+                className="h-9"
+              />
             </div>
             <div className="space-y-1.5"><Label className="text-xs">Cidade *</Label><Input name="cidade" required className="h-9" /></div>
             <div className="space-y-1.5"><Label className="text-xs">WhatsApp *</Label><Input name="whatsapp" required className="h-9" /></div>
