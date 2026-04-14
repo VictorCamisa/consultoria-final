@@ -11,12 +11,13 @@ import { toast } from "@/hooks/use-toast";
 import {
   Send, Sparkles, Loader2, BrainCircuit, CheckCircle2, XCircle,
   X, Phone, MapPin, Instagram, Globe, User,
-  Megaphone, PlayCircle, RotateCcw, ChevronRight, Copy, PanelRight, PanelRightClose, PanelLeft, PanelLeftClose,
+  Megaphone, PlayCircle, RotateCcw, ChevronRight, Copy,
   AlertTriangle, Target, Lightbulb, ArrowRight, Zap, MessageSquare, RefreshCw,
 } from "lucide-react";
 import { StickyNote, Plus, Trash2, Clock } from "lucide-react";
 import { Prospect, PIPELINE_STAGES, classificacaoConfig, scoreColor, timeAgo } from "./types";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { ChatInputBar, ChatBubble } from "./WhatsAppChat";
 
 interface Props {
   prospect: Prospect | null;
