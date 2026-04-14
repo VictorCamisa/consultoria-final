@@ -253,6 +253,7 @@ export type Database = {
           origem: string | null
           processado_ia: boolean | null
           prospect_id: string | null
+          reactions: Json | null
         }
         Insert: {
           conteudo: string
@@ -264,6 +265,7 @@ export type Database = {
           origem?: string | null
           processado_ia?: boolean | null
           prospect_id?: string | null
+          reactions?: Json | null
         }
         Update: {
           conteudo?: string
@@ -275,6 +277,7 @@ export type Database = {
           origem?: string | null
           processado_ia?: boolean | null
           prospect_id?: string | null
+          reactions?: Json | null
         }
         Relationships: [
           {

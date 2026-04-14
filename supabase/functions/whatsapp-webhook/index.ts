@@ -63,6 +63,58 @@ serve(async (req) => {
 
     const data = payload.data;
     const key = data?.key;
+    const msgContent = data?.message;
+
+    // Handle reaction messages
+    if (msgContent?.reactionMessage) {
+      const reaction = msgContent.reactionMessage;
+      const targetMessageId = reaction.key?.id;
+      const emoji = reaction.text || "";
+
+      if (targetMessageId) {
+        const supabaseReaction = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+        );
+
+        // Get current reactions
+        const { data: targetMsg } = await supabaseReaction
+          .from("consultoria_conversas")
+          .select("id, reactions")
+          .eq("message_id", targetMessageId)
+          .maybeSingle();
+
+        if (targetMsg) {
+          const currentReactions = (targetMsg.reactions as any[]) || [];
+          const fromJid = key?.remoteJid || "";
+          
+          if (emoji) {
+            // Add or update reaction
+            const existingIdx = currentReactions.findIndex((r: any) => r.from === fromJid);
+            if (existingIdx >= 0) {
+              currentReactions[existingIdx].emoji = emoji;
+            } else {
+              currentReactions.push({ from: fromJid, emoji, fromMe: key?.fromMe || false });
+            }
+          } else {
+            // Empty text = reaction removed
+            const filtered = currentReactions.filter((r: any) => r.from !== fromJid);
+            currentReactions.length = 0;
+            currentReactions.push(...filtered);
+          }
+
+          await supabaseReaction
+            .from("consultoria_conversas")
+            .update({ reactions: currentReactions })
+            .eq("id", targetMsg.id);
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, type: "reaction" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const isFromMe = key?.fromMe === true;
 
     const remoteJid: string = key?.remoteJid ?? "";
