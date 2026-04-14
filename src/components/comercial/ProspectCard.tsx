@@ -23,7 +23,7 @@ interface Props {
 
 export function ProspectCard({
   prospect: p, unread, loadingAbordar, loadingCadencia, loadingReativar,
-  onSelect, onAbordar, onCadencia, onReativar, onDelete,
+  onSelect, onAbordar, onCadencia, onReativar, onDelete, onMoveStage,
 }: Props) {
   const classif = classificacaoConfig(p.classificacao_ia);
   const nichoCat = nichoCategory(p.nicho);
