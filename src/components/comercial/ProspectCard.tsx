@@ -1,10 +1,11 @@
-import { Prospect, classificacaoConfig, scoreColor, timeAgo, nichoCategory } from "./types";
+import { Prospect, classificacaoConfig, scoreColor, timeAgo, nichoCategory, PIPELINE_STAGES } from "./types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  MessageSquare, Phone, Megaphone, PlayCircle, RotateCcw, Loader2, Trash2, AlertTriangle,
+  MessageSquare, Phone, Megaphone, PlayCircle, RotateCcw, Loader2, Trash2, AlertTriangle, ArrowRightLeft,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Props {
   prospect: Prospect;
