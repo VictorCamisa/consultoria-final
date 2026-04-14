@@ -484,9 +484,13 @@ export function ProspectWorkspace({
         }`}>
           {/* WhatsApp chat header */}
           <div className="flex items-center gap-3 px-4 py-2 bg-[#f0f2f5] border-b border-[#e9edef] shrink-0">
-            <div className="w-8 h-8 rounded-full bg-[#dfe5e7] flex items-center justify-center">
-              <span className="text-xs font-bold text-[#54656f]">{prospect.nome_negocio.charAt(0).toUpperCase()}</span>
-            </div>
+            {profilePhoto ? (
+              <img src={profilePhoto} alt={prospect.nome_negocio} className="w-10 h-10 rounded-full object-cover" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-[#dfe5e7] flex items-center justify-center">
+                <span className="text-sm font-bold text-[#54656f]">{prospect.nome_negocio.charAt(0).toUpperCase()}</span>
+              </div>
+            )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-[#111b21] truncate">{prospect.nome_negocio}</p>
               <p className="text-[11px] text-[#667781]">
