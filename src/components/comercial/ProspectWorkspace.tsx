@@ -515,8 +515,6 @@ export function ProspectWorkspace({
           }`}>
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-4 min-w-[480px]">
-            <ScrollArea className="flex-1">
-              <div className="p-4 space-y-4 min-w-[480px]">
               {/* Phase indicator */}
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5">
                 <div className="flex items-center gap-2 mb-1.5">
