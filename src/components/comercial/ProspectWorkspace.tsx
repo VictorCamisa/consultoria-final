@@ -622,7 +622,7 @@ export function ProspectWorkspace({
               {coaching?.alerta && (
                 <div className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
                   <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-amber-900 dark:text-amber-100 leading-relaxed font-medium">{coaching.alerta}</p>
+                  <p className="text-[11px] text-black leading-relaxed font-medium">{coaching.alerta}</p>
                 </div>
               )}
 
