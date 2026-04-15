@@ -223,7 +223,15 @@ export function ProspectWorkspace({
     }
   }, [prospect]);
 
-  // Realtime — auto-suggest on new inbound
+  // Auto-activate coaching when prospect is abordado and no coaching loaded
+  useEffect(() => {
+    if (!prospect?.id) return;
+    if (prospect.status === "abordado" && !coaching && !loadingSuggest) {
+      triggerAutoSuggest();
+    }
+  }, [prospect?.id, prospect?.status]);
+
+  // Realtime — auto-suggest on new messages (inbound AND outbound/approach)
   useEffect(() => {
     if (!prospect?.id) return;
     const channel = supabase
@@ -237,8 +245,9 @@ export function ProspectWorkspace({
         const newMsg = payload.new as { direcao?: string; id?: string };
         if (newMsg.direcao === "entrada" && newMsg.id !== lastInboundId) {
           setLastInboundId(newMsg.id ?? null);
-          triggerAutoSuggest();
         }
+        // Trigger coaching on any new message (inbound or outbound/approach)
+        triggerAutoSuggest();
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
