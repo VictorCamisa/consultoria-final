@@ -675,7 +675,7 @@ export default function Prospeccao() {
       )}
 
       {/* MAIN CONTENT - 2 zones */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-6">
         {/* LEFT — Leads list */}
         <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
