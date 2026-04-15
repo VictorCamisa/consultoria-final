@@ -349,9 +349,14 @@ serve(async (req) => {
           const hora = new Date().getHours();
           const { data: config } = await supabase
             .from("consultoria_config")
-            .select("horario_inicio, horario_fim")
+            .select("horario_inicio, horario_fim, ia_auto_reply")
             .ilike("nicho", prospect.nicho)
             .maybeSingle();
+
+          if (config?.ia_auto_reply === false) {
+            console.log(`[webhook] Auto-reply desativado para nicho ${prospect.nicho}`);
+            return;
+          }
 
           const horaInicio = config?.horario_inicio ?? 8;
           const horaFim = config?.horario_fim ?? 18;
