@@ -10,6 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Trash2, Pencil } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+const EMOJI_PRESETS = [
+  "💆", "🦷", "⚖️", "🚗", "🐾", "🏠", "🍕", "💊", "🏋️", "📚",
+  "🎨", "💻", "🔧", "🌿", "👗", "📷", "🎵", "✈️", "🏢", "🧹",
+  "💈", "🍽️", "☕", "🛒", "🏥", "👶", "🐕", "🌸", "🔒", "📱",
+];
 
 const COLOR_PRESETS = [
   { label: "Rosa", color: "bg-pink-500/15 border-pink-500/30 text-pink-400", dot: "bg-pink-500" },
