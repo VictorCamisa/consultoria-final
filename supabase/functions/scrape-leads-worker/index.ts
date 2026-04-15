@@ -36,7 +36,6 @@ async function firecrawlSearch(apiKey: string, query: string, limit: number): Pr
 
 const CONSULTORIA_VS_CONTEXT = `
 EMPRESA: VS Growth Hub — Consultoria de Crescimento para negócios locais.
-Nichos: Estética, Odonto, Advocacia, Revendas de Veículos Seminovos.
 ICP: Donos de negócios locais, faturamento >R$30k/mês, equipe >=3, investem em marketing.
 Score ICP 80-100=perfeito, 60-79=bom, 40-59=médio, 20-39=fraco, 0-19=ruim.
 `.trim();
@@ -50,17 +49,87 @@ function buildSmartQueries(niche: string, locationStr: string, intent: string): 
     const queries = [
       `revenda seminovos ${city} telefone WhatsApp`,
       `loja de carros usados ${city} contato`,
+      `revenda veículos seminovos ${loc} celular endereço`,
     ];
     if (intent?.trim()) queries.push(`revenda veículos ${loc} ${intent.trim().slice(0, 60)}`);
-    return queries.slice(0, 2);
+    return queries.slice(0, 4);
   }
 
+  // Generic niche: build 4 diverse queries to maximize coverage
   const queries = [
     `${niche} ${loc} telefone contato`,
     `${niche} ${loc} WhatsApp celular`,
+    `"${niche}" "${city}" endereço telefone`,
+    `${niche} perto de ${city} contato celular site`,
   ];
-  if (intent?.trim()) queries[1] = `${niche} ${loc} ${intent.trim().slice(0, 60)}`;
-  return queries.slice(0, 2);
+  if (intent?.trim()) queries[3] = `${niche} ${loc} ${intent.trim().slice(0, 60)}`;
+  return queries.slice(0, 4);
+}
+
+/** Split pages into batches and call AI for each batch, then merge contacts */
+async function extractContactsBatch(
+  pages: any[],
+  niche: string,
+  locationStr: string,
+  prospecting_intent: string,
+  jobId: string,
+): Promise<any[]> {
+  const { callClaude } = await import("../_shared/ai-client.ts");
+
+  // Process in batches of 8 pages to stay within token limits but cover more
+  const BATCH_SIZE = 8;
+  const allContacts: any[] = [];
+
+  for (let i = 0; i < pages.length; i += BATCH_SIZE) {
+    const batch = pages.slice(i, i + BATCH_SIZE);
+    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+
+    const pagesContent = batch.map((r: any, idx: number) => {
+      const title = r.title || r.metadata?.title || `Resultado ${idx + 1}`;
+      const url = r.url || r.metadata?.sourceURL || "";
+      const markdown = (r.markdown || r.content || "").substring(0, 2500);
+      return `--- PÁG ${idx + 1}: ${title} (${url}) ---\n${markdown}`;
+    }).join("\n\n");
+
+    const extractionPrompt = `Extraia TODOS os contatos de empresas "${niche}" ${locationStr ? `em ${locationStr}` : ""} das páginas abaixo.
+${prospecting_intent ? `\nIntenção: "${prospecting_intent}"\n` : ""}
+${pagesContent}
+
+${CONSULTORIA_VS_CONTEXT}
+
+IMPORTANTE: Extraia TODOS os telefones/contatos que encontrar, mesmo que pareçam incompletos. Cada empresa deve ser um contato separado.
+
+Responda APENAS JSON: {"contacts":[{"name":"str|null","phone":"str|null","email":"str|null","company":"str|null","role":"str|null","city":"str|null","website":"str|null","segment":"str|null","company_size":"str|null","icp_score":0,"icp_reason":"str|null"}]}`;
+
+    console.log(`[${jobId}] AI batch ${batchNum}: ${batch.length} pages...`);
+
+    try {
+      const aiResult = await callClaude({
+        system: `Extraia o MÁXIMO de contatos B2B possível. Cada empresa com telefone ou email deve ser um contato separado. Retorne APENAS JSON válido.`,
+        messages: [{ role: "user", content: extractionPrompt }],
+        max_tokens: 4096,
+      });
+      const aiContent = aiResult.text ?? "";
+
+      let contacts: any[] = [];
+      try {
+        const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) contacts = JSON.parse(jsonMatch[0]).contacts || [];
+      } catch {
+        const contactMatches = aiContent.matchAll(/\{\s*"name"\s*:\s*(?:"[^"]*"|null)[\s\S]*?"icp_score"\s*:\s*\d+[\s\S]*?\}/g);
+        for (const m of contactMatches) {
+          try { contacts.push(JSON.parse(m[0])); } catch {}
+        }
+      }
+
+      console.log(`[${jobId}] AI batch ${batchNum}: extracted ${contacts.length} contacts`);
+      allContacts.push(...contacts);
+    } catch (e) {
+      console.error(`[${jobId}] AI batch ${batchNum} error:`, e);
+    }
+  }
+
+  return allContacts;
 }
 
 Deno.serve(async (req) => {
@@ -71,7 +140,6 @@ Deno.serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY")!;
 
-    // Authenticate via service_role_key in Authorization header
     const authHeader = req.headers.get("authorization");
     if (authHeader !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -82,9 +150,9 @@ Deno.serve(async (req) => {
 
     console.log(`[${jobId}] Worker started: "${niche}" in "${locationStr}" (${desiredCount} leads)`);
 
-    // PHASE 1: Search (max 2 queries)
+    // PHASE 1: Search (up to 4 queries for better coverage)
     const queries = buildSmartQueries(niche, locationStr, prospecting_intent);
-    const perQueryLimit = Math.ceil(desiredCount / 2);
+    const perQueryLimit = Math.ceil(desiredCount / queries.length);
 
     const allResults: any[] = [];
     const seenUrls = new Set<string>();
@@ -113,48 +181,17 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ status: "completed", count: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // PHASE 2: Build context (max 10 pages, 1500 chars each)
-    const pagesForAI = allResults.slice(0, 10);
-    const pagesContent = pagesForAI.map((r: any, i: number) => {
-      const title = r.title || r.metadata?.title || `Resultado ${i + 1}`;
-      const url = r.url || r.metadata?.sourceURL || "";
-      const markdown = (r.markdown || r.content || "").substring(0, 1500);
-      return `--- PÁG ${i + 1}: ${title} (${url}) ---\n${markdown}`;
-    }).join("\n\n");
+    // PHASE 2: Send ALL pages to AI in batches (no more 10-page cap)
+    const maxPages = Math.min(allResults.length, 40);
+    const pagesForAI = allResults.slice(0, maxPages);
 
-    // PHASE 3: AI extraction
-    const extractionPrompt = `Extraia TODOS os contatos de empresas "${niche}" ${locationStr ? `em ${locationStr}` : ""} das páginas abaixo.
-${prospecting_intent ? `\nIntenção: "${prospecting_intent}"\n` : ""}
-${pagesContent}
+    console.log(`[${jobId}] Sending ${pagesForAI.length} pages to AI in batches...`);
 
-${CONSULTORIA_VS_CONTEXT}
+    const contacts = await extractContactsBatch(pagesForAI, niche, locationStr, prospecting_intent, jobId);
 
-Responda APENAS JSON: {"contacts":[{"name":"str|null","phone":"str|null","email":"str|null","company":"str|null","role":"str|null","city":"str|null","website":"str|null","segment":"str|null","company_size":"str|null","icp_score":0,"icp_reason":"str|null"}]}`;
+    console.log(`[${jobId}] Total AI extracted: ${contacts.length} contacts`);
 
-    console.log(`[${jobId}] Sending ${pagesForAI.length} pages to AI...`);
-
-    const { callClaude } = await import("../_shared/ai-client.ts");
-    const aiResult = await callClaude({
-      system: `Extraia contatos B2B e qualifique com ICP score. Retorne APENAS JSON válido.`,
-      messages: [{ role: "user", content: extractionPrompt }],
-      max_tokens: 4096,
-    });
-    const aiContent = aiResult.text ?? "";
-
-    let contacts: any[] = [];
-    try {
-      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-      if (jsonMatch) contacts = JSON.parse(jsonMatch[0]).contacts || [];
-    } catch {
-      const contactMatches = aiContent.matchAll(/\{\s*"name"\s*:\s*(?:"[^"]*"|null)[\s\S]*?"icp_score"\s*:\s*\d+[\s\S]*?\}/g);
-      for (const m of contactMatches) {
-        try { contacts.push(JSON.parse(m[0])); } catch {}
-      }
-    }
-
-    console.log(`[${jobId}] AI extracted ${contacts.length} contacts`);
-
-    // PHASE 4: Format, deduplicate, save
+    // PHASE 3: Format, deduplicate, save
     const formatPhone = (phone: string): string | null => {
       if (!phone) return null;
       const digits = phone.replace(/\D/g, "");
@@ -263,7 +300,7 @@ Responda APENAS JSON: {"contacts":[{"name":"str|null","phone":"str|null","email"
       },
     });
 
-    console.log(`[${jobId}] DONE: ${savedCount} saved, ${contacts.length - newLeads.length} dupes`);
+    console.log(`[${jobId}] DONE: ${savedCount} saved, ${contacts.length - newLeads.length} dupes, ${allResults.length} pages searched`);
 
     return new Response(JSON.stringify({ status: "completed", count: savedCount }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
