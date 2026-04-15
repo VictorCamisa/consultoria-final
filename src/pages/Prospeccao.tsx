@@ -549,7 +549,7 @@ export default function Prospeccao() {
   };
 
   return (
-    <div className="space-y-6 max-w-6xl">
+    <div className="space-y-6 max-w-[1600px]">
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
@@ -675,9 +675,9 @@ export default function Prospeccao() {
       )}
 
       {/* MAIN CONTENT - 2 zones */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* LEFT — Leads list (2/3) */}
-        <div className="lg:col-span-2 space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6">
+        {/* LEFT — Leads list */}
+        <div className="space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div>
               <h3 className="text-sm font-semibold">Todos os Leads</h3>
