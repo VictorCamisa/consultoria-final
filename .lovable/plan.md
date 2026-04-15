@@ -1,34 +1,47 @@
 
 
-## Problema
+## Diagnóstico
 
-Atualmente o campo "Nicho" no cadastro de prospect é um `Select` fixo com apenas 4 opções (Estética, Odonto, Advocacia, Revendas). Prospects como "Massas Quiririm" e "Pneuvip" não se encaixam e ficam invisíveis nos filtros.
+O problema raiz: **`EdgeRuntime.waitUntil()` não existe em Supabase Edge Functions**. O fallback `?? processInBackground(...)` executa o processamento pesado de forma síncrona (3 buscas Firecrawl + chamada Claude + queries de dedup + inserts). Como tudo roda na mesma requisição, o worker estoura o limite de CPU/memória e é encerrado (os logs mostram ciclos constantes de boot → shutdown a cada ~3s).
 
-## Solução: Nicho Personalizado + Filtro "Sem config."
+Além disso, o registro sentinela `__job_complete__` está aparecendo na lista de leads como um card visível.
 
-### 1. Campo de Nicho no cadastro (NewProspectDialog)
+## Solução: Dividir em dois Edge Functions
 
-Trocar o `Select` fixo por um campo híbrido:
-- Manter os 4 nichos pré-definidos como **sugestões rápidas** (botões/chips clicáveis)
-- Adicionar um `Input` de texto livre abaixo para digitar qualquer nicho personalizado (ex: "Alimentação", "Automotivo")
-- Se o usuário clicar em um chip, preenche o input; se digitar manualmente, aceita qualquer valor
+Criar uma segunda Edge Function `scrape-leads-worker` que faz o trabalho pesado. A função principal `scrape-leads` dispara o worker via `fetch()` **sem `await`** (fire-and-forget) e retorna imediatamente o `job_id`.
 
-### 2. Filtro no Pipeline (Comercial.tsx)
+### Mudanças
 
-No dropdown de filtro de nichos, adicionar uma nova opção **"Sem config."** (ou "Outros") que filtra prospects cujo nicho não corresponde a nenhuma das 4 categorias pré-definidas. Esses prospects continuam aparecendo normalmente quando "Todos nichos" está selecionado.
+| Arquivo | O que muda |
+|---------|-----------|
+| `supabase/functions/scrape-leads/index.ts` | Remove `processInBackground`. Dispara `fetch()` para `scrape-leads-worker` sem await. Mantém a lógica de polling. |
+| `supabase/functions/scrape-leads-worker/index.ts` | **Novo**. Recebe os params via POST (autenticado com service_role_key), executa Firecrawl + AI + dedup + insert. Grava o sentinela ao final. |
+| `src/pages/Prospeccao.tsx` | Filtrar leads com `name === "__job_complete__"` da listagem para não aparecerem como cards. |
 
-### 3. Alterações em types.ts
+### Detalhes técnicos
 
-- Adicionar função `isNichoConfigurado(nicho: string): boolean` que retorna `true` se o nicho bate com alguma das keywords das 4 categorias
-- Atualizar `matchesNichoFilter` para suportar o valor especial `"sem_config"` que filtra nichos não reconhecidos
+**scrape-leads (main)** — ao receber uma nova prospecção:
+```typescript
+// Fire-and-forget: chama o worker sem await
+const workerUrl = `${SUPABASE_URL}/functions/v1/scrape-leads-worker`;
+fetch(workerUrl, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+  },
+  body: JSON.stringify({ niche, locationStr, desiredCount, prospecting_intent, jobId }),
+});
+// Retorna imediatamente
+return json({ job_id: jobId, status: "running" });
+```
 
-### Arquivos afetados
+**scrape-leads-worker** — função separada com `verify_jwt = false` (autenticada via service_role_key interno), contém toda a lógica de `processInBackground`.
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/comercial/types.ts` | Adicionar `isNichoConfigurado()`, atualizar `matchesNichoFilter` |
-| `src/components/comercial/NewProspectDialog.tsx` | Input híbrido (chips + texto livre) |
-| `src/pages/Comercial.tsx` | Adicionar "Sem config." no dropdown de filtro |
+**Prospeccao.tsx** — adicionar filtro `leads.filter(l => l.name !== "__job_complete__")` para esconder sentinelas.
 
-Nenhuma migração de banco necessária — o campo `nicho` já é `text` livre.
+### Otimizações adicionais de memória no worker
+- Reduzir páginas de 15 para 10
+- Reduzir conteúdo por página de 2000 para 1500 chars
+- Usar apenas 2 queries Firecrawl em vez de 3
 
