@@ -125,7 +125,6 @@ serve(async (req) => {
     }
 
     const rawPhone = remoteJid.replace("@s.whatsapp.net", "").replace(/\D/g, "");
-    const msgContent = data?.message;
     let conteudo: string =
       msgContent?.conversation ??
       msgContent?.extendedTextMessage?.text ??
@@ -146,13 +145,28 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Use centralized phone matching
-    const phoneFilter = buildPhoneMatchFilter(rawPhone);
-    const { data: prospects } = await supabase
+    // Try matching by remote_jid first (most reliable), then fallback to phone
+    let prospects: any[] | null = null;
+
+    // 1. Match by remote_jid (exact)
+    const { data: jidMatch } = await supabase
       .from("consultoria_prospects")
       .select("id, nicho, status, whatsapp, nome_negocio, dia_cadencia, classificacao_ia, score_qualificacao, linked_instance, remote_jid")
-      .or(phoneFilter)
+      .eq("remote_jid", remoteJid)
       .limit(1);
+
+    if (jidMatch?.length) {
+      prospects = jidMatch;
+    } else {
+      // 2. Fallback: match by phone number
+      const phoneFilter = buildPhoneMatchFilter(rawPhone);
+      const { data: phoneMatch } = await supabase
+        .from("consultoria_prospects")
+        .select("id, nicho, status, whatsapp, nome_negocio, dia_cadencia, classificacao_ia, score_qualificacao, linked_instance, remote_jid")
+        .or(phoneFilter)
+        .limit(1);
+      prospects = phoneMatch;
+    }
 
     if (!prospects?.length) {
       console.warn(`[webhook] Número desconhecido: ${rawPhone}`);

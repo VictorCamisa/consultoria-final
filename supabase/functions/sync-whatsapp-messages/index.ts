@@ -60,7 +60,7 @@ serve(async (req) => {
 
     const { data: prospect, error: pErr } = await supabase
       .from("consultoria_prospects")
-      .select("id, whatsapp, responsavel, nicho, linked_instance, remote_jid")
+      .select("id, whatsapp, responsavel, nicho, linked_instance, remote_jid, status")
       .eq("id", prospect_id).single();
     if (pErr || !prospect) throw new Error("Prospect não encontrado");
 
@@ -207,8 +207,24 @@ serve(async (req) => {
       }
     }
 
+    // Auto-move: if inbound messages found and prospect is pre-response, move to "respondeu"
+    let autoMoved = false;
+    if (synced > 0) {
+      const hasInbound = toInsert.some(m => m.direcao === "entrada");
+      if (hasInbound && ["abordado", "em_cadencia"].includes(prospect.status)) {
+        const now = new Date().toISOString();
+        await supabase.from("consultoria_prospects").update({
+          status: "respondeu",
+          data_ultima_interacao: now,
+          updated_at: now,
+        }).eq("id", prospect_id);
+        autoMoved = true;
+        console.log(`[sync] Auto-moved prospect ${prospect_id} to "respondeu"`);
+      }
+    }
+
     return new Response(
-      JSON.stringify({ success: true, synced, total_found: messages.length, searched_instances: candidates, matched_instances: matchedInstances }),
+      JSON.stringify({ success: true, synced, total_found: messages.length, searched_instances: candidates, matched_instances: matchedInstances, auto_moved: autoMoved }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
