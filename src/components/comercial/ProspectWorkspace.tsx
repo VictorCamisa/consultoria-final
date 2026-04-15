@@ -64,8 +64,19 @@ export function ProspectWorkspace({
   const [mobileTab, setMobileTab] = useState<"chat" | "ai" | "acoes">("chat");
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastSyncedProspectRef = useRef<string | null>(null);
+  const prevProspectIdRef = useRef<string | null>(null);
   const [novaNota, setNovaNota] = useState("");
   const [savingNota, setSavingNota] = useState(false);
+
+  // Reset coaching when switching prospects
+  useEffect(() => {
+    if (prospect?.id && prospect.id !== prevProspectIdRef.current) {
+      prevProspectIdRef.current = prospect.id;
+      setCoaching(null);
+      setLastInboundId(null);
+      setMensagem("");
+    }
+  }, [prospect?.id]);
 
   // Fetch WhatsApp profile photo
   const { data: profilePhoto } = useQuery({
