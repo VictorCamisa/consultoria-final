@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { useEvolutionInstances } from "@/hooks/useEvolutionInstances";
-import { Save, Copy, CheckCircle, XCircle, Loader2, Wifi, Plus, Trash2, QrCode, Smartphone, RefreshCw } from "lucide-react";
+import { Save, Copy, CheckCircle, XCircle, Loader2, Wifi, Plus, Trash2, QrCode, Smartphone, RefreshCw, Bot } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 const NICHOS = ["Estética", "Odonto", "Advocacia", "Revendas de Veículos"];
 
@@ -207,6 +208,25 @@ export default function Configuracoes() {
                         <Label>Horário fim (h)</Label>
                         <Input type="number" name="horario_fim" defaultValue={existing?.horario_fim ?? 18} min={0} max={23} />
                       </div>
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-lg border p-4 bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        <Bot className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="text-sm font-medium">IA Auto-Reply</p>
+                          <p className="text-xs text-muted-foreground">Resposta automática da IA quando o lead responde</p>
+                        </div>
+                      </div>
+                      <Switch
+                        checked={(existing as any)?.ia_auto_reply !== false}
+                        onCheckedChange={async (checked) => {
+                          if (!existing?.id) return;
+                          await supabase.from("consultoria_config").update({ ia_auto_reply: checked } as any).eq("id", existing.id);
+                          queryClient.invalidateQueries({ queryKey: ["configs"] });
+                          toast({ title: checked ? "IA Auto-Reply ativada" : "IA Auto-Reply desativada" });
+                        }}
+                      />
                     </div>
 
                     <div className="flex gap-2">
