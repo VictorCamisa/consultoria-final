@@ -3,7 +3,7 @@
 ## Core
 Dark mode only, Barlow Condensed headings, Barlow body. VS Blue #2E6FCC.
 Desktop-only (1280px+). Supabase backend. Dois sócios: Victor (técnico) e Danilo (comercial).
-Nichos: Estética, Odonto, Advocacia, Revendas de Veículos (VS AUTO).
+Nichos dinâmicos via tabela consultoria_nichos + hook useNichos(). Gerenciados em Configurações > Nichos.
 
 ## Memories
 - [Identidade Visual](mem://style/identidade-visual) — Brand Bible VS dark-mode com Barlow Condensed/Barlow, VS Blue #2E6FCC e Blue Light #4A8DE0
