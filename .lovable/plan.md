@@ -2,46 +2,64 @@
 
 ## Diagnóstico
 
-O problema raiz: **`EdgeRuntime.waitUntil()` não existe em Supabase Edge Functions**. O fallback `?? processInBackground(...)` executa o processamento pesado de forma síncrona (3 buscas Firecrawl + chamada Claude + queries de dedup + inserts). Como tudo roda na mesma requisição, o worker estoura o limite de CPU/memória e é encerrado (os logs mostram ciclos constantes de boot → shutdown a cada ~3s).
+A lógica de movimentação automática **já existe** no webhook (`whatsapp-webhook/index.ts`, linha 259-265): quando uma mensagem de entrada (`direcao: "entrada"`) chega para um prospect com status `"abordado"` ou `"em_cadencia"`, ele é automaticamente movido para `"respondeu"`.
 
-Além disso, o registro sentinela `__job_complete__` está aparecendo na lista de leads como um card visível.
+**O problema**: A resposta da Dra. Gabriela **não chegou ao banco de dados**. Não há nenhum registro de entrada em `consultoria_conversas` para esse prospect — o webhook da Evolution API não disparou ou falhou silenciosamente. Possíveis causas:
+- O webhook da instância "Danilo-prospect" não está configurado corretamente (URL incorreta ou desabilitado)
+- O evento `MESSAGES_UPSERT` não está sendo enviado pela Evolution API
 
-## Solução: Dividir em dois Edge Functions
+## Solução em 3 partes
 
-Criar uma segunda Edge Function `scrape-leads-worker` que faz o trabalho pesado. A função principal `scrape-leads` dispara o worker via `fetch()` **sem `await`** (fire-and-forget) e retorna imediatamente o `job_id`.
+### 1. Reconfigurar webhook automaticamente (garantir auto-move)
+Adicionar na função `manage-evolution` uma action `"reconfigure_webhooks"` que re-aplica o webhook URL em todas as instâncias abertas. Também adicionar um botão em Configurações para o usuário disparar isso manualmente.
 
-### Mudanças
+### 2. Sync + Auto-move (fallback)
+No `sync-whatsapp-messages`, após sincronizar mensagens históricas, verificar se existem mensagens de entrada e o prospect ainda está em `"abordado"` ou `"em_cadencia"` — se sim, mover automaticamente para `"respondeu"`. Isso funciona como fallback caso o webhook falhe.
+
+### 3. Manter movimentação manual
+O botão de mover manualmente entre estágios (já existente no `ProspectCard`) continua funcionando normalmente para leads adicionados/abordados manualmente.
+
+## Mudanças
 
 | Arquivo | O que muda |
 |---------|-----------|
-| `supabase/functions/scrape-leads/index.ts` | Remove `processInBackground`. Dispara `fetch()` para `scrape-leads-worker` sem await. Mantém a lógica de polling. |
-| `supabase/functions/scrape-leads-worker/index.ts` | **Novo**. Recebe os params via POST (autenticado com service_role_key), executa Firecrawl + AI + dedup + insert. Grava o sentinela ao final. |
-| `src/pages/Prospeccao.tsx` | Filtrar leads com `name === "__job_complete__"` da listagem para não aparecerem como cards. |
+| `supabase/functions/sync-whatsapp-messages/index.ts` | Após sincronizar, verificar se prospect deve ser movido para "respondeu" (auto-move por sync) |
+| `supabase/functions/manage-evolution/index.ts` | Adicionar action `reconfigure_webhooks` para re-aplicar webhook em todas instâncias |
+| `supabase/functions/whatsapp-webhook/index.ts` | Adicionar também matching por `remote_jid` direto (mais confiável que só telefone) |
 
-### Detalhes técnicos
+### Detalhe técnico do auto-move no sync
 
-**scrape-leads (main)** — ao receber uma nova prospecção:
 ```typescript
-// Fire-and-forget: chama o worker sem await
-const workerUrl = `${SUPABASE_URL}/functions/v1/scrape-leads-worker`;
-fetch(workerUrl, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-  },
-  body: JSON.stringify({ niche, locationStr, desiredCount, prospecting_intent, jobId }),
-});
-// Retorna imediatamente
-return json({ job_id: jobId, status: "running" });
+// No final de sync-whatsapp-messages, após inserir mensagens:
+if (synced > 0) {
+  // Verificar se há mensagens de entrada e prospect está em estágio pré-resposta
+  const hasInbound = toInsert.some(m => m.direcao === "entrada");
+  if (hasInbound && ["abordado", "em_cadencia"].includes(prospect.status)) {
+    await supabase.from("consultoria_prospects").update({
+      status: "respondeu",
+      data_ultima_interacao: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq("id", prospect_id);
+  }
+}
 ```
 
-**scrape-leads-worker** — função separada com `verify_jwt = false` (autenticada via service_role_key interno), contém toda a lógica de `processInBackground`.
+### Detalhe do matching por remote_jid no webhook
 
-**Prospeccao.tsx** — adicionar filtro `leads.filter(l => l.name !== "__job_complete__")` para esconder sentinelas.
+```typescript
+// Antes do phoneMatchFilter, tentar match direto por remote_jid
+const { data: jidMatch } = await supabase
+  .from("consultoria_prospects")
+  .select("id, nicho, status, ...")
+  .eq("remote_jid", remoteJid)
+  .limit(1);
 
-### Otimizações adicionais de memória no worker
-- Reduzir páginas de 15 para 10
-- Reduzir conteúdo por página de 2000 para 1500 chars
-- Usar apenas 2 queries Firecrawl em vez de 3
+// Se encontrou, usar. Senão, fallback para phone match.
+const prospects = jidMatch?.length ? jidMatch : phoneMatchResult;
+```
+
+Isso garante 3 camadas de proteção:
+1. **Webhook** → move automaticamente em tempo real
+2. **Sync** → move quando o usuário abre o chat (fallback)
+3. **Manual** → botão já existente para casos especiais
 
