@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNichos } from "@/hooks/useNichos";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -20,6 +21,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const WEBHOOK_URL = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
 
 export default function Configuracoes() {
+  const { labels: NICHOS } = useNichos();
   const queryClient = useQueryClient();
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [testingEvolution, setTestingEvolution] = useState<string | null>(null);

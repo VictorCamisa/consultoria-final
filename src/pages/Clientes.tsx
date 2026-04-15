@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useNichos } from "@/hooks/useNichos";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,6 +27,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
 const STATUSES = Object.keys(statusConfig);
 
 export default function Clientes() {
+  const { labels: NICHOS_CLIENTE } = useNichos();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterNicho, setFilterNicho] = useState("todos");
