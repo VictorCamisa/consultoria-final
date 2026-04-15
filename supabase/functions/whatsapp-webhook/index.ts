@@ -6,7 +6,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
-import { buildPhoneMatchFilter, phoneToJid } from "../_shared/instance-resolver.ts";
+import { buildPhoneMatchFilter, buildJidVariants, phoneToJid } from "../_shared/instance-resolver.ts";
 import { isAudioMessage, processAudioMessage } from "../_shared/audio-transcriber.ts";
 import { isImageMessage, processImageMessage, getMediaTypeLabel } from "../_shared/image-processor.ts";
 
@@ -145,20 +145,21 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Try matching by remote_jid first (most reliable), then fallback to phone
+    // Try matching by remote_jid variants (with/without 9th digit), then fallback to phone
     let prospects: any[] | null = null;
 
-    // 1. Match by remote_jid (exact)
+    // 1. Match by remote_jid variants (handles 9th digit mismatch)
+    const jidCandidates = buildJidVariants(remoteJid);
     const { data: jidMatch } = await supabase
       .from("consultoria_prospects")
       .select("id, nicho, status, whatsapp, nome_negocio, dia_cadencia, classificacao_ia, score_qualificacao, linked_instance, remote_jid")
-      .eq("remote_jid", remoteJid)
+      .in("remote_jid", jidCandidates)
       .limit(1);
 
     if (jidMatch?.length) {
       prospects = jidMatch;
     } else {
-      // 2. Fallback: match by phone number
+      // 2. Fallback: match by phone number (also with 9th digit variants)
       const phoneFilter = buildPhoneMatchFilter(rawPhone);
       const { data: phoneMatch } = await supabase
         .from("consultoria_prospects")
