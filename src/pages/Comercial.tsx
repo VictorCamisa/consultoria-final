@@ -34,6 +34,7 @@ export default function Comercial() {
   const [loadingReativar, setLoadingReativar] = useState<string | null>(null);
   const [loadingCadencia, setLoadingCadencia] = useState<string | null>(null);
   const [loadingProcessar, setLoadingProcessar] = useState(false);
+  const [loadingBulkSync, setLoadingBulkSync] = useState(false);
 
   const { data: prospects, isLoading } = useQuery({
     queryKey: ["prospects"],
