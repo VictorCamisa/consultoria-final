@@ -611,9 +611,9 @@ export function ProspectWorkspace({
 
               {/* Alert */}
               {coaching?.alerta && (
-                <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-amber-200/80 leading-relaxed">{coaching.alerta}</p>
+                <div className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-amber-900 dark:text-amber-100 leading-relaxed font-medium">{coaching.alerta}</p>
                 </div>
               )}
 
