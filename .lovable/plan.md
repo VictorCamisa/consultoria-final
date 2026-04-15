@@ -2,35 +2,58 @@
 
 ## Diagnóstico
 
-Atualmente **não existe** nenhum toggle no sistema para ativar/desativar a IA de resposta automática. O auto-reply está sempre ligado no webhook — a única condição que o bloqueia é se houve uma mensagem de saída nos últimos 30 segundos (anti-duplicata).
+Os nichos estão **hardcoded** em pelo menos 6 arquivos diferentes:
+- `src/components/comercial/types.ts` — `NICHO_CATEGORIES` (fonte principal)
+- `src/pages/Configuracoes.tsx` — `const NICHOS`
+- `src/pages/Clientes.tsx` — `NICHOS_CLIENTE`
+- `src/pages/Prospeccao.tsx` — `PRESET_SEGMENTS`
+- `src/components/dashboard/ProspectingWizard.tsx` — `PRESET_SEGMENTS`
+- `src/components/cliente/NewClientDialog.tsx` — `NICHOS`
+
+Para adicionar "Casas de Ração" (ou qualquer novo nicho), seria necessário editar todos esses arquivos manualmente.
 
 ## Solução
 
-Adicionar uma coluna `ia_auto_reply` (boolean) na tabela `consultoria_config` e um toggle visual na página de Configurações. O webhook consultará esse flag antes de disparar o auto-reply.
+Criar uma tabela `consultoria_nichos` no banco e um painel de gerenciamento na página de Configurações. Todos os pontos do sistema passam a ler dessa tabela.
 
 ## Mudanças
 
 | Local | O que muda |
 |-------|-----------|
-| **Migração SQL** | `ALTER TABLE consultoria_config ADD COLUMN ia_auto_reply boolean NOT NULL DEFAULT true` |
-| **`whatsapp-webhook/index.ts`** | Na query de config (linha ~350), incluir `ia_auto_reply` e checar antes do auto-reply |
-| **`src/pages/Configuracoes.tsx`** | Adicionar um Switch (toggle) por nicho para ligar/desligar a IA, salvando via `consultoria_config` |
+| **Migração SQL** | Criar tabela `consultoria_nichos` (id, label, keywords[], color, dot, icon, search_value, primary, ordem) com seed dos 4 nichos atuais |
+| **`src/hooks/useNichos.ts`** | Novo hook que busca os nichos do banco com `useQuery` e exporta helpers (`nichoCategory`, `matchesNichoFilter`, etc.) |
+| **`src/components/comercial/types.ts`** | Manter funções como fallback mas o hook será a fonte principal |
+| **`src/pages/Configuracoes.tsx`** | Adicionar seção "Gerenciar Nichos" com botão "+ Novo Nicho" que abre dialog para cadastrar label, keywords, cor e ícone |
+| **6 arquivos consumidores** | Substituir arrays hardcoded por dados do hook `useNichos()` — Comercial, Leads, Clientes, Prospecção, ProspectingWizard, NewClientDialog |
 
-### Detalhe técnico
+### Fluxo do usuário
 
-No webhook, a seção AUTO-REPLY (linha 342) passará a verificar:
-```typescript
-const { data: config } = await supabase
-  .from("consultoria_config")
-  .select("horario_inicio, horario_fim, ia_auto_reply")
-  .ilike("nicho", prospect.nicho)
-  .maybeSingle();
+1. Vai em **Configurações** > seção "Nichos"
+2. Clica **+ Novo Nicho**
+3. Preenche: nome ("Casas de Ração"), palavras-chave ("ração, pet, animal"), ícone (🐾), cor
+4. Salva — o nicho aparece imediatamente em todos os filtros, pipeline e prospecção
 
-if (config?.ia_auto_reply === false) {
-  console.log(`[webhook] Auto-reply desativado para nicho ${prospect.nicho}`);
-  return;
-}
+### Detalhe técnico — Tabela
+
+```sql
+CREATE TABLE consultoria_nichos (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  label text NOT NULL UNIQUE,
+  keywords text[] NOT NULL DEFAULT '{}',
+  color text NOT NULL DEFAULT 'bg-gray-500/15 border-gray-500/30 text-gray-400',
+  dot text NOT NULL DEFAULT 'bg-gray-500',
+  icon text DEFAULT '🏢',
+  search_value text DEFAULT '',
+  is_primary boolean DEFAULT true,
+  ordem integer DEFAULT 0,
+  created_at timestamptz DEFAULT now()
+);
+
+-- Seed com os 4 atuais
+INSERT INTO consultoria_nichos (label, keywords, color, dot, icon, search_value, is_primary, ordem) VALUES
+('Estética', '{estética,estetic,bem-estar,cirurgia plástica}', 'bg-pink-500/15 border-pink-500/30 text-pink-400', 'bg-pink-500', '💆', 'clínicas estéticas', true, 1),
+('Odonto', '{odonto,odontológ}', 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400', 'bg-cyan-500', '🦷', 'clínicas odontológicas', true, 2),
+('Advocacia', '{advoca,advocacia,advogado,direito,jurídic}', 'bg-amber-500/15 border-amber-500/30 text-amber-400', 'bg-amber-500', '⚖️', 'escritórios de advocacia', true, 3),
+('Revendas', '{revenda,veículo,seminov,motors,auto}', 'bg-blue-500/15 border-blue-500/30 text-blue-400', 'bg-blue-500', '🚗', 'revendas de veículos seminovos usados', true, 4);
 ```
-
-Na página de Configurações, cada card de nicho exibirá um Switch "IA Auto-Reply" que atualiza `ia_auto_reply` no banco.
 
