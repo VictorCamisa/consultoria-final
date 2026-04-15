@@ -34,6 +34,7 @@ export default function Comercial() {
   const [loadingReativar, setLoadingReativar] = useState<string | null>(null);
   const [loadingCadencia, setLoadingCadencia] = useState<string | null>(null);
   const [loadingProcessar, setLoadingProcessar] = useState(false);
+  const [loadingBulkSync, setLoadingBulkSync] = useState(false);
 
   const { data: prospects, isLoading } = useQuery({
     queryKey: ["prospects"],
@@ -180,6 +181,33 @@ export default function Comercial() {
       toast({ title: "Erro", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally { setLoadingProcessar(false); }
   };
+  const handleBulkSync = async () => {
+    setLoadingBulkSync(true);
+    try {
+      const linked = prospects?.filter(p => p.linked_instance && ["abordado", "em_cadencia", "respondeu"].includes(p.status)) ?? [];
+      if (linked.length === 0) {
+        toast({ title: "Nenhum prospect para sincronizar" });
+        return;
+      }
+      let synced = 0;
+      let moved = 0;
+      for (const p of linked) {
+        try {
+          const { data } = await supabase.functions.invoke("sync-whatsapp-messages", { body: { prospect_id: p.id } });
+          if (data?.synced > 0) synced += data.synced;
+          if (data?.auto_moved) moved++;
+        } catch (e) {
+          console.warn(`[bulk-sync] ${p.nome_negocio}:`, e);
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ["prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["unread-counts"] });
+      toast({ title: "Sync concluído", description: `${synced} mensagens sincronizadas, ${moved} prospects movidos automaticamente` });
+    } catch (err: unknown) {
+      toast({ title: "Erro no sync", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    } finally { setLoadingBulkSync(false); }
+  };
+
 
   return (
     <div className="space-y-5 page-enter">
@@ -192,6 +220,10 @@ export default function Comercial() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleBulkSync} disabled={loadingBulkSync} className="text-xs">
+            {loadingBulkSync ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
+            Sync Todos
+          </Button>
           <Button variant="outline" size="sm" onClick={handleProcessarCadencia} disabled={loadingProcessar} className="text-xs">
             {loadingProcessar ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <RefreshCw className="h-3.5 w-3.5 mr-1.5" />}
             <span className="hidden sm:inline">Processar</span> Cadência
