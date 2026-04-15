@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNichos } from "@/hooks/useNichos";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -100,6 +101,7 @@ export default function Prospeccao() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { presetSegments: PRESET_SEGMENTS } = useNichos();
 
   const {
     instances, instancesLoading, selectedInstance, setSelectedInstance,
