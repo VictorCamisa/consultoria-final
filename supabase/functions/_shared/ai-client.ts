@@ -59,24 +59,23 @@ export async function callClaude(params: {
     body.tool_choice = params.tool_choice;
   }
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify(body),
-  });
+  const maxRetries = 3;
+  let delay = 1500;
+  let lastError = "";
 
-  if (!res.ok) {
-    const errText = await res.text();
-    if (res.status === 429) throw new Error("RATE_LIMIT");
-    if (res.status === 401) throw new Error("AUTH_ERROR: Verifique a ANTHROPIC_API_KEY");
-    throw new Error(`Anthropic error (${res.status}): ${errText.substring(0, 300)}`);
-  }
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify(body),
+    });
 
-  const data = await res.json();
+    if (res.ok) {
+      const data = await res.json();
   const content = data.content || [];
 
   // Extract tool_use block
