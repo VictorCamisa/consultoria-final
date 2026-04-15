@@ -3,6 +3,9 @@ project_id = "uxqugcumsimejigxnvzz"
 [functions.scrape-leads]
 verify_jwt = false
 
+[functions.scrape-leads-worker]
+verify_jwt = false
+
 [functions.abordar-prospect]
 verify_jwt = false
 
