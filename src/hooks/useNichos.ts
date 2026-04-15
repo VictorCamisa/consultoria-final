@@ -61,7 +61,7 @@ export function useNichos() {
 
   const presetSegments = list.map(n => ({
     label: n.label,
-    value: n.search_value,
+    value: n.search_value || n.label.toLowerCase(),
     icon: n.icon,
     primary: n.is_primary,
   }));
