@@ -216,6 +216,26 @@ export default function Prospeccao() {
     },
   });
 
+  // Search history derived from leads_raw enrichment_data
+  const searchHistory = useMemo(() => {
+    const map = new Map<string, { niche: string; location: string; count: number; lastDate: string }>();
+    savedLeads.forEach(l => {
+      const ed = (l.enrichment_data as any) || {};
+      const niche = ed.scraped_niche;
+      const location = ed.scraped_location || ed.city;
+      if (!niche) return;
+      const key = `${niche}||${location || ""}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.count++;
+        if ((l.created_at || "") > existing.lastDate) existing.lastDate = l.created_at || "";
+      } else {
+        map.set(key, { niche, location: location || "", count: 1, lastDate: l.created_at || "" });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.lastDate.localeCompare(a.lastDate));
+  }, [savedLeads]);
+
   const formatPhone = (phone: string) => {
     const digits = phone.replace(/\D/g, "");
     if (digits.startsWith("55") && digits.length >= 12) return `+${digits}`;
