@@ -59,33 +59,49 @@ export async function callClaude(params: {
     body.tool_choice = params.tool_choice;
   }
 
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify(body),
-  });
+  const maxRetries = 3;
+  let delay = 1500;
+  let lastError = "";
 
-  if (!res.ok) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const content = data.content || [];
+
+      const toolUseBlock = content.find((b: any) => b.type === "tool_use");
+      if (toolUseBlock) {
+        return { content, toolUse: { name: toolUseBlock.name, input: toolUseBlock.input } };
+      }
+
+      const textBlock = content.find((b: any) => b.type === "text");
+      return { content, text: textBlock?.text ?? "" };
+    }
+
+    // Not OK — check if retryable
     const errText = await res.text();
     if (res.status === 429) throw new Error("RATE_LIMIT");
     if (res.status === 401) throw new Error("AUTH_ERROR: Verifique a ANTHROPIC_API_KEY");
-    throw new Error(`Anthropic error (${res.status}): ${errText.substring(0, 300)}`);
+
+    // 529 = overloaded, retry with backoff
+    if (res.status === 529 && attempt < maxRetries) {
+      console.warn(`[ai-client] Anthropic 529 overloaded, retry ${attempt + 1}/${maxRetries} in ${delay}ms`);
+      await new Promise(r => setTimeout(r, delay));
+      delay *= 2;
+      continue;
+    }
+
+    lastError = `Anthropic error (${res.status}): ${errText.substring(0, 300)}`;
   }
 
-  const data = await res.json();
-  const content = data.content || [];
-
-  // Extract tool_use block
-  const toolUseBlock = content.find((b: any) => b.type === "tool_use");
-  if (toolUseBlock) {
-    return { content, toolUse: { name: toolUseBlock.name, input: toolUseBlock.input } };
-  }
-
-  // Extract plain text
-  const textBlock = content.find((b: any) => b.type === "text");
-  return { content, text: textBlock?.text ?? "" };
+  throw new Error(lastError || "Anthropic: max retries exceeded (529 overloaded)");
 }
