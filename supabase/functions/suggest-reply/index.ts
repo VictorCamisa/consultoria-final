@@ -202,9 +202,9 @@ ${workingMemory}`;
         coaching = { sugestao: aiResult.text ?? "", insights: [], proximo_passo: "", tom_recomendado: "" };
       }
     } catch (aiErr: any) {
-      if (aiErr.message === "RATE_LIMIT") {
-        return new Response(JSON.stringify({ error: "Rate limit excedido. Tente em alguns segundos." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      if (aiErr.message === "RATE_LIMIT" || aiErr.message === "OVERLOADED") {
+        return new Response(JSON.stringify({ error: "IA temporariamente indisponível. Tente novamente em alguns segundos." }), {
+          status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (aiErr.message?.includes("AUTH_ERROR")) {
