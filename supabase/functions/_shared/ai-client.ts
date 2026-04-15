@@ -59,8 +59,8 @@ export async function callClaude(params: {
     body.tool_choice = params.tool_choice;
   }
 
-  const maxRetries = 3;
-  let delay = 1500;
+  const maxRetries = 4;
+  let delay = 2000;
   let lastError = "";
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -87,21 +87,23 @@ export async function callClaude(params: {
       return { content, text: textBlock?.text ?? "" };
     }
 
-    // Not OK — check if retryable
     const errText = await res.text();
-    if (res.status === 429) throw new Error("RATE_LIMIT");
+
     if (res.status === 401) throw new Error("AUTH_ERROR: Verifique a ANTHROPIC_API_KEY");
 
-    // 529 = overloaded, retry with backoff
-    if (res.status === 529 && attempt < maxRetries) {
-      console.warn(`[ai-client] Anthropic 529 overloaded, retry ${attempt + 1}/${maxRetries} in ${delay}ms`);
+    // Retryable errors: 429 (rate limit), 529 (overloaded), 500/502/503 (server)
+    const retryable = [429, 500, 502, 503, 529].includes(res.status);
+    if (retryable && attempt < maxRetries) {
+      console.warn(`[ai-client] Anthropic ${res.status}, retry ${attempt + 1}/${maxRetries} in ${delay}ms`);
       await new Promise(r => setTimeout(r, delay));
       delay *= 2;
       continue;
     }
 
+    if (res.status === 429) throw new Error("RATE_LIMIT");
+    if (res.status === 529) throw new Error("OVERLOADED");
     lastError = `Anthropic error (${res.status}): ${errText.substring(0, 300)}`;
   }
 
-  throw new Error(lastError || "Anthropic: max retries exceeded (529 overloaded)");
+  throw new Error(lastError || "OVERLOADED");
 }
