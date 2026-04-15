@@ -1,0 +1,1 @@
+ALTER TABLE public.consultoria_config ADD COLUMN ia_auto_reply boolean NOT NULL DEFAULT true;

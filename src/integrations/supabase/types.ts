@@ -195,6 +195,7 @@ export type Database = {
           followup_d7: string
           horario_fim: number
           horario_inicio: number
+          ia_auto_reply: boolean
           id: string
           instancia_evolution: string
           nicho: string
@@ -213,6 +214,7 @@ export type Database = {
           followup_d7: string
           horario_fim?: number
           horario_inicio?: number
+          ia_auto_reply?: boolean
           id?: string
           instancia_evolution: string
           nicho: string
@@ -231,6 +233,7 @@ export type Database = {
           followup_d7?: string
           horario_fim?: number
           horario_inicio?: number
+          ia_auto_reply?: boolean
           id?: string
           instancia_evolution?: string
           nicho?: string
