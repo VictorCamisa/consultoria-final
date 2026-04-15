@@ -185,6 +185,7 @@ export default function Prospeccao() {
       const { data, error } = await supabase
         .from("leads_raw")
         .select("*")
+        .neq("name", "__job_complete__")
         .order("created_at", { ascending: false })
         .limit(500);
       if (error) throw error;
