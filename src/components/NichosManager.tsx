@@ -177,7 +177,27 @@ export default function NichosManager() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Ícone (emoji)</Label>
-                <Input value={form.icon} onChange={e => set("icon", e.target.value)} placeholder="🐾" className="h-9" />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="h-9 w-full justify-start text-lg">
+                      {form.icon || "🏢"} <span className="ml-2 text-xs text-muted-foreground">Clique para trocar</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-2">
+                    <div className="grid grid-cols-6 gap-1">
+                      {EMOJI_PRESETS.map(e => (
+                        <button
+                          key={e}
+                          type="button"
+                          onClick={() => set("icon", e)}
+                          className={`text-xl p-1.5 rounded hover:bg-accent transition-colors ${form.icon === e ? "bg-accent ring-2 ring-primary" : ""}`}
+                        >
+                          {e}
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Termo de busca (prospecção)</Label>
