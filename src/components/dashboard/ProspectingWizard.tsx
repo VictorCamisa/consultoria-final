@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNichos } from "@/hooks/useNichos";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -35,16 +36,7 @@ type ScrapeResult = {
   icp_reason: string | null;
 };
 
-const PRESET_SEGMENTS = [
-  { label: "Estética", value: "clínicas estéticas", icon: "💆" },
-  { label: "Odontologia", value: "clínicas odontológicas", icon: "🦷" },
-  { label: "Advocacia", value: "escritórios de advocacia", icon: "⚖️" },
-  { label: "Bares e Restaurantes", value: "bares restaurantes", icon: "🍽️" },
-  { label: "Imobiliárias", value: "imobiliárias", icon: "🏠" },
-  { label: "Clínicas Médicas", value: "clínicas médicas", icon: "🏥" },
-  { label: "Academias", value: "academias fitness", icon: "💪" },
-  { label: "Contabilidade", value: "escritórios contabilidade", icon: "📊" },
-];
+// PRESET_SEGMENTS now loaded dynamically via useNichos hook
 
 const STATES = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",

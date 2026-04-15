@@ -8,12 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
-
-const NICHOS = ["Estética", "Odonto", "Advocacia", "Revendas de Veículos", "Marketing", "Outro"];
+import { useNichos } from "@/hooks/useNichos";
 const RESPONSAVEIS = ["victor", "danilo"];
 
 export default function NewClientDialog() {
   const [open, setOpen] = useState(false);
+  const { labels: NICHOS } = useNichos();
   const queryClient = useQueryClient();
 
   const [form, setForm] = useState({

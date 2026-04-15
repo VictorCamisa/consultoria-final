@@ -7,12 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { Plus } from "lucide-react";
-import { NICHOS, ProspectInsert } from "./types";
+import { ProspectInsert } from "./types";
+import { useNichos } from "@/hooks/useNichos";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 export function NewProspectDialog() {
   const queryClient = useQueryClient();
+  const { labels: NICHOS } = useNichos();
   const [open, setOpen] = useState(false);
   const [nicho, setNicho] = useState("");
 
