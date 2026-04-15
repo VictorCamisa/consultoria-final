@@ -14,6 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { useEvolutionInstances } from "@/hooks/useEvolutionInstances";
 import { Save, Copy, CheckCircle, XCircle, Loader2, Wifi, Plus, Trash2, QrCode, Smartphone, RefreshCw, Bot } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import NichosManager from "@/components/NichosManager";
 
 // NICHOS are now dynamic — loaded via useNichos hook
 
