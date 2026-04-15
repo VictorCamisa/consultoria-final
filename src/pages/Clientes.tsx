@@ -22,7 +22,7 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   encerrado: { label: "Encerrado", className: "bg-muted text-muted-foreground" },
 };
 
-const NICHOS_CLIENTE = ["Estética", "Odonto", "Advocacia", "Revendas de Veículos", "Marketing", "Outro"];
+// Nichos are now dynamic — imported via useNichos hook
 const STATUSES = Object.keys(statusConfig);
 
 export default function Clientes() {

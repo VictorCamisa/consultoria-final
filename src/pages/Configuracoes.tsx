@@ -14,7 +14,7 @@ import { useEvolutionInstances } from "@/hooks/useEvolutionInstances";
 import { Save, Copy, CheckCircle, XCircle, Loader2, Wifi, Plus, Trash2, QrCode, Smartphone, RefreshCw, Bot } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
-const NICHOS = ["Estética", "Odonto", "Advocacia", "Revendas de Veículos"];
+// NICHOS are now dynamic — loaded via useNichos hook
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const WEBHOOK_URL = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
