@@ -55,6 +55,7 @@ export default function ProspectingWizard({
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { presetSegments: PRESET_SEGMENTS } = useNichos();
 
   // Config step
   const [selectedNiche, setSelectedNiche] = useState("");
