@@ -148,6 +148,7 @@ export default function Configuracoes() {
           <TabsTrigger value="scripts" className="flex-1 min-w-0 text-xs sm:text-sm">Scripts por Nicho</TabsTrigger>
           <TabsTrigger value="whatsapp" className="flex-1 min-w-0 text-xs sm:text-sm">WhatsApp</TabsTrigger>
           <TabsTrigger value="integracoes" className="flex-1 min-w-0 text-xs sm:text-sm">Cadência</TabsTrigger>
+          <TabsTrigger value="nichos" className="flex-1 min-w-0 text-xs sm:text-sm">Nichos</TabsTrigger>
         </TabsList>
 
         {/* Scripts por Nicho */}
@@ -457,6 +458,11 @@ export default function Configuracoes() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Nichos Management */}
+        <TabsContent value="nichos" className="mt-4 space-y-4">
+          <NichosManager />
         </TabsContent>
       </Tabs>
 
