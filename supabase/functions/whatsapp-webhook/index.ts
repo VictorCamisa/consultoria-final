@@ -6,7 +6,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
-import { buildPhoneMatchFilter, phoneToJid } from "../_shared/instance-resolver.ts";
+import { buildPhoneMatchFilter, buildJidVariants, phoneToJid } from "../_shared/instance-resolver.ts";
 import { isAudioMessage, processAudioMessage } from "../_shared/audio-transcriber.ts";
 import { isImageMessage, processImageMessage, getMediaTypeLabel } from "../_shared/image-processor.ts";
 
