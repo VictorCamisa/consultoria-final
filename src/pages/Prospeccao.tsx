@@ -9,7 +9,7 @@ import {
   CheckCircle2, Tag, X, Zap, Eye,
   Sparkles, Upload, FileSpreadsheet, AlertCircle, MapPin, ArrowRight,
   ExternalLink, Compass, Target, Building2, Check, Circle, Database, Send, Filter,
-  TrendingUp, BarChart3, Flame, ChevronDown, ChevronRight
+  TrendingUp, BarChart3, Flame, ChevronDown, ChevronRight, History, Clock
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -215,6 +215,26 @@ export default function Prospeccao() {
       return (data || []) as ProspectIdentity[];
     },
   });
+
+  // Search history derived from leads_raw enrichment_data
+  const searchHistory = useMemo(() => {
+    const map = new Map<string, { niche: string; location: string; count: number; lastDate: string }>();
+    savedLeads.forEach(l => {
+      const ed = (l.enrichment_data as any) || {};
+      const niche = ed.scraped_niche;
+      const location = ed.scraped_location || ed.city;
+      if (!niche) return;
+      const key = `${niche}||${location || ""}`;
+      const existing = map.get(key);
+      if (existing) {
+        existing.count++;
+        if ((l.created_at || "") > existing.lastDate) existing.lastDate = l.created_at || "";
+      } else {
+        map.set(key, { niche, location: location || "", count: 1, lastDate: l.created_at || "" });
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.lastDate.localeCompare(a.lastDate));
+  }, [savedLeads]);
 
   const formatPhone = (phone: string) => {
     const digits = phone.replace(/\D/g, "");
@@ -1005,6 +1025,41 @@ export default function Prospeccao() {
                   Extrair
                 </Button>
               </div>
+            </div>
+          )}
+          {/* Search History */}
+          {searchHistory.length > 0 && (
+            <div className="border rounded-lg p-4 space-y-2">
+              <div className="flex items-center gap-2 mb-1">
+                <History className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-xs font-medium">Histórico de Pesquisas</p>
+              </div>
+              <ScrollArea className="max-h-[280px]">
+                <div className="space-y-1.5">
+                  {searchHistory.map((item, i) => {
+                    const nicheLabel = PRESET_SEGMENTS.find(s => s.value === item.niche)?.label || item.niche;
+                    const nicheIcon = PRESET_SEGMENTS.find(s => s.value === item.niche)?.icon;
+                    const dateStr = item.lastDate ? new Date(item.lastDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }) : "";
+                    return (
+                      <div key={i} className="flex items-start gap-2.5 p-2.5 rounded-md border bg-card hover:bg-secondary/30 transition-colors">
+                        <div className="text-sm shrink-0 mt-0.5">{nicheIcon || "🔍"}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium truncate">{nicheLabel}</p>
+                          {item.location && (
+                            <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <MapPin className="h-2.5 w-2.5 shrink-0" />{item.location}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <Badge variant="secondary" className="text-[10px]">{item.count}</Badge>
+                          {dateStr && <p className="text-[9px] text-muted-foreground mt-1 flex items-center gap-0.5 justify-end"><Clock className="h-2 w-2" />{dateStr}</p>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
             </div>
           )}
         </div>
