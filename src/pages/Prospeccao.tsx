@@ -390,44 +390,60 @@ export default function Prospeccao() {
     return scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
   }, [promotePreviewLeads]);
 
-  // === Web Scraping ===
+  // === Web Scraping (background job + polling) ===
   const handleScrape = async () => {
     if (!user || !activeNiche) return;
     setScrapingLoading(true);
     setWizardOpen(false);
-    const jobId = crypto.randomUUID();
+    const localJobId = crypto.randomUUID();
     const newJob: ScrapeJob = {
-      id: jobId, niche: activeNiche, city: activeLocation, prospecting_intent: prospectingIntent,
+      id: localJobId, niche: activeNiche, city: activeLocation, prospecting_intent: prospectingIntent,
       status: "running", results: [], results_count: 0, total_found: 0,
       duplicates_skipped: 0, pages_searched: 0, avg_icp_score: 0, created_at: new Date().toISOString(),
     };
     setScrapeJobs(prev => [newJob, ...prev]);
     try {
-      const { data, error } = await supabase.functions.invoke("scrape-leads", {
+      // 1. Start background job
+      const { data: startData, error: startError } = await supabase.functions.invoke("scrape-leads", {
         body: { niche: activeNiche, city: selectedCity || undefined, state: selectedState || undefined, bairro: selectedBairro || undefined, limit: leadCount, prospecting_intent: prospectingIntent || undefined },
       });
-      if (error || data?.error) {
-        const errMsg = data?.error || error?.message || "Erro desconhecido";
-        if (errMsg.includes("Créditos de IA esgotados") || errMsg.includes("402")) {
-          throw new Error("Créditos de IA esgotados. Vá em Settings → Workspace → Usage no Lovable para adicionar créditos.");
-        }
-        if (errMsg.includes("Limite de requisições") || errMsg.includes("429")) {
-          throw new Error("Limite de requisições atingido. Aguarde 1 minuto e tente novamente.");
-        }
+      if (startError || startData?.error) {
+        const errMsg = startData?.error || startError?.message || "Erro desconhecido";
         throw new Error(errMsg);
       }
-      // Surface Firecrawl errors even when count=0 (no hard error thrown)
-      const firecrawlMsg = data?.firecrawl_error ? ` (Firecrawl: ${data.firecrawl_error})` : "";
-      setScrapeJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "completed" as const, results_count: data?.count || 0, total_found: data?.total_found || 0, duplicates_skipped: data?.duplicates_skipped || 0, pages_searched: data?.pages_searched || 0, results: data?.results || [], avg_icp_score: data?.avg_icp_score || 0, error_message: data?.firecrawl_error || undefined } : j));
-      if (data?.count === 0 && data?.firecrawl_error) {
-        toast({ title: "Prospecção com erro ⚠️", description: data.message || data.firecrawl_error, variant: "destructive" });
-      } else {
-        toast({ title: "Prospecção concluída! 🎯", description: `${data?.count || 0} novos leads salvos${firecrawlMsg}` });
+
+      const remoteJobId = startData?.job_id || localJobId;
+
+      // 2. Poll for results
+      const maxPolls = 60; // up to ~2 minutes
+      for (let i = 0; i < maxPolls; i++) {
+        await new Promise(r => setTimeout(r, 3000));
+        const { data: pollData } = await supabase.functions.invoke("scrape-leads", {
+          body: { niche: activeNiche, poll_job_id: remoteJobId },
+        });
+
+        if (pollData?.status === "completed") {
+          setScrapeJobs(prev => prev.map(j => j.id === localJobId ? {
+            ...j, status: "completed" as const,
+            results_count: pollData.count || 0,
+            total_found: pollData.total_found || 0,
+            duplicates_skipped: pollData.duplicates_skipped || 0,
+            pages_searched: pollData.pages_searched || 0,
+            results: pollData.results || [],
+            avg_icp_score: pollData.avg_icp_score || 0,
+          } : j));
+          toast({ title: "Prospecção concluída! 🎯", description: `${pollData.count || 0} novos leads salvos` });
+          refetchLeads();
+          resetWizard();
+          return;
+        }
+        if (pollData?.status === "failed") {
+          throw new Error(pollData.error || "Erro no processamento");
+        }
       }
-      refetchLeads();
-      resetWizard();
+      throw new Error("Tempo limite excedido. Tente novamente.");
     } catch (error: any) {
-      setScrapeJobs(prev => prev.map(j => j.id === jobId ? { ...j, status: "failed" as const, error_message: error.message } : j));
+      setScrapeJobs(prev => prev.map(j => j.id === localJobId ? { ...j, status: "failed" as const, error_message: error.message } : j));
       toast({ title: "Erro na prospecção", description: error.message, variant: "destructive" });
     } finally { setScrapingLoading(false); }
   };
