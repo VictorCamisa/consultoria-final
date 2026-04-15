@@ -9,7 +9,7 @@ import {
   CheckCircle2, Tag, X, Zap, Eye,
   Sparkles, Upload, FileSpreadsheet, AlertCircle, MapPin, ArrowRight,
   ExternalLink, Compass, Target, Building2, Check, Circle, Database, Send, Filter,
-  TrendingUp, BarChart3, Flame, ChevronDown, ChevronRight
+  TrendingUp, BarChart3, Flame, ChevronDown, ChevronRight, History, Clock
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
