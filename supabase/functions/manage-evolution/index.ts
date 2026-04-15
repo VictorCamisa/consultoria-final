@@ -127,6 +127,31 @@ Deno.serve(async (req) => {
       return json({ success: true });
     }
 
+    // RECONFIGURE WEBHOOKS
+    if (action === "reconfigure_webhooks") {
+      const webhookUrl = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
+      const { data: dbInstances } = await supabaseAdmin.from("evolution_instances").select("instance_name").order("created_at");
+      const names = (dbInstances || []).map((i: any) => i.instance_name);
+      const results: any[] = [];
+
+      for (const name of names) {
+        try {
+          const resp = await fetch(`${baseUrl}/webhook/set/${name}`, {
+            method: "POST",
+            headers: { apikey: apiKey, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              webhook: { url: webhookUrl, enabled: true, webhook_by_events: false, webhook_base64: false, events: ["MESSAGES_UPSERT"] },
+            }),
+          });
+          results.push({ name, success: resp.ok, status: resp.status });
+        } catch (e) {
+          results.push({ name, success: false, error: (e as Error).message });
+        }
+      }
+
+      return json({ success: true, webhook_url: webhookUrl, results });
+    }
+
     return json({ error: `Ação inválida: ${action}` }, 400);
   } catch (e) {
     console.error("manage-evolution error:", e);
