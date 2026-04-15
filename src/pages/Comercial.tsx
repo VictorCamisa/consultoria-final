@@ -181,6 +181,33 @@ export default function Comercial() {
       toast({ title: "Erro", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
     } finally { setLoadingProcessar(false); }
   };
+  const handleBulkSync = async () => {
+    setLoadingBulkSync(true);
+    try {
+      const linked = prospects?.filter(p => p.linked_instance && ["abordado", "em_cadencia", "respondeu"].includes(p.status)) ?? [];
+      if (linked.length === 0) {
+        toast({ title: "Nenhum prospect para sincronizar" });
+        return;
+      }
+      let synced = 0;
+      let moved = 0;
+      for (const p of linked) {
+        try {
+          const { data } = await supabase.functions.invoke("sync-whatsapp-messages", { body: { prospect_id: p.id } });
+          if (data?.synced > 0) synced += data.synced;
+          if (data?.auto_moved) moved++;
+        } catch (e) {
+          console.warn(`[bulk-sync] ${p.nome_negocio}:`, e);
+        }
+      }
+      queryClient.invalidateQueries({ queryKey: ["prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["unread-counts"] });
+      toast({ title: "Sync concluído", description: `${synced} mensagens sincronizadas, ${moved} prospects movidos automaticamente` });
+    } catch (err: unknown) {
+      toast({ title: "Erro no sync", description: err instanceof Error ? err.message : String(err), variant: "destructive" });
+    } finally { setLoadingBulkSync(false); }
+  };
+
 
   return (
     <div className="space-y-5 page-enter">
