@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNichos } from "@/hooks/useNichos";
 import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -13,13 +14,15 @@ import { toast } from "@/hooks/use-toast";
 import { useEvolutionInstances } from "@/hooks/useEvolutionInstances";
 import { Save, Copy, CheckCircle, XCircle, Loader2, Wifi, Plus, Trash2, QrCode, Smartphone, RefreshCw, Bot } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import NichosManager from "@/components/NichosManager";
 
-const NICHOS = ["Estética", "Odonto", "Advocacia", "Revendas de Veículos"];
+// NICHOS are now dynamic — loaded via useNichos hook
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const WEBHOOK_URL = `${SUPABASE_URL}/functions/v1/whatsapp-webhook`;
 
 export default function Configuracoes() {
+  const { labels: NICHOS } = useNichos();
   const queryClient = useQueryClient();
   const [copiedWebhook, setCopiedWebhook] = useState(false);
   const [testingEvolution, setTestingEvolution] = useState<string | null>(null);
@@ -146,6 +149,7 @@ export default function Configuracoes() {
           <TabsTrigger value="scripts" className="flex-1 min-w-0 text-xs sm:text-sm">Scripts por Nicho</TabsTrigger>
           <TabsTrigger value="whatsapp" className="flex-1 min-w-0 text-xs sm:text-sm">WhatsApp</TabsTrigger>
           <TabsTrigger value="integracoes" className="flex-1 min-w-0 text-xs sm:text-sm">Cadência</TabsTrigger>
+          <TabsTrigger value="nichos" className="flex-1 min-w-0 text-xs sm:text-sm">Nichos</TabsTrigger>
         </TabsList>
 
         {/* Scripts por Nicho */}
@@ -455,6 +459,11 @@ export default function Configuracoes() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Nichos Management */}
+        <TabsContent value="nichos" className="mt-4 space-y-4">
+          <NichosManager />
         </TabsContent>
       </Tabs>
 

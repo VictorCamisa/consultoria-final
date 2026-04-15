@@ -10,7 +10,8 @@ import { Loader2, RefreshCw, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import type { Tables } from "@/integrations/supabase/types";
 
-import { PIPELINE_STAGES, NICHOS, NICHO_CATEGORIES, matchesNichoFilter, Prospect } from "@/components/comercial/types";
+import { PIPELINE_STAGES, Prospect } from "@/components/comercial/types";
+import { useNichos } from "@/hooks/useNichos";
 import { PipelineStats } from "@/components/comercial/PipelineStats";
 import { ProspectCard } from "@/components/comercial/ProspectCard";
 import { ProspectWorkspace } from "@/components/comercial/ProspectWorkspace";
@@ -21,6 +22,7 @@ import { UnreadNotifications } from "@/components/comercial/UnreadNotifications"
 export default function Comercial() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { labels: NICHOS, matchesNichoFilter } = useNichos();
   const storageKey = user ? `vs_filterNicho_${user.id}` : "vs_filterNicho";
   const [filterNicho, setFilterNicho] = useState(() => localStorage.getItem(storageKey) || "todos");
   const [filterClassificacao, setFilterClassificacao] = useState("todos");

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNichos } from "@/hooks/useNichos";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,21 +45,7 @@ type ScrapeJob = {
   created_at: string; error_message?: string;
 };
 
-const PRESET_SEGMENTS = [
-  { label: "Estética", value: "clínicas estéticas", icon: "💆", primary: true },
-  { label: "Odontologia", value: "clínicas odontológicas", icon: "🦷", primary: true },
-  { label: "Advocacia", value: "escritórios de advocacia", icon: "⚖️", primary: true },
-  { label: "Revendas de Veículos", value: "revendas de veículos seminovos usados", icon: "🚗", primary: true },
-  { label: "Bares e Restaurantes", value: "bares restaurantes", icon: "🍽️", primary: false },
-  { label: "Imobiliárias", value: "imobiliárias", icon: "🏠", primary: false },
-  { label: "Clínicas Médicas", value: "clínicas médicas", icon: "🏥", primary: false },
-  { label: "Academias", value: "academias fitness", icon: "💪", primary: false },
-  { label: "Contabilidade", value: "escritórios contabilidade", icon: "📊", primary: false },
-  { label: "Educação", value: "escolas cursos", icon: "📚", primary: false },
-  { label: "Marketing", value: "agências marketing digital", icon: "📢", primary: false },
-  { label: "Pet Shops", value: "pet shops veterinários", icon: "🐾", primary: false },
-  { label: "Tecnologia", value: "empresas tecnologia SaaS", icon: "💻", primary: false },
-];
+// PRESET_SEGMENTS now loaded dynamically via useNichos hook
 
 const STATES = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
@@ -114,6 +101,7 @@ export default function Prospeccao() {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { presetSegments: PRESET_SEGMENTS } = useNichos();
 
   const {
     instances, instancesLoading, selectedInstance, setSelectedInstance,

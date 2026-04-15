@@ -606,6 +606,45 @@ export type Database = {
           },
         ]
       }
+      consultoria_nichos: {
+        Row: {
+          color: string
+          created_at: string | null
+          dot: string
+          icon: string | null
+          id: string
+          is_primary: boolean | null
+          keywords: string[]
+          label: string
+          ordem: number | null
+          search_value: string | null
+        }
+        Insert: {
+          color?: string
+          created_at?: string | null
+          dot?: string
+          icon?: string | null
+          id?: string
+          is_primary?: boolean | null
+          keywords?: string[]
+          label: string
+          ordem?: number | null
+          search_value?: string | null
+        }
+        Update: {
+          color?: string
+          created_at?: string | null
+          dot?: string
+          icon?: string | null
+          id?: string
+          is_primary?: boolean | null
+          keywords?: string[]
+          label?: string
+          ordem?: number | null
+          search_value?: string | null
+        }
+        Relationships: []
+      }
       consultoria_notas_diagnostico: {
         Row: {
           created_at: string | null
