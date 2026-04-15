@@ -882,36 +882,6 @@ export default function Prospeccao() {
                 </div>
               )}
 
-              {/* Manual & File import */}
-              <div className="border rounded-lg p-4 space-y-3">
-                <p className="text-xs font-medium text-muted-foreground">Adicionar manualmente</p>
-                <form onSubmit={handleManualAdd} className="space-y-2">
-                  <Input placeholder="Nome" value={manualName} onChange={(e) => setManualName(e.target.value)} required className="text-xs h-8" />
-                  <Input placeholder="Telefone" value={manualPhone} onChange={(e) => setManualPhone(e.target.value)} required className="text-xs h-8" />
-                  <Input type="email" placeholder="Email (opcional)" value={manualEmail} onChange={(e) => setManualEmail(e.target.value)} className="text-xs h-8" />
-                  <Button type="submit" size="sm" disabled={manualLoading} className="gap-1.5 text-xs w-full" variant="outline">
-                    {manualLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}Adicionar
-                  </Button>
-                </form>
-              </div>
-
-              <div className="border rounded-lg p-4 space-y-3">
-                <p className="text-xs font-medium text-muted-foreground">Importar CSV</p>
-                <label htmlFor="file-upload-sidebar" className="flex flex-col items-center gap-1 border-2 border-dashed rounded-lg p-4 cursor-pointer hover:border-primary/50 transition-colors">
-                  <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
-                  <p className="text-[10px] font-medium">Selecionar arquivo</p>
-                  <input id="file-upload-sidebar" type="file" accept=".csv,.txt" onChange={handleFileUpload} className="hidden" />
-                </label>
-                {fileError && <p className="text-[10px] text-destructive">{fileError}</p>}
-                {fileParsedLeads.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-[10px] text-muted-foreground">{fileParsedLeads.length} leads encontrados</p>
-                    <Button onClick={handleFileImport} size="sm" disabled={fileUploading} className="gap-1.5 text-xs w-full" variant="outline">
-                      {fileUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}Importar
-                    </Button>
-                  </div>
-                )}
-              </div>
             </div>
           )}
 
