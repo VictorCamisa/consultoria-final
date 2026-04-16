@@ -156,18 +156,17 @@ export function ProspectCard({
           </Select>
         )}
 
-        {onDelete && !onMoveStage && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-[11px] h-7 w-7 px-0 ml-auto text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10"
-            onClick={onDelete}
-            title="Excluir prospect"
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
-        )}
-        {onDelete && onMoveStage && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-[11px] h-7 w-7 px-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 ml-auto"
+          onClick={(e) => { e.stopPropagation(); setEditOpen(true); }}
+          title="Editar prospect"
+        >
+          <Pencil className="h-3 w-3" />
+        </Button>
+
+        {onDelete && (
           <Button
             size="sm"
             variant="ghost"
@@ -179,6 +178,8 @@ export function ProspectCard({
           </Button>
         )}
       </div>
+
+      <NewProspectDialog prospect={p} open={editOpen} onOpenChange={setEditOpen} hideDefaultTrigger />
     </div>
   );
 }
