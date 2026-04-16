@@ -161,7 +161,7 @@ export function ProspectCard({
           size="sm"
           variant="ghost"
           className="text-[11px] h-7 w-7 px-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 ml-auto"
-          onClick={(e) => { e.stopPropagation(); setEditOpen(true); }}
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); setEditOpen(true); }}
           title="Editar prospect"
         >
           <Pencil className="h-3 w-3" />
@@ -179,8 +179,8 @@ export function ProspectCard({
           </Button>
         )}
       </div>
-
-      <NewProspectDialog prospect={p} open={editOpen} onOpenChange={setEditOpen} hideDefaultTrigger />
     </div>
+    <NewProspectDialog prospect={p} open={editOpen} onOpenChange={setEditOpen} hideDefaultTrigger />
+    </>
   );
 }
