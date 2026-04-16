@@ -2,58 +2,42 @@
 
 ## Diagnóstico
 
-Os nichos estão **hardcoded** em pelo menos 6 arquivos diferentes:
-- `src/components/comercial/types.ts` — `NICHO_CATEGORIES` (fonte principal)
-- `src/pages/Configuracoes.tsx` — `const NICHOS`
-- `src/pages/Clientes.tsx` — `NICHOS_CLIENTE`
-- `src/pages/Prospeccao.tsx` — `PRESET_SEGMENTS`
-- `src/components/dashboard/ProspectingWizard.tsx` — `PRESET_SEGMENTS`
-- `src/components/cliente/NewClientDialog.tsx` — `NICHOS`
+No `ProspectCard.tsx` (linha 182), o `<NewProspectDialog>` está renderizado **dentro** da `<div>` raiz do card que possui `onClick={onSelect}` — esse handler abre o `ProspectWorkspace` (página completa do lead).
 
-Para adicionar "Casas de Ração" (ou qualquer novo nicho), seria necessário editar todos esses arquivos manualmente.
+Quando o usuário clica em editar:
+1. O botão chama `setEditOpen(true)` com `stopPropagation` ✓
+2. O Dialog do Radix abre via Portal, mas eventos de foco/clique do conteúdo do Dialog (que React trata como filho lógico do card) acabam disparando o `onClick` do card pai em alguns casos
+3. Resultado: **abre o Dialog de edição E o ProspectWorkspace ao mesmo tempo**, e como o Workspace é full-screen, ele "engole" o Dialog visualmente
 
 ## Solução
 
-Criar uma tabela `consultoria_nichos` no banco e um painel de gerenciamento na página de Configurações. Todos os pontos do sistema passam a ler dessa tabela.
+Duas correções pequenas e seguras no `src/components/comercial/ProspectCard.tsx`:
 
-## Mudanças
+**1. Mover o `<NewProspectDialog>` para fora da div clicável do card**
 
-| Local | O que muda |
-|-------|-----------|
-| **Migração SQL** | Criar tabela `consultoria_nichos` (id, label, keywords[], color, dot, icon, search_value, primary, ordem) com seed dos 4 nichos atuais |
-| **`src/hooks/useNichos.ts`** | Novo hook que busca os nichos do banco com `useQuery` e exporta helpers (`nichoCategory`, `matchesNichoFilter`, etc.) |
-| **`src/components/comercial/types.ts`** | Manter funções como fallback mas o hook será a fonte principal |
-| **`src/pages/Configuracoes.tsx`** | Adicionar seção "Gerenciar Nichos" com botão "+ Novo Nicho" que abre dialog para cadastrar label, keywords, cor e ícone |
-| **6 arquivos consumidores** | Substituir arrays hardcoded por dados do hook `useNichos()` — Comercial, Leads, Clientes, Prospecção, ProspectingWizard, NewClientDialog |
+Envolver o card em um Fragment (`<>...</>`) para que o Dialog seja irmão da div, não filho. Assim eventos do Dialog nunca borbulham para o `onClick={onSelect}`.
 
-### Fluxo do usuário
+**2. Reforçar o stopPropagation no botão Pencil**
 
-1. Vai em **Configurações** > seção "Nichos"
-2. Clica **+ Novo Nicho**
-3. Preenche: nome ("Casas de Ração"), palavras-chave ("ração, pet, animal"), ícone (🐾), cor
-4. Salva — o nicho aparece imediatamente em todos os filtros, pipeline e prospecção
+Adicionar também `e.preventDefault()` para garantir que nenhum comportamento padrão dispare a navegação.
 
-### Detalhe técnico — Tabela
+### Mudança visual
 
-```sql
-CREATE TABLE consultoria_nichos (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  label text NOT NULL UNIQUE,
-  keywords text[] NOT NULL DEFAULT '{}',
-  color text NOT NULL DEFAULT 'bg-gray-500/15 border-gray-500/30 text-gray-400',
-  dot text NOT NULL DEFAULT 'bg-gray-500',
-  icon text DEFAULT '🏢',
-  search_value text DEFAULT '',
-  is_primary boolean DEFAULT true,
-  ordem integer DEFAULT 0,
-  created_at timestamptz DEFAULT now()
-);
-
--- Seed com os 4 atuais
-INSERT INTO consultoria_nichos (label, keywords, color, dot, icon, search_value, is_primary, ordem) VALUES
-('Estética', '{estética,estetic,bem-estar,cirurgia plástica}', 'bg-pink-500/15 border-pink-500/30 text-pink-400', 'bg-pink-500', '💆', 'clínicas estéticas', true, 1),
-('Odonto', '{odonto,odontológ}', 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400', 'bg-cyan-500', '🦷', 'clínicas odontológicas', true, 2),
-('Advocacia', '{advoca,advocacia,advogado,direito,jurídic}', 'bg-amber-500/15 border-amber-500/30 text-amber-400', 'bg-amber-500', '⚖️', 'escritórios de advocacia', true, 3),
-('Revendas', '{revenda,veículo,seminov,motors,auto}', 'bg-blue-500/15 border-blue-500/30 text-blue-400', 'bg-blue-500', '🚗', 'revendas de veículos seminovos usados', true, 4);
+```text
+ANTES:                          DEPOIS:
+<div onClick={onSelect}>        <>
+  ...conteúdo do card...          <div onClick={onSelect}>
+  <NewProspectDialog />            ...conteúdo do card...
+</div>                            </div>
+                                  <NewProspectDialog />
+                                </>
 ```
+
+### Arquivo afetado
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/comercial/ProspectCard.tsx` | Mover `<NewProspectDialog>` para fora da `<div>` raiz (usar Fragment) e reforçar handler do botão editar |
+
+Nenhuma outra página é afetada — a correção é isolada no card.
 
