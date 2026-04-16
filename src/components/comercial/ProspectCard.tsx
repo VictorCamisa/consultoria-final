@@ -31,6 +31,7 @@ export function ProspectCard({
   const classif = classificacaoConfig(p.classificacao_ia);
   const nichoCat = nichoCategory(p.nicho);
   return (
+    <>
     <div
       className="group bg-background rounded-lg border border-border hover:border-primary/30 p-3.5 space-y-3 cursor-pointer transition-all duration-150 hover:shadow-sm"
       onClick={onSelect}
