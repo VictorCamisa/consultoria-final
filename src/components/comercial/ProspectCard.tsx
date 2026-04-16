@@ -2,10 +2,12 @@ import { Prospect, classificacaoConfig, scoreColor, timeAgo, nichoCategory, PIPE
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  MessageSquare, Phone, Megaphone, PlayCircle, RotateCcw, Loader2, Trash2, AlertTriangle, ArrowRightLeft,
+  MessageSquare, Phone, Megaphone, PlayCircle, RotateCcw, Loader2, Trash2, AlertTriangle, ArrowRightLeft, Pencil,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
+import { NewProspectDialog } from "./NewProspectDialog";
 
 interface Props {
   prospect: Prospect;
@@ -25,6 +27,7 @@ export function ProspectCard({
   prospect: p, unread, loadingAbordar, loadingCadencia, loadingReativar,
   onSelect, onAbordar, onCadencia, onReativar, onDelete, onMoveStage,
 }: Props) {
+  const [editOpen, setEditOpen] = useState(false);
   const classif = classificacaoConfig(p.classificacao_ia);
   const nichoCat = nichoCategory(p.nicho);
   return (
@@ -153,18 +156,17 @@ export function ProspectCard({
           </Select>
         )}
 
-        {onDelete && !onMoveStage && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-[11px] h-7 w-7 px-0 ml-auto text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10"
-            onClick={onDelete}
-            title="Excluir prospect"
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
-        )}
-        {onDelete && onMoveStage && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="text-[11px] h-7 w-7 px-0 text-muted-foreground/60 hover:text-primary hover:bg-primary/10 ml-auto"
+          onClick={(e) => { e.stopPropagation(); setEditOpen(true); }}
+          title="Editar prospect"
+        >
+          <Pencil className="h-3 w-3" />
+        </Button>
+
+        {onDelete && (
           <Button
             size="sm"
             variant="ghost"
@@ -176,6 +178,8 @@ export function ProspectCard({
           </Button>
         )}
       </div>
+
+      <NewProspectDialog prospect={p} open={editOpen} onOpenChange={setEditOpen} hideDefaultTrigger />
     </div>
   );
 }
