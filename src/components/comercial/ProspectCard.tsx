@@ -2,10 +2,12 @@ import { Prospect, classificacaoConfig, scoreColor, timeAgo, nichoCategory, PIPE
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  MessageSquare, Phone, Megaphone, PlayCircle, RotateCcw, Loader2, Trash2, AlertTriangle, ArrowRightLeft,
+  MessageSquare, Phone, Megaphone, PlayCircle, RotateCcw, Loader2, Trash2, AlertTriangle, ArrowRightLeft, Pencil,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
+import { NewProspectDialog } from "./NewProspectDialog";
 
 interface Props {
   prospect: Prospect;
@@ -25,6 +27,7 @@ export function ProspectCard({
   prospect: p, unread, loadingAbordar, loadingCadencia, loadingReativar,
   onSelect, onAbordar, onCadencia, onReativar, onDelete, onMoveStage,
 }: Props) {
+  const [editOpen, setEditOpen] = useState(false);
   const classif = classificacaoConfig(p.classificacao_ia);
   const nichoCat = nichoCategory(p.nicho);
   return (
