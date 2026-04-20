@@ -23,18 +23,18 @@ const STAGE_ICONS: Record<string, React.ElementType> = {
 };
 
 const STAGE_ACCENTS: Record<string, string> = {
-  novo: "bg-slate-500/15 text-slate-400",
-  abordado: "bg-blue-500/15 text-blue-400",
-  em_cadencia: "bg-indigo-500/15 text-indigo-400",
-  respondeu: "bg-amber-500/15 text-amber-400",
-  quente: "bg-red-500/15 text-red-400",
-  call_agendada: "bg-purple-500/15 text-purple-400",
-  call_realizada: "bg-violet-500/15 text-violet-400",
-  proposta_enviada: "bg-emerald-500/15 text-emerald-400",
-  fechado: "bg-green-500/15 text-green-400",
-  aguardando_humano: "bg-orange-500/15 text-orange-400",
-  frio: "bg-cyan-500/15 text-cyan-400",
-  blacklist: "bg-gray-500/15 text-gray-400",
+  novo: "bg-slate-100 text-slate-600",
+  abordado: "bg-blue-50 text-blue-600",
+  em_cadencia: "bg-indigo-50 text-indigo-600",
+  respondeu: "bg-amber-50 text-amber-600",
+  quente: "bg-red-50 text-red-600",
+  call_agendada: "bg-purple-50 text-purple-600",
+  call_realizada: "bg-violet-50 text-violet-600",
+  proposta_enviada: "bg-emerald-50 text-emerald-600",
+  fechado: "bg-green-50 text-green-600",
+  aguardando_humano: "bg-orange-50 text-orange-600",
+  frio: "bg-cyan-50 text-cyan-600",
+  blacklist: "bg-gray-100 text-gray-500",
 };
 
 export function PipelineStats({ prospects, onStageClick }: Props) {
