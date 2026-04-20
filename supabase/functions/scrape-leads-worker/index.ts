@@ -45,25 +45,69 @@ function buildSmartQueries(niche: string, locationStr: string, intent: string): 
   const city = loc.split(",")[0]?.trim() || "";
   const nicheLower = niche.toLowerCase();
 
-  if (nicheLower.includes("revenda") || nicheLower.includes("veículo") || nicheLower.includes("seminovo") || nicheLower.includes("carro")) {
+  if (nicheLower.includes("revenda") || nicheLower.includes("veículo") || nicheLower.includes("seminovo") || nicheLower.includes("carro") || nicheLower.includes("auto")) {
     const queries = [
-      `revenda seminovos ${city} telefone WhatsApp`,
-      `loja de carros usados ${city} contato`,
-      `revenda veículos seminovos ${loc} celular endereço`,
+      `revenda seminovos ${city} WhatsApp telefone`,
+      `loja carros usados ${city} contato celular`,
+      `multimarcas ${city} veículos seminovos endereço`,
+      `compra venda veículos ${city} WhatsApp celular`,
+      `seminovos ${loc} telefone site`,
+      `"revenda" "${city}" veículos fone contato`,
+      `automoveis seminovos ${city} celular endereço`,
     ];
-    if (intent?.trim()) queries.push(`revenda veículos ${loc} ${intent.trim().slice(0, 60)}`);
-    return queries.slice(0, 4);
+    if (intent?.trim()) queries.push(`${city} veículos seminovos ${intent.trim().slice(0, 80)}`);
+    return queries.slice(0, 8);
   }
 
-  // Generic niche: build 4 diverse queries to maximize coverage
+  if (nicheLower.includes("estética") || nicheLower.includes("estetic") || nicheLower.includes("bem-estar") || nicheLower.includes("depilação") || nicheLower.includes("skincare")) {
+    const queries = [
+      `clínica estética ${city} WhatsApp telefone`,
+      `estética ${city} agendamento contato celular`,
+      `salão estética ${city} telefone endereço`,
+      `clínica depilação ${city} WhatsApp contato`,
+      `estética dermato ${city} celular site`,
+      `"estética" "${city}" fone agendamento`,
+      `clínica beleza ${city} contato WhatsApp`,
+    ];
+    if (intent?.trim()) queries.push(`${city} estética ${intent.trim().slice(0, 80)}`);
+    return queries.slice(0, 8);
+  }
+
+  if (nicheLower.includes("odonto") || nicheLower.includes("dentist") || nicheLower.includes("clínica odontológ")) {
+    const queries = [
+      `clínica odontológica ${city} WhatsApp telefone`,
+      `dentista ${city} contato celular endereço`,
+      `odontologia ${city} agendamento site`,
+      `clínica dental ${city} WhatsApp`,
+      `"odontológica" "${city}" fone contato`,
+    ];
+    if (intent?.trim()) queries.push(`${city} odontologia ${intent.trim().slice(0, 80)}`);
+    return queries.slice(0, 6);
+  }
+
+  if (nicheLower.includes("advoca") || nicheLower.includes("jurídic") || nicheLower.includes("direito")) {
+    const queries = [
+      `escritório advocacia ${city} WhatsApp telefone`,
+      `advogado ${city} contato celular`,
+      `advogados ${city} site endereço`,
+      `"advocacia" "${city}" fone`,
+      `direito ${city} escritório contato`,
+    ];
+    if (intent?.trim()) queries.push(`${city} advocacia ${intent.trim().slice(0, 80)}`);
+    return queries.slice(0, 6);
+  }
+
+  // Generic niche: 6 diverse queries to maximize coverage
   const queries = [
     `${niche} ${loc} telefone contato`,
     `${niche} ${loc} WhatsApp celular`,
     `"${niche}" "${city}" endereço telefone`,
-    `${niche} perto de ${city} contato celular site`,
+    `${niche} ${city} site contato`,
+    `${niche} perto de ${city} celular WhatsApp`,
+    `${niche} ${loc} fone endereço site`,
   ];
-  if (intent?.trim()) queries[3] = `${niche} ${loc} ${intent.trim().slice(0, 60)}`;
-  return queries.slice(0, 4);
+  if (intent?.trim()) queries[5] = `${niche} ${loc} ${intent.trim().slice(0, 80)}`;
+  return queries.slice(0, 6);
 }
 
 /** Split pages into batches and call AI for each batch, then merge contacts */
@@ -150,9 +194,11 @@ Deno.serve(async (req) => {
 
     console.log(`[${jobId}] Worker started: "${niche}" in "${locationStr}" (${desiredCount} leads)`);
 
-    // PHASE 1: Search (up to 4 queries for better coverage)
+    // PHASE 1: Search — each query gets a fixed minimum so total coverage
+    // isn't penalized by having more queries. perQueryLimit is at least 15
+    // regardless of query count so a wider query set doesn't shrink each search.
     const queries = buildSmartQueries(niche, locationStr, prospecting_intent);
-    const perQueryLimit = Math.ceil(desiredCount / queries.length);
+    const perQueryLimit = Math.max(Math.ceil(desiredCount * 1.5 / queries.length), 15);
 
     const allResults: any[] = [];
     const seenUrls = new Set<string>();
@@ -181,8 +227,9 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ status: "completed", count: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // PHASE 2: Send ALL pages to AI in batches (no more 10-page cap)
-    const maxPages = Math.min(allResults.length, 40);
+    // PHASE 2: Send pages to AI in batches — raised cap to 80 to handle
+    // larger result sets from the expanded query list
+    const maxPages = Math.min(allResults.length, 80);
     const pagesForAI = allResults.slice(0, maxPages);
 
     console.log(`[${jobId}] Sending ${pagesForAI.length} pages to AI in batches...`);
@@ -289,7 +336,7 @@ Deno.serve(async (req) => {
         avg_icp_score: uniqueContacts.length
           ? Math.round(uniqueContacts.reduce((s: number, c: any) => s + (c.icp_score || 50), 0) / uniqueContacts.length)
           : 0,
-        results: uniqueContacts.slice(0, 50).map((c: any) => ({
+        results: uniqueContacts.slice(0, 100).map((c: any) => ({
           name: capitalizeName(c.name || c.company || "") || null,
           phone: formatPhone(c.phone || ""), email: c.email || null,
           company: c.company || null, city: c.city || null,
