@@ -8,7 +8,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { normalizePhone, resolveSendInstance } from "../_shared/instance-resolver.ts";
 
 
-async function findConfig(supabase: ReturnType<typeof createClient>, nicho: string) {
+async function findConfig(supabase: any, nicho: string) {
   const { data: exactConfig } = await supabase
     .from("consultoria_config")
     .select("*")
@@ -29,7 +29,7 @@ async function findConfig(supabase: ReturnType<typeof createClient>, nicho: stri
 }
 
 async function upsertState(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   prospectId: string,
   step: string,
   completedSteps: string[],

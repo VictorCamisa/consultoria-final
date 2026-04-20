@@ -2,9 +2,7 @@
  * Centralized WhatsApp instance resolution and phone normalization.
  * Used by: send-whatsapp, abordar-prospect, process-cadencia, sync-whatsapp-messages, whatsapp-webhook
  */
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-type SupabaseClient = ReturnType<typeof createClient>;
+type SupabaseClient = any;
 
 /** Normalize phone to E.164-ish format: digits only, with 55 prefix */
 export function normalizePhone(raw: string): string {
