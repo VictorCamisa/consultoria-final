@@ -39,8 +39,8 @@ export function VSAutoMetrics() {
 
       const { data: prospects } = await supabase
         .from("consultoria_prospects")
-        .select("id, status, mrr_estimado, created_at, classificacao_ia")
-        .or("nicho.ilike.%revenda%,nicho.ilike.%veículo%,nicho.ilike.%auto%,nicho.ilike.%seminov%,is_vs_auto.eq.true");
+        .select("id, status, created_at, classificacao_ia, nicho")
+        .or("nicho.ilike.%revenda%,nicho.ilike.%veículo%,nicho.ilike.%auto%,nicho.ilike.%seminov%");
 
       const all = prospects || [];
       const mapeadosSemana = all.filter(
