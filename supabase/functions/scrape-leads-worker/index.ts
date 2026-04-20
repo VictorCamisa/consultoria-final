@@ -176,6 +176,43 @@ Responda APENAS JSON: {"contacts":[{"name":"str|null","phone":"str|null","email"
   return allContacts;
 }
 
+/** Queries de expansão geográfica para quando a cidade local não tem leads suficientes */
+function buildExpansionQueries(niche: string, locationStr: string): string[] {
+  const parts = (locationStr || "").split(",");
+  const city  = parts[0]?.trim() || "";
+  const state = parts[parts.length - 1]?.trim() || "";
+  const nicheLower = niche.toLowerCase();
+
+  if (nicheLower.includes("revenda") || nicheLower.includes("veículo") || nicheLower.includes("seminovo") || nicheLower.includes("carro") || nicheLower.includes("auto")) {
+    return [
+      `revenda veículos região ${city} ${state} contato celular`,
+      `carros usados ${state} interior telefone WhatsApp`,
+      `comprar carro seminovo ${state} revenda contato`,
+      `multimarcas interior ${state} veículos celular endereço`,
+      `revenda automoveis cidades próximas ${city} WhatsApp`,
+    ];
+  }
+  if (nicheLower.includes("estética") || nicheLower.includes("estetic") || nicheLower.includes("depilação") || nicheLower.includes("skincare")) {
+    return [
+      `clínica estética região ${city} ${state} WhatsApp`,
+      `estética ${state} interior celular agendamento`,
+      `procedimentos estéticos ${state} interior contato`,
+      `depilação ${state} ${city} região WhatsApp`,
+    ];
+  }
+  if (nicheLower.includes("odonto") || nicheLower.includes("dentist")) {
+    return [
+      `clínica odontológica região ${city} ${state} telefone`,
+      `dentista ${state} interior contato celular`,
+    ];
+  }
+  return [
+    `${niche} ${state} interior região ${city} telefone`,
+    `${niche} ${state} celular contato endereço`,
+    `${niche} cidades próximas ${city} WhatsApp`,
+  ];
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -319,6 +356,96 @@ Deno.serve(async (req) => {
         const { error: insertError } = await supabaseAdmin.from("leads_raw").insert(chunk);
         if (insertError) console.error("Insert error:", insertError);
         else savedCount += chunk.length;
+      }
+    }
+
+    // PHASE 4: Geographic expansion — if we still need more leads, try regional queries
+    if (savedCount < desiredCount) {
+      const needed = desiredCount - savedCount;
+      console.log(`[${jobId}] Phase 4: need ${needed} more leads — expanding geographically...`);
+
+      const expandQueries = buildExpansionQueries(niche, locationStr);
+      const expandResults: any[] = [];
+
+      for (const q of expandQueries) {
+        const result = await firecrawlSearch(FIRECRAWL_API_KEY, q, 15);
+        for (const r of result.results) {
+          const url = r.url || r.metadata?.sourceURL || "";
+          if (url && !seenUrls.has(url)) {
+            seenUrls.add(url);
+            expandResults.push(r);
+          }
+        }
+      }
+
+      console.log(`[${jobId}] Phase 4: ${expandResults.length} new pages from expansion`);
+
+      if (expandResults.length > 0) {
+        const expandContacts = await extractContactsBatch(
+          expandResults.slice(0, 30), niche, locationStr, prospecting_intent, jobId
+        );
+
+        // Deduplicate within expansion (reuse seenPhones/seenEmails from phase 3)
+        const expandUnique = expandContacts.filter((c: any) => {
+          const phone = formatPhone(c.phone || "");
+          const email = c.email?.toLowerCase()?.trim();
+          if (phone && seenPhones.has(phone)) return false;
+          if (!phone && email && seenEmails.has(email)) return false;
+          if (phone) seenPhones.add(phone);
+          if (email) seenEmails.add(email);
+          return phone || email;
+        });
+
+        // Check DB for expansion contacts
+        const expandPhones = expandUnique.map((c: any) => formatPhone(c.phone || "")).filter(Boolean) as string[];
+        if (expandPhones.length > 0) {
+          const [{ data: rawExp }, { data: prospectsExp }] = await Promise.all([
+            supabaseAdmin.from("leads_raw").select("phone").in("phone", expandPhones),
+            supabaseAdmin.from("consultoria_prospects").select("whatsapp").in("whatsapp", expandPhones),
+          ]);
+          (rawExp || []).forEach((l: any) => existingPhones.add(l.phone));
+          (prospectsExp || []).forEach((l: any) => existingPhones.add(l.whatsapp));
+        }
+
+        const expandNewLeads = expandUnique
+          .map((c: any) => {
+            const phone = formatPhone(c.phone || "");
+            const email = c.email?.toLowerCase()?.trim() || null;
+            const icpScore = typeof c.icp_score === "number" ? Math.min(100, Math.max(0, Math.round(c.icp_score))) : 50;
+            if (phone && existingPhones.has(phone)) return null;
+            return {
+              name: capitalizeName(c.name || c.company || "") || "Lead sem nome",
+              phone, email,
+              source: "web" as const,
+              status: "pending" as const,
+              tags: [`job:${jobId}`, "expansion"],
+              enrichment_data: {
+                company: c.company || null, role: c.role || null, city: c.city || null,
+                website: c.website || null, segment: c.segment || niche,
+                scraped_niche: niche, scraped_location: locationStr,
+                scraped_at: new Date().toISOString(),
+                prospecting_intent: prospecting_intent || null,
+                icp_score: icpScore, icp_reason: c.icp_reason || null,
+                job_id: jobId, expansion: true,
+              },
+            };
+          })
+          .filter(Boolean);
+
+        if (expandNewLeads.length > 0) {
+          for (let i = 0; i < expandNewLeads.length; i += 50) {
+            const chunk = expandNewLeads.slice(i, i + 50);
+            const { error: insertError } = await supabaseAdmin.from("leads_raw").insert(chunk);
+            if (insertError) console.error("Expand insert error:", insertError);
+            else savedCount += chunk.length;
+          }
+        }
+
+        // Merge for sentinel results
+        uniqueContacts.push(...expandUnique);
+        contacts.push(...expandContacts);
+
+        console.log(`[${jobId}] Phase 4 done: +${expandNewLeads.length} leads (total ${savedCount})`);
       }
     }
 
