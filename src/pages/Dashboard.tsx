@@ -10,6 +10,7 @@ import {
   AlertTriangle, BrainCircuit, Flame, Thermometer, Snowflake, Clock, Rocket,
 } from "lucide-react";
 import ProspectingWizard from "@/components/dashboard/ProspectingWizard";
+import { VSAutoMetrics } from "@/components/dashboard/VSAutoMetrics";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -150,6 +151,9 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      <VSAutoMetrics />
+      <div className="border-t border-border" />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">

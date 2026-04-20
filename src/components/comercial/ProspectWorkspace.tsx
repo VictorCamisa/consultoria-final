@@ -18,6 +18,7 @@ import { StickyNote, Plus, Trash2, Clock } from "lucide-react";
 import { Prospect, PIPELINE_STAGES, classificacaoConfig, scoreColor, timeAgo } from "./types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChatInputBar, ChatBubble } from "./WhatsAppChat";
+import { ChecklistEtapa } from "./ChecklistEtapa";
 
 interface Props {
   prospect: Prospect | null;
@@ -777,6 +778,14 @@ export function ProspectWorkspace({
                   <ActionButton icon={<BrainCircuit className="h-4 w-4" />} label="Classificar com IA" desc="Analisa e classifica o lead" loading={loadingClassify} onClick={handleClassify} />
                 </div>
               </div>
+
+              {/* Checklist VS AUTO */}
+              <ChecklistEtapa
+                prospect={prospect}
+                onUpdate={onProspectUpdate}
+              />
+
+              <div className="border-t border-border pt-4" />
 
               {/* Move Stage */}
               <div>
