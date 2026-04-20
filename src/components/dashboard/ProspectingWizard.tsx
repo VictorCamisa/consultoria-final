@@ -21,6 +21,7 @@ import {
   Building2, Target, Globe, Phone, Mail, Star, ThumbsUp, ThumbsDown, SkipForward,
   Sparkles, ArrowRight,
 } from "lucide-react";
+import { nichoCategory } from "@/components/comercial/types";
 
 type ScrapeResult = {
   name: string | null;
@@ -37,6 +38,68 @@ type ScrapeResult = {
 };
 
 // PRESET_SEGMENTS now loaded dynamically via useNichos hook
+
+const INTENT_PRESETS: Record<string, string> = {
+  estetica: "Clínicas de estética com Instagram ativo (posts de antes/depois), sem sistema de agendamento online. Priorizar quem atende só pelo WhatsApp manual e tem mais de 100 seguidores.",
+  revendas: "Lojas de veículos seminovos com mais de 10 carros no estoque, presença no OLX ou WebMotors, sem automação de atendimento no WhatsApp. Priorizar donos que dependem de vendedor para responder leads.",
+  odonto: "Clínicas odontológicas com Google Business ativo e sem confirmação automática de consultas. Faturamento estimado acima de R$30k/mês.",
+  advocacia: "Escritórios de advocacia sem captação digital estruturada, que dependem de indicação e não têm automação de qualificação de leads.",
+};
+
+const ICP_CRITERIA: Record<string, { label: string; colorBorder: string; colorText: string; items: string[] }> = {
+  estetica: {
+    label: "ICP Estética",
+    colorBorder: "border-pink-500/30 bg-pink-500/5",
+    colorText: "text-pink-600",
+    items: [
+      "Instagram com posts antes/depois (+2pts)",
+      "Sem Booksy / Fresha / agendamento online (+2pts)",
+      "Mais de 100 seguidores no Instagram (+1pt)",
+      "Avaliações no Google Business (+1pt)",
+      "Score mín. 5pts para abordar",
+    ],
+  },
+  revendas: {
+    label: "ICP VS AUTO",
+    colorBorder: "border-blue-500/30 bg-blue-500/5",
+    colorText: "text-blue-600",
+    items: [
+      "Estoque mín. 10 veículos no OLX/WebMotors (+2pts)",
+      "Sem automação de atendimento no WhatsApp (+2pts)",
+      "Instagram ativo com fotos dos veículos (+1pt)",
+      "Sistema atual identificável (Autocerto, etc.) (+1pt)",
+      "Score mín. 5pts para abordar",
+    ],
+  },
+};
+
+const NICHO_SEARCH_STAGES: Record<string, string[]> = {
+  estetica: [
+    "Analisando perfil ICP de clínicas estéticas...",
+    "Buscando clínicas no Google Maps e Instagram...",
+    "Verificando sistema de agendamento (Booksy/Fresha)...",
+    "Raspando WhatsApp e Instagram das clínicas...",
+    "Qualificando com score ICP estética...",
+    "Priorizando clínicas sem agendamento online...",
+  ],
+  revendas: [
+    "Analisando perfil ICP de revendas VS AUTO...",
+    "Buscando lojas no OLX Autos e WebMotors...",
+    "Verificando estoque e portais de cada loja...",
+    "Raspando WhatsApp e Instagram das lojas...",
+    "Qualificando com score ICP VS AUTO...",
+    "Priorizando lojas sem automação de atendimento...",
+  ],
+};
+
+const DEFAULT_SEARCH_STAGES = [
+  "Analisando perfil e ICP...",
+  "Montando buscas inteligentes...",
+  "Buscando leads na web...",
+  "Raspando páginas de contato...",
+  "Qualificando com score ICP...",
+  "Finalizando extração...",
+];
 
 const STATES = [
   "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
@@ -79,17 +142,19 @@ export default function ProspectingWizard({
   const [step, setStep] = useState<Step>("config");
 
   const activeNiche = customNiche || selectedNiche;
+  const activeNichoCategory = nichoCategory(activeNiche);
+  const SEARCH_STAGES = (activeNichoCategory && NICHO_SEARCH_STAGES[activeNichoCategory.key]) || DEFAULT_SEARCH_STAGES;
   const currentLead = results[currentIndex];
   const reviewDone = currentIndex >= results.length && results.length > 0;
 
-  const SEARCH_STAGES = [
-    "Analisando perfil e ICP...",
-    "Montando buscas inteligentes...",
-    "Buscando leads na web...",
-    "Raspando páginas de contato...",
-    "Qualificando com score ICP...",
-    "Finalizando extração...",
-  ];
+  const handleSelectNiche = (nicheValue: string) => {
+    setSelectedNiche(nicheValue);
+    setCustomNiche("");
+    const cat = nichoCategory(nicheValue);
+    if (cat && INTENT_PRESETS[cat.key] && !intent) {
+      setIntent(INTENT_PRESETS[cat.key]);
+    }
+  };
 
   const reset = () => {
     setSelectedNiche(""); setCustomNiche(""); setState(""); setCity(""); setBairro("");
@@ -165,6 +230,7 @@ export default function ProspectingWizard({
     if (approved.length === 0) return;
     setSaving(true);
     try {
+      const isRevenda = activeNichoCategory?.key === "revendas";
       const prospects = approved
         .filter((l) => l.phone)
         .map((l) => ({
@@ -179,7 +245,13 @@ export default function ProspectingWizard({
           origem: "prospeccao_web",
           status: "novo",
           responsavel: "danilo",
-        }));
+          is_vs_auto: isRevenda,
+          mrr_estimado: isRevenda ? 1497 : undefined,
+          icp_auto_data: {
+            tem_site: !!(l.website),
+            score_pontos: l.icp_score ?? null,
+          },
+        } as any));
 
       if (prospects.length === 0) {
         toast({ title: "Nenhum lead com telefone", variant: "destructive" });
@@ -236,13 +308,38 @@ export default function ProspectingWizard({
 
             <div className="space-y-5 py-2">
               {/* Niche selection */}
+              {/* ICP Banner — nicho-aware */}
+              {activeNichoCategory && ICP_CRITERIA[activeNichoCategory.key] ? (
+                <div className={`p-3 rounded-lg border space-y-1.5 ${ICP_CRITERIA[activeNichoCategory.key].colorBorder}`}>
+                  <div className="flex items-center gap-1.5">
+                    <Target className={`h-3.5 w-3.5 shrink-0 ${ICP_CRITERIA[activeNichoCategory.key].colorText}`} />
+                    <p className={`text-xs font-semibold ${ICP_CRITERIA[activeNichoCategory.key].colorText}`}>
+                      {ICP_CRITERIA[activeNichoCategory.key].label} — critérios de qualificação
+                    </p>
+                  </div>
+                  <ul className="space-y-0.5 pl-5">
+                    {ICP_CRITERIA[activeNichoCategory.key].items.map((item, i) => (
+                      <li key={i} className="text-[10px] text-muted-foreground list-disc">{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
+                  <Target className="h-3.5 w-3.5 text-green-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-medium text-green-600">ICP configurado — VS Growth Hub</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Donos de negócios locais, faturamento acima de R$30k/mês</p>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Nicho / Segmento</Label>
                 <div className="flex flex-wrap gap-2">
                   {PRESET_SEGMENTS.map((seg) => (
                     <button
                       key={seg.value}
-                      onClick={() => { setSelectedNiche(seg.value); setCustomNiche(""); }}
+                      onClick={() => handleSelectNiche(seg.value)}
                       className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
                         selectedNiche === seg.value
                           ? "bg-primary text-primary-foreground border-primary"

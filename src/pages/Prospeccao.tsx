@@ -28,6 +28,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useEvolutionInstances } from "@/hooks/useEvolutionInstances";
 import type { Tables } from "@/integrations/supabase/types";
 import { buildLeadIdentityKey, normalizePhone } from "@/lib/utils";
+import { nichoCategory } from "@/components/comercial/types";
 
 type ProspectIdentity = Pick<Tables<"consultoria_prospects">, "id" | "whatsapp" | "nome_negocio" | "cidade" | "site">;
 
@@ -47,12 +48,60 @@ type ScrapeJob = {
 
 // PRESET_SEGMENTS now loaded dynamically via useNichos hook
 
-const STATES = [
-  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
-  "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO",
-];
+const INTENT_PRESETS: Record<string, string> = {
+  estetica: "Clínicas de estética com Instagram ativo (posts de antes/depois), sem sistema de agendamento online. Priorizar quem atende só pelo WhatsApp manual e tem mais de 100 seguidores.",
+  revendas: "Lojas de veículos seminovos com mais de 10 carros no estoque, presença no OLX ou WebMotors, sem automação de atendimento no WhatsApp. Priorizar donos que dependem de vendedor para responder leads.",
+  odonto: "Clínicas odontológicas com Google Business ativo e sem confirmação automática de consultas. Faturamento estimado acima de R$30k/mês.",
+  advocacia: "Escritórios de advocacia sem captação digital estruturada, que dependem de indicação e não têm automação de qualificação de leads.",
+};
 
-const PROSPECTING_STAGES = [
+const ICP_CRITERIA: Record<string, { label: string; colorBorder: string; colorText: string; items: string[] }> = {
+  estetica: {
+    label: "ICP Estética",
+    colorBorder: "border-pink-500/30 bg-pink-500/5",
+    colorText: "text-pink-600",
+    items: [
+      "Instagram com posts antes/depois (+2pts)",
+      "Sem Booksy / Fresha / agendamento online (+2pts)",
+      "Mais de 100 seguidores no Instagram (+1pt)",
+      "Avaliações no Google Business (+1pt)",
+      "Score mín. 5pts para abordar",
+    ],
+  },
+  revendas: {
+    label: "ICP VS AUTO",
+    colorBorder: "border-blue-500/30 bg-blue-500/5",
+    colorText: "text-blue-600",
+    items: [
+      "Estoque mín. 10 veículos no OLX/WebMotors (+2pts)",
+      "Sem automação de atendimento no WhatsApp (+2pts)",
+      "Instagram ativo com fotos dos veículos (+1pt)",
+      "Sistema atual identificável (Autocerto, etc.) (+1pt)",
+      "Score mín. 5pts para abordar",
+    ],
+  },
+};
+
+const NICHO_SEARCH_STAGES: Record<string, { label: string; delay: number }[]> = {
+  estetica: [
+    { label: "Analisando perfil ICP de clínicas estéticas...", delay: 0 },
+    { label: "Buscando clínicas no Google Maps e Instagram...", delay: 3000 },
+    { label: "Verificando sistema de agendamento (Booksy/Fresha)...", delay: 8000 },
+    { label: "Raspando WhatsApp e Instagram das clínicas...", delay: 15000 },
+    { label: "Qualificando com score ICP estética...", delay: 25000 },
+    { label: "Priorizando clínicas sem agendamento online...", delay: 40000 },
+  ],
+  revendas: [
+    { label: "Analisando perfil ICP de revendas VS AUTO...", delay: 0 },
+    { label: "Buscando lojas no OLX Autos e WebMotors...", delay: 3000 },
+    { label: "Verificando estoque e portais de cada loja...", delay: 8000 },
+    { label: "Raspando WhatsApp e Instagram das lojas...", delay: 15000 },
+    { label: "Qualificando com score ICP VS AUTO...", delay: 25000 },
+    { label: "Priorizando lojas sem automação de atendimento...", delay: 40000 },
+  ],
+};
+
+const DEFAULT_PROSPECTING_STAGES = [
   { label: "Analisando perfil da consultoria e ICP...", delay: 0 },
   { label: "Montando consultas inteligentes para o nicho...", delay: 3000 },
   { label: "Buscando leads em sites públicos...", delay: 8000 },
@@ -61,7 +110,13 @@ const PROSPECTING_STAGES = [
   { label: "Salvando leads no banco de dados...", delay: 40000 },
 ];
 
-function ProspectingThinkingFeed({ isRunning }: { isRunning: boolean }) {
+const STATES = [
+  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG",
+  "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO",
+];
+
+function ProspectingThinkingFeed({ isRunning, nichoKey }: { isRunning: boolean; nichoKey?: string }) {
+  const stages = (nichoKey && NICHO_SEARCH_STAGES[nichoKey]) || DEFAULT_PROSPECTING_STAGES;
   const [currentStep, setCurrentStep] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
   const startRef = useRef(Date.now());
@@ -73,7 +128,7 @@ function ProspectingThinkingFeed({ isRunning }: { isRunning: boolean }) {
     const timer = setInterval(() => {
       const elapsed = Date.now() - startRef.current;
       setElapsedMs(elapsed);
-      setCurrentStep(Math.max(0, PROSPECTING_STAGES.filter(s => elapsed >= s.delay).length - 1));
+      setCurrentStep(Math.max(0, stages.filter(s => elapsed >= s.delay).length - 1));
     }, 500);
     return () => clearInterval(timer);
   }, [isRunning]);
@@ -83,7 +138,7 @@ function ProspectingThinkingFeed({ isRunning }: { isRunning: boolean }) {
 
   return (
     <div className="mt-3 space-y-1.5 pl-1">
-      {PROSPECTING_STAGES.map((stage, i) => {
+      {stages.map((stage, i) => {
         if (i > currentStep) return null;
         return (
           <div key={i} className="flex items-center gap-2 animate-fade-in">
@@ -234,7 +289,17 @@ export default function Prospeccao() {
 
   const activeNiche = customNiche || selectedNiche;
   const activeLocation = [selectedCity, selectedBairro, selectedState].filter(Boolean).join(", ");
+  const activeNichoCategory = nichoCategory(activeNiche);
   const resetWizard = () => { setSelectedNiche(""); setCustomNiche(""); setSelectedState(""); setSelectedCity(""); setSelectedBairro(""); setLeadCount(20); setProspectingIntent(""); };
+
+  const handleSelectNiche = (nicheValue: string) => {
+    setSelectedNiche(nicheValue);
+    setCustomNiche("");
+    const cat = nichoCategory(nicheValue);
+    if (cat && INTENT_PRESETS[cat.key] && !prospectingIntent) {
+      setProspectingIntent(INTENT_PRESETS[cat.key]);
+    }
+  };
 
   // === KPI Metrics ===
   const kpiMetrics = useMemo(() => {
@@ -315,9 +380,12 @@ export default function Prospeccao() {
         }
 
         batchKeys.add(identityKey);
+        const leadNicho = enrichment.segment || enrichment.scraped_niche || "Não definido";
+        const leadCat = nichoCategory(leadNicho);
+        const isRevenda = leadCat?.key === "revendas";
         prospectsToInsert.push({
           nome_negocio: l.name || enrichment.company || "Lead sem nome",
-          nicho: enrichment.segment || enrichment.scraped_niche || "Não definido",
+          nicho: leadNicho,
           cidade: enrichment.city || enrichment.scraped_location || "Não informada",
           whatsapp: normalizedWhatsapp,
           site: enrichment.website || null,
@@ -327,7 +395,15 @@ export default function Prospeccao() {
           origem: l.source === "web" ? "prospeccao_web" : l.source === "whatsapp" ? "whatsapp" : "manual",
           status: "novo",
           responsavel: "danilo",
-        });
+          is_vs_auto: isRevenda,
+          mrr_estimado: isRevenda ? 1497 : undefined,
+          icp_auto_data: {
+            tem_site: !!(enrichment.website),
+            instagram_ativo: enrichment.instagram_ativo ?? null,
+            sistema_atual: enrichment.sistema_atual ?? null,
+            score_pontos: enrichment.icp_score ?? null,
+          },
+        } as any);
       });
 
       if (prospectsToInsert.length === 0 && leadIdsToMarkPromoted.length === 0) {
@@ -875,7 +951,7 @@ export default function Prospeccao() {
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium truncate">{job.niche}</p>
                           {job.city && <p className="text-[10px] text-muted-foreground truncate">{job.city}</p>}
-                          {job.status === "running" && <ProspectingThinkingFeed isRunning={true} />}
+                          {job.status === "running" && <ProspectingThinkingFeed isRunning={true} nichoKey={nichoCategory(job.niche)?.key} />}
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
                           <Badge variant="secondary" className={`text-[10px] ${cfg.color}`}>{cfg.label}</Badge>
@@ -1061,16 +1137,32 @@ export default function Prospeccao() {
             <DialogDescription className="text-xs">A IA busca e qualifica leads automaticamente</DialogDescription>
           </DialogHeader>
           <div className="space-y-5">
-            {/* ICP Banner */}
-            <div className="flex items-start gap-2.5 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
-              <Target className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-green-600">ICP configurado — VS Growth Hub</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Qualificação baseada no perfil da consultoria (donos de negócios locais, faturamento acima de R$ 30k/mês)
-                </p>
+            {/* ICP Banner — nicho-aware */}
+            {activeNichoCategory && ICP_CRITERIA[activeNichoCategory.key] ? (
+              <div className={`p-3 rounded-lg border space-y-1.5 ${ICP_CRITERIA[activeNichoCategory.key].colorBorder}`}>
+                <div className="flex items-center gap-1.5">
+                  <Target className={`h-3.5 w-3.5 shrink-0 ${ICP_CRITERIA[activeNichoCategory.key].colorText}`} />
+                  <p className={`text-xs font-semibold ${ICP_CRITERIA[activeNichoCategory.key].colorText}`}>
+                    {ICP_CRITERIA[activeNichoCategory.key].label} — critérios de qualificação
+                  </p>
+                </div>
+                <ul className="space-y-0.5 pl-5">
+                  {ICP_CRITERIA[activeNichoCategory.key].items.map((item, i) => (
+                    <li key={i} className="text-[10px] text-muted-foreground list-disc">{item}</li>
+                  ))}
+                </ul>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-start gap-2.5 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
+                <Target className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-green-600">ICP configurado — VS Growth Hub</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Qualificação baseada no perfil da consultoria (donos de negócios locais, faturamento acima de R$30k/mês)
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Prospecting Intent */}
             <div className="space-y-1.5">
@@ -1100,7 +1192,7 @@ export default function Prospeccao() {
                   </p>
                   <div className="grid grid-cols-3 gap-2">
                     {PRESET_SEGMENTS.filter(n => n.primary).map(n => (
-                      <button key={n.value} onClick={() => { setSelectedNiche(n.value); setCustomNiche(""); }}
+                      <button key={n.value} onClick={() => handleSelectNiche(n.value)}
                         className={`text-left p-3 rounded-lg border-2 transition-all text-xs ${
                           selectedNiche === n.value
                             ? "border-primary bg-primary/5 ring-1 ring-primary/30"
@@ -1123,7 +1215,7 @@ export default function Prospeccao() {
                   <CollapsibleContent className="mt-2">
                     <div className="grid grid-cols-3 gap-2">
                       {PRESET_SEGMENTS.filter(n => !n.primary).map(n => (
-                        <button key={n.value} onClick={() => { setSelectedNiche(n.value); setCustomNiche(""); }}
+                        <button key={n.value} onClick={() => handleSelectNiche(n.value)}
                           className={`text-left p-3 rounded-lg border transition-all text-xs ${
                             selectedNiche === n.value
                               ? "border-primary bg-primary/5 ring-1 ring-primary/30"
