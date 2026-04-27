@@ -1,7 +1,6 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { Outlet, useLocation } from "react-router-dom";
-import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { useEffect } from "react";
 import WhatsAppOnboarding from "@/components/WhatsAppOnboarding";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -9,26 +8,28 @@ import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const routeTitles: Record<string, string> = {
-  "/": "Dashboard — VS Growth Hub",
-  "/comercial": "Pipeline Comercial — VS Growth Hub",
-  "/agente-ia": "Central de Automação — VS Growth Hub",
-  "/prospeccao": "Prospecção — VS Growth Hub",
-  "/meu-vendedor": "Meu Vendedor — VS Growth Hub",
-  "/clientes": "Clientes — VS Growth Hub",
-  "/acompanhamento": "Acompanhamento — VS Growth Hub",
-  "/configuracoes": "Configurações — VS Growth Hub",
+  "/": "Dashboard",
+  "/comercial": "Comercial",
+  "/agente-ia": "Agente IA",
+  "/prospeccao": "Prospecção",
+  "/leads": "Leads",
+  "/meu-vendedor": "Meu Vendedor",
+  "/clientes": "Clientes",
+  "/acompanhamento": "Acompanhamento",
+  "/operacional": "Operacional",
+  "/configuracoes": "Configurações",
 };
 
 export default function AppLayout() {
   const location = useLocation();
   const isMobile = useIsMobile();
 
-  useEffect(() => {
-    const base = "/" + location.pathname.split("/").filter(Boolean).slice(0, 1).join("/");
-    document.title = routeTitles[base] || "VS Growth Hub";
-  }, [location.pathname]);
+  const base = "/" + location.pathname.split("/").filter(Boolean).slice(0, 1).join("/");
+  const pageTitle = routeTitles[base] ?? "VS Growth Hub";
 
-  const showBreadcrumbs = location.pathname !== "/";
+  useEffect(() => {
+    document.title = `${pageTitle} — VS Growth Hub`;
+  }, [pageTitle]);
 
   // Mobile layout
   if (isMobile) {
@@ -53,13 +54,10 @@ export default function AppLayout() {
 
         <div className="flex-1 flex flex-col min-w-0">
           {/* Topbar */}
-          <header className="h-11 flex items-center gap-3 border-b border-border bg-card px-5 shrink-0 sticky top-0 z-10">
+          <header className="h-14 flex items-center gap-3 border-b border-border/60 bg-card/80 backdrop-blur-sm px-5 shrink-0 sticky top-0 z-10">
             <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors -ml-1" />
-            {showBreadcrumbs && (
-              <div className="border-l border-border pl-3">
-                <Breadcrumbs />
-              </div>
-            )}
+            <div className="h-4 w-px bg-border" />
+            <span className="text-sm font-semibold text-foreground tracking-tight">{pageTitle}</span>
             <div className="ml-auto">
               <ThemeToggle />
             </div>

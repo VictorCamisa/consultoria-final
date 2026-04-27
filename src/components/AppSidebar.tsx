@@ -3,7 +3,6 @@ import {
   LogOut, BrainCircuit, Search, UserRoundCog, FolderKanban, Users2,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-import vsLogo from "@/assets/vs-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -18,42 +17,17 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-interface NavSection {
-  label: string;
-  items: { title: string; url: string; icon: React.ElementType; badgeKey?: string }[];
-}
-
-const sections: NavSection[] = [
-  {
-    label: "Geral",
-    items: [
-      { title: "Dashboard", url: "/", icon: LayoutDashboard },
-    ],
-  },
-  {
-    label: "Vendas",
-    items: [
-      { title: "Comercial", url: "/comercial", icon: Megaphone, badgeKey: "unread" },
-      { title: "Prospecção", url: "/prospeccao", icon: Search },
-      { title: "Leads", url: "/leads", icon: Users2 },
-      { title: "Meu Vendedor", url: "/meu-vendedor", icon: UserRoundCog },
-    ],
-  },
-  {
-    label: "Clientes",
-    items: [
-      { title: "Clientes", url: "/clientes", icon: Users },
-      { title: "Operacional", url: "/operacional", icon: FolderKanban },
-      { title: "Acompanhamento", url: "/acompanhamento", icon: CalendarCheck, badgeKey: "pendentes" },
-    ],
-  },
-  {
-    label: "Sistema",
-    items: [
-      { title: "Agente IA", url: "/agente-ia", icon: BrainCircuit },
-      { title: "Configurações", url: "/configuracoes", icon: Settings },
-    ],
-  },
+const navItems = [
+  { title: "Dashboard",      url: "/",               icon: LayoutDashboard },
+  { title: "Comercial",      url: "/comercial",       icon: Megaphone,      badgeKey: "unread" },
+  { title: "Agente IA",      url: "/agente-ia",       icon: BrainCircuit },
+  { title: "Prospecção",     url: "/prospeccao",      icon: Search },
+  { title: "Leads",          url: "/leads",           icon: Users2 },
+  { title: "Meu Vendedor",   url: "/meu-vendedor",    icon: UserRoundCog },
+  { title: "Clientes",       url: "/clientes",        icon: Users },
+  { title: "Operacional",    url: "/operacional",     icon: FolderKanban },
+  { title: "Acompanhamento", url: "/acompanhamento",  icon: CalendarCheck,  badgeKey: "pendentes" },
+  { title: "Configurações",  url: "/configuracoes",   icon: Settings },
 ];
 
 function getInitials(name: string | null) {
@@ -106,22 +80,31 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      {/* ── Brand ── */}
+      {/* ── Brand header ── */}
       <SidebarHeader className={cn("py-5 border-b border-sidebar-border", collapsed ? "px-2" : "px-4")}>
         <div
-          className={cn("flex items-center cursor-pointer", collapsed ? "justify-center" : "gap-2.5")}
+          className={cn("flex items-center cursor-pointer", collapsed ? "justify-center" : "gap-3")}
           onClick={() => navigate("/")}
         >
-          <img src={vsLogo} alt="VS Ecossistemas Digitais" className={cn("flex-shrink-0 object-contain", collapsed ? "w-8 h-8" : "w-9 h-9")} />
+          {/* VS monogram — V prata · S azul (Brand Bible v1.0) */}
+          <div className="rounded-lg w-8 h-8 flex-shrink-0 flex items-center justify-center bg-foreground">
+            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 15, letterSpacing: "-0.03em", lineHeight: 1 }}>
+              <span style={{ color: "#D4D8E4" }}>V</span>
+              <span style={{ color: "#4A8DE0" }}>S</span>
+            </span>
+          </div>
           {!collapsed && (
             <div className="min-w-0">
               <p
                 className="leading-none text-foreground"
-                style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, letterSpacing: "0.01em" }}
+                style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: "0.01em" }}
               >
                 VS Growth Hub
               </p>
-              <p className="vs-overline mt-0.5" style={{ fontSize: 9 }}>
+              <p
+                className="mt-0.5 leading-none text-muted-foreground"
+                style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 600, fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase" }}
+              >
                 Ecossistemas Digitais
               </p>
             </div>
@@ -130,55 +113,49 @@ export function AppSidebar() {
       </SidebarHeader>
 
       {/* ── Navigation ── */}
-      <SidebarContent className={cn("py-1 flex-1 overflow-y-auto", collapsed ? "px-1.5" : "px-2")}>
-        {sections.map((section) => (
-          <div key={section.label}>
-            {!collapsed && (
-              <div className="nav-section-label">{section.label}</div>
-            )}
-            {collapsed && <div className="h-3" />}
-            <SidebarMenu className="space-y-0.5">
-              {section.items.map((item) => {
-                const active = isActive(item.url);
-                const badgeCount = item.badgeKey ? badgeCounts[item.badgeKey] ?? 0 : 0;
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <button
-                      onClick={() => navigate(item.url)}
-                      className={cn(
-                        collapsed
-                          ? "flex items-center justify-center w-full p-2 rounded-md transition-colors relative"
-                          : "nav-item w-full",
-                        active && !collapsed && "active",
-                        active && collapsed && "bg-primary/8 text-primary",
-                        !active && collapsed && "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                      )}
-                      title={collapsed ? item.title : undefined}
-                    >
-                      <item.icon
-                        className={cn(
-                          "h-4 w-4 flex-shrink-0 nav-icon",
-                          active ? "text-primary" : "text-muted-foreground"
-                        )}
-                      />
-                      {!collapsed && (
-                        <span className={cn("flex-1 text-left", active ? "text-primary" : "")}>{item.title}</span>
-                      )}
-                      {badgeCount > 0 && (
-                        <span className={cn(
-                          "bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center",
-                          collapsed && "absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] text-[8px]"
-                        )}>
-                          {badgeCount > 99 ? "99+" : badgeCount}
-                        </span>
-                      )}
-                    </button>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </div>
-        ))}
+      <SidebarContent className={cn("py-3 flex-1 overflow-y-auto", collapsed ? "px-1" : "px-2")}>
+        <SidebarMenu className="space-y-0.5">
+          {navItems.map((item) => {
+            const active = isActive(item.url);
+            const badgeCount = item.badgeKey ? badgeCounts[item.badgeKey] ?? 0 : 0;
+            return (
+              <SidebarMenuItem key={item.title}>
+                <button
+                  onClick={() => navigate(item.url)}
+                  className={cn(
+                    collapsed
+                      ? "flex items-center justify-center w-full p-2 rounded-md transition-colors relative"
+                      : "nav-item w-full",
+                    active && !collapsed && "active",
+                    active && collapsed && "bg-primary/10 text-primary",
+                    !active && collapsed && "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+                  )}
+                  title={collapsed ? item.title : undefined}
+                >
+                  <item.icon
+                    className={cn(
+                      "h-4 w-4 flex-shrink-0",
+                      active ? "text-primary" : "text-sidebar-foreground"
+                    )}
+                  />
+                  {!collapsed && (
+                    <span className={cn("flex-1 text-left", active ? "text-primary" : "")}>
+                      {item.title}
+                    </span>
+                  )}
+                  {badgeCount > 0 && (
+                    <span className={cn(
+                      "bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center",
+                      collapsed && "absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] text-[8px]"
+                    )}>
+                      {badgeCount > 99 ? "99+" : badgeCount}
+                    </span>
+                  )}
+                </button>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
       </SidebarContent>
 
       {/* ── User footer ── */}
@@ -187,26 +164,26 @@ export function AppSidebar() {
           <button
             onClick={signOut}
             title="Sair"
-            className="flex items-center justify-center w-full p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/8 transition-colors"
+            className="flex items-center justify-center w-full p-2 rounded-md text-muted-foreground hover:text-destructive hover:bg-sidebar-accent transition-colors"
           >
             <LogOut className="h-4 w-4" />
           </button>
         ) : (
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-md bg-primary/8 flex-shrink-0 flex items-center justify-center">
-              <span className="text-[11px] font-semibold text-primary">
+            <div className="w-7 h-7 rounded-full bg-sidebar-accent flex-shrink-0 flex items-center justify-center">
+              <span className="text-[11px] font-semibold text-sidebar-accent-foreground">
                 {getInitials(userName)}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-foreground truncate leading-tight">
+              <p className="text-[12px] font-medium text-sidebar-accent-foreground truncate leading-tight">
                 {userName ?? "Usuário"}
               </p>
             </div>
             <button
               onClick={signOut}
               title="Sair"
-              className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/8 transition-colors"
+              className="p-1.5 rounded-md text-sidebar-foreground/60 hover:text-destructive hover:bg-sidebar-accent transition-colors"
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>
