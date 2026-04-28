@@ -2,121 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── VS Brand Bible v1.0 — Light Mode ───────────────────────────────────
-   Brand:     VS Blue #2E6FCC · Blue Light #4A8DE0 · Silver Light #D4D8E4
-   Fundos:    Branco #FFFFFF · Cinza Frio #F3F4F8 · Borda #E2E4EB
-   Texto:     Escuro #1A1C22 · Secundário #6B7280
-   Semântica: Sucesso #10B981 · Alerta #F59E0B · Erro #EF4444
-   Type:      Barlow Condensed (headings) · Barlow (body)
-   ────────────────────────────────────────────────────────────────────── */
+/* ─── VS Brand Bible 2026 · Tech Fusion ──────────────────────────────────
+   70% Deep Space Blue #050814 · 20% Branco #FFFFFF · 10% Cyber Orange #FF5300
+   Display: Poppins Black Italic 900 · Corpo: Montserrat 400/500/600/700
+   Regra: fundo SEMPRE escuro — modo claro só em emails transacionais
+   ─────────────────────────────────────────────────────────────────────── */
 
 @layer base {
   :root {
-    --background:           0 0% 100%;            /* #FFFFFF — nível 0 base     */
-    --foreground:           225 13% 12%;           /* #1A1C22 VS Surface         */
+    /* ── Fundos — Deep Space Blue system ── */
+    --background:           228 60% 5%;     /* #050814 Deep Space Blue        */
+    --foreground:           0 0% 100%;      /* #FFFFFF Branco Puro             */
 
-    --card:                 228 18% 96%;           /* #F3F4F8 Cinza Frio         */
-    --card-foreground:      225 13% 12%;
+    --card:                 228 50% 8%;     /* nível 1 — card sobre fundo      */
+    --card-foreground:      0 0% 100%;
 
-    --popover:              0 0% 100%;
-    --popover-foreground:   225 13% 12%;
+    --popover:              228 50% 9%;
+    --popover-foreground:   0 0% 100%;
 
-    --primary:              215 63% 49%;           /* #2E6FCC VS Blue            */
+    /* ── Primary = Cyber Orange — toda ação primária ── */
+    --primary:              20 100% 50%;    /* #FF5300 Cyber Orange            */
     --primary-foreground:   0 0% 100%;
 
-    --secondary:            228 18% 96%;           /* #F3F4F8                    */
-    --secondary-foreground: 220 9% 46%;            /* #6B7280                    */
+    --secondary:            228 40% 12%;
+    --secondary-foreground: 228 15% 65%;
 
-    --muted:                228 18% 96%;           /* #F3F4F8                    */
-    --muted-foreground:     220 9% 46%;            /* #6B7280                    */
+    --muted:                228 40% 12%;
+    --muted-foreground:     228 15% 50%;
 
-    --accent:               213 71% 58%;           /* #4A8DE0 Blue Light         */
+    --accent:               20 100% 50%;    /* Cyber Orange                    */
     --accent-foreground:    0 0% 100%;
 
-    --destructive:          0 84% 60%;             /* #EF4444                    */
+    --destructive:          0 84% 55%;
     --destructive-foreground: 0 0% 100%;
-    --success:              160 84% 39%;           /* #10B981                    */
+    --success:              160 84% 39%;
     --success-foreground:   0 0% 100%;
-    --warning:              38 92% 50%;            /* #F59E0B                    */
+    --warning:              38 92% 50%;
     --warning-foreground:   0 0% 100%;
 
-    --border:               228 14% 90%;           /* #E2E4EB                    */
-    --input:                228 14% 90%;
-    --ring:                 213 71% 58%;           /* Blue Light                 */
+    --border:               228 30% 14%;
+    --input:                228 30% 14%;
+    --ring:                 20 100% 50%;    /* Cyber Orange                    */
 
     --radius: 0.375rem;
 
-    --sidebar-background:         228 18% 97%;    /* #F5F6F9                    */
-    --sidebar-foreground:         220 9% 46%;     /* #6B7280                    */
-    --sidebar-primary:            213 71% 58%;    /* Blue Light                 */
+    /* ── Sidebar — ainda mais profundo ── */
+    --sidebar-background:         228 60% 4%;
+    --sidebar-foreground:         228 15% 55%;
+    --sidebar-primary:            20 100% 50%;     /* Cyber Orange            */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent:             228 18% 93%;    /* #EAECF1                    */
-    --sidebar-accent-foreground:  225 13% 12%;    /* #1A1C22                    */
-    --sidebar-border:             228 14% 90%;
-    --sidebar-ring:               213 71% 58%;
+    --sidebar-accent:             228 40% 10%;
+    --sidebar-accent-foreground:  0 0% 90%;
+    --sidebar-border:             228 30% 12%;
+    --sidebar-ring:               20 100% 50%;
 
-    /* Semantic surface helpers — light */
-    --surface-danger:       0 50% 96%;
-    --surface-danger-fg:    0 84% 45%;
-    --surface-warning:      38 50% 95%;
-    --surface-warning-fg:   38 80% 35%;
-    --surface-success:      152 40% 94%;
-    --surface-success-fg:   160 70% 32%;
-    --surface-info:         213 40% 95%;
-    --surface-info-fg:      215 63% 42%;
-  }
-
-  .dark {
-    --background:           222 47% 8%;
-    --foreground:           210 20% 92%;
-
-    --card:                 223 40% 11%;
-    --card-foreground:      210 20% 92%;
-
-    --popover:              223 40% 11%;
-    --popover-foreground:   210 20% 92%;
-
-    --primary:              215 63% 52%;
-    --primary-foreground:   0 0% 100%;
-
-    --secondary:            222 30% 16%;
-    --secondary-foreground: 210 15% 75%;
-
-    --muted:                222 30% 16%;
-    --muted-foreground:     215 12% 55%;
-
-    --accent:               213 71% 55%;
-    --accent-foreground:    0 0% 100%;
-
-    --destructive:          0 72% 55%;
-    --destructive-foreground: 0 0% 100%;
-    --success:              160 72% 42%;
-    --success-foreground:   0 0% 100%;
-    --warning:              38 92% 55%;
-    --warning-foreground:   30 95% 10%;
-
-    --border:               222 20% 18%;
-    --input:                222 20% 20%;
-    --ring:                 215 63% 52%;
-
-    --sidebar-background:         223 40% 10%;
-    --sidebar-foreground:         215 12% 55%;
-    --sidebar-primary:            215 63% 52%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent:             222 30% 16%;
-    --sidebar-accent-foreground:  210 20% 92%;
-    --sidebar-border:             222 20% 16%;
-    --sidebar-ring:               215 63% 52%;
-
-    /* Semantic surface helpers — dark */
+    /* Semantic surfaces — dark */
     --surface-danger:       0 50% 14%;
-    --surface-danger-fg:    0 72% 65%;
+    --surface-danger-fg:    0 84% 65%;
     --surface-warning:      38 50% 14%;
     --surface-warning-fg:   38 80% 65%;
     --surface-success:      152 40% 13%;
     --surface-success-fg:   160 60% 55%;
-    --surface-info:         213 40% 14%;
-    --surface-info-fg:      215 63% 62%;
+    --surface-info:         228 40% 14%;
+    --surface-info-fg:      228 60% 65%;
   }
 }
 
@@ -135,41 +83,36 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Barlow', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     font-weight: 400;
     line-height: 1.6;
-    letter-spacing: 0.005em;
     overscroll-behavior-y: none;
   }
 
   h1 {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 900;
+    font-style: italic;
     font-size: 1.75rem;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    color: hsl(var(--foreground));
+  }
+  h2 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 900;
+    font-style: italic;
+    font-size: 1.35rem;
     line-height: 1.15;
     letter-spacing: -0.02em;
     color: hsl(var(--foreground));
   }
-  h2 {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 1.35rem;
-    line-height: 1.2;
-    letter-spacing: -0.015em;
-    color: hsl(var(--foreground));
-  }
   h3 {
-    font-family: 'Barlow', sans-serif;
-    font-weight: 600;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
     font-size: 1rem;
     line-height: 1.35;
     color: hsl(var(--foreground));
-  }
-
-  /* Mobile heading sizes */
-  @media (max-width: 767px) {
-    h1 { font-size: 1.4rem; }
-    h2 { font-size: 1.15rem; }
   }
 
   /* Scrollbar */
@@ -180,67 +123,61 @@
     background: hsl(var(--border));
   }
   ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.4); }
-
-  /* Hide scrollbar on mobile for horizontal scroll */
-  @media (max-width: 767px) {
-    .hide-scrollbar::-webkit-scrollbar { display: none; }
-    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  }
 }
 
-/* ─── VS Utilities ───────────────────────────────────────────────────── */
+/* ─── Utilities VS Brand Bible 2026 ──────────────────────────────────── */
 @layer utilities {
   .vs-display {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: 'Poppins', sans-serif;
     font-weight: 900;
+    font-style: italic;
     font-size: 3rem;
     line-height: 1.05;
     letter-spacing: -0.025em;
   }
   .vs-h1 {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 900;
+    font-style: italic;
     font-size: 1.75rem;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+  }
+  .vs-h2 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 900;
+    font-style: italic;
+    font-size: 1.35rem;
     line-height: 1.15;
     letter-spacing: -0.02em;
   }
-  @media (max-width: 767px) {
-    .vs-h1 { font-size: 1.4rem; }
-  }
-  .vs-h2 {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 700;
-    font-size: 1.35rem;
-    line-height: 1.2;
-    letter-spacing: -0.015em;
-  }
   .vs-h3 {
-    font-family: 'Barlow', sans-serif;
-    font-weight: 600;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700;
     font-size: 1rem;
     line-height: 1.35;
   }
   .vs-body {
-    font-family: 'Barlow', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     font-weight: 400;
-    font-size: 0.933rem;
+    font-size: 0.9375rem;
     line-height: 1.6;
   }
+  /* Tagline — caixa alta, tracking 0.28em, Montserrat 500/600 */
   .vs-overline {
-    font-family: 'Barlow', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     font-weight: 600;
     font-size: 0.6875rem;
     line-height: 1;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.28em;
     text-transform: uppercase;
     color: hsl(var(--muted-foreground));
   }
   .vs-caption {
-    font-family: 'Barlow', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     font-weight: 500;
-    font-size: 0.733rem;
+    font-size: 0.6875rem;
     line-height: 1.4;
-    color: hsl(var(--muted-foreground));
   }
 
   .tabular { font-variant-numeric: tabular-nums; }
@@ -249,28 +186,23 @@
     animation: page-enter 0.15s ease-out both;
   }
   @keyframes page-enter {
-    from { opacity: 0; transform: translateY(4px); }
+    from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  /* Semantic surfaces */
   .surface-danger  { background: hsl(var(--surface-danger));  color: hsl(var(--surface-danger-fg));  }
   .surface-warning { background: hsl(var(--surface-warning)); color: hsl(var(--surface-warning-fg)); }
   .surface-success { background: hsl(var(--surface-success)); color: hsl(var(--surface-success-fg)); }
   .surface-info    { background: hsl(var(--surface-info));    color: hsl(var(--surface-info-fg));    }
-
-  /* Safe area for iOS bottom */
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
 }
 
-/* ─── Components ─────────────────────────────────────────────────────── */
+/* ─── Components ──────────────────────────────────────────────────────── */
 @layer components {
+  /* Sidebar nav item */
   .nav-item {
     @apply flex items-center gap-2.5 px-2.5 py-2 rounded-md text-[13px]
            transition-colors duration-100 cursor-pointer select-none w-full;
-    font-family: 'Barlow', sans-serif;
+    font-family: 'Montserrat', sans-serif;
     font-weight: 500;
     color: hsl(var(--sidebar-foreground));
   }
@@ -279,40 +211,29 @@
     color: hsl(var(--sidebar-accent-foreground));
   }
   .nav-item.active {
-    background: hsl(var(--primary) / 0.08);
-    color: hsl(var(--primary));
+    background: hsl(20 100% 50% / 0.12);
+    color: #FF5300;
     font-weight: 600;
   }
   .nav-item.active .nav-icon {
-    color: hsl(var(--primary));
+    color: #FF5300;
   }
 
   .vs-card {
-    @apply bg-card border border-border rounded-lg shadow-xs;
+    @apply bg-card border border-border rounded-lg;
   }
   .vs-card-interactive {
-    @apply vs-card transition-colors duration-100 hover:border-primary/25 cursor-pointer;
+    @apply vs-card transition-colors duration-100 hover:border-primary/30 cursor-pointer;
   }
 
   .kanban-col {
     @apply min-w-[260px] max-w-[280px] flex-shrink-0;
   }
-  @media (max-width: 767px) {
-    .kanban-col {
-      @apply min-w-[240px] max-w-[260px];
-    }
-  }
 
-  /* Section label for sidebar groups */
   .nav-section-label {
-    @apply text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70 px-2.5 pt-5 pb-1.5;
-    font-family: 'Barlow', sans-serif;
-  }
-
-  /* Mobile-friendly card touch targets */
-  @media (max-width: 767px) {
-    .mobile-touch-target {
-      min-height: 44px;
-    }
+    @apply text-[10px] font-semibold uppercase px-2.5 pt-5 pb-1.5;
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: 0.18em;
+    color: hsl(var(--muted-foreground) / 0.6);
   }
 }

@@ -13,16 +13,15 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans:    ["Barlow", "sans-serif"],
-        display: ["Barlow Condensed", "sans-serif"],
+        sans:    ["Montserrat", "sans-serif"],
+        display: ["Poppins", "sans-serif"],
       },
       fontSize: {
         "2xs": ["0.6875rem", { lineHeight: "1rem" }],
       },
       colors: {
-        "vs-blue":     "#2E6FCC",
-        "blue-light":  "#4A8DE0",
-        "silver-light":"#D4D8E4",
+        "cyber-orange": "#FF5300",
+        "deep-space":   "#050814",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

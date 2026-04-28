@@ -5,7 +5,6 @@ import { useEffect } from "react";
 import WhatsAppOnboarding from "@/components/WhatsAppOnboarding";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 const routeTitles: Record<string, string> = {
   "/": "Dashboard",
@@ -54,13 +53,15 @@ export default function AppLayout() {
 
         <div className="flex-1 flex flex-col min-w-0">
           {/* Topbar */}
-          <header className="h-14 flex items-center gap-3 border-b border-border/60 bg-card/80 backdrop-blur-sm px-5 shrink-0 sticky top-0 z-10">
+          <header className="h-14 flex items-center gap-3 border-b border-border bg-card px-5 shrink-0 sticky top-0 z-10">
             <SidebarTrigger className="text-muted-foreground hover:text-foreground transition-colors -ml-1" />
             <div className="h-4 w-px bg-border" />
-            <span className="text-sm font-semibold text-foreground tracking-tight">{pageTitle}</span>
-            <div className="ml-auto">
-              <ThemeToggle />
-            </div>
+            <span
+              className="text-sm text-foreground tracking-tight"
+              style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 600 }}
+            >
+              {pageTitle}
+            </span>
           </header>
 
           {/* Content */}
