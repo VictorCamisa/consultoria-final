@@ -86,11 +86,11 @@ export function AppSidebar() {
           className={cn("flex items-center cursor-pointer", collapsed ? "justify-center" : "gap-3")}
           onClick={() => navigate("/")}
         >
-          {/* VS monogram — V prata · S azul (Brand Bible v1.0) */}
-          <div className="rounded-lg w-8 h-8 flex-shrink-0 flex items-center justify-center bg-foreground">
-            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 15, letterSpacing: "-0.03em", lineHeight: 1 }}>
-              <span style={{ color: "#D4D8E4" }}>V</span>
-              <span style={{ color: "#4A8DE0" }}>S</span>
+          {/* VS monogram — V branco · S Cyber Orange (Brand Bible 2026) */}
+          <div className="rounded-lg w-8 h-8 flex-shrink-0 flex items-center justify-center bg-card border border-border">
+            <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 900, fontStyle: 'italic', fontSize: 16, letterSpacing: "-0.04em", lineHeight: 1 }}>
+              <span style={{ color: "#FFFFFF" }}>V</span>
+              <span style={{ color: "#FF5300" }}>S</span>
             </span>
           </div>
           {!collapsed && (
