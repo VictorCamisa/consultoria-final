@@ -17,6 +17,25 @@ import {
 } from "lucide-react";
 import { StickyNote, Plus, Trash2, Clock } from "lucide-react";
 import { Prospect, PIPELINE_STAGES, classificacaoConfig, scoreColor, timeAgo } from "./types";
+
+// Only valid logical next stages per current stage
+const STAGE_TRANSITIONS: Record<string, string[]> = {
+  novo:              ["abordado", "frio"],
+  abordado:          ["em_cadencia", "respondeu", "frio"],
+  em_cadencia:       ["respondeu", "aguardando_humano", "frio"],
+  respondeu:         ["call_agendada", "proposta_enviada", "frio"],
+  call_agendada:     ["call_realizada", "aguardando_humano", "frio"],
+  call_realizada:    ["proposta_enviada", "quente", "frio"],
+  proposta_enviada:  ["quente", "fechado", "frio"],
+  quente:            ["fechado", "frio"],
+  fechado:           [],
+  aguardando_humano: ["respondeu", "call_agendada", "frio"],
+  frio:              ["novo"],
+  blacklist:         [],
+};
+
+// Stages where confronto calculator is relevant
+const STAGES_CONFRONTO = ["respondeu", "call_agendada", "call_realizada", "proposta_enviada", "quente"];
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChatInputBar, ChatBubble } from "./WhatsAppChat";
 import { ChecklistEtapa } from "./ChecklistEtapa";
@@ -73,6 +92,8 @@ export function ProspectWorkspace({
   const prevProspectIdRef = useRef<string | null>(null);
   const [novaNota, setNovaNota] = useState("");
   const [savingNota, setSavingNota] = useState(false);
+  const [pendingMove, setPendingMove] = useState<{ key: string; label: string } | null>(null);
+  const [moveNote, setMoveNote] = useState("");
 
   // Reset coaching when switching prospects
   useEffect(() => {
@@ -818,51 +839,175 @@ export function ProspectWorkspace({
           </div>
           <ScrollArea className="flex-1">
             <div className="p-4 space-y-4">
-              {/* Quick Actions */}
+
+              {/* ── 1. CHECKLIST PRIMEIRO ── */}
+              <ChecklistEtapa
+                prospect={prospect}
+                onUpdate={onProspectUpdate}
+                onClassifyICP={handleClassify}
+                loadingClassify={loadingClassify}
+              />
+
+              <div className="border-t border-border" />
+
+              {/* ── 2. ANOTAÇÕES (antes de mover) ── */}
               <div>
-                <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ações Rápidas</h3>
+                <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <StickyNote className="h-3 w-3" />
+                  Anotações
+                  {notas && notas.length > 0 && (
+                    <Badge variant="secondary" className="text-[9px] h-4 px-1">{notas.length}</Badge>
+                  )}
+                </h3>
+                <div className="space-y-2">
+                  <Textarea
+                    value={novaNota}
+                    onChange={e => setNovaNota(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleAddNota(); } }}
+                    placeholder="Registre o que aconteceu: objeção, dado coletado, próximo passo... (Ctrl+Enter para salvar)"
+                    className="min-h-[64px] max-h-[120px] resize-none text-[11px] bg-background"
+                  />
+                  <Button size="sm" variant="outline" className="w-full text-xs h-7 gap-1.5" onClick={handleAddNota} disabled={savingNota || !novaNota.trim()}>
+                    {savingNota ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                    Salvar anotação
+                  </Button>
+                  {notas && notas.length > 0 && (
+                    <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-0.5">
+                      {notas.map((nota: any) => (
+                        <div key={nota.id} className="rounded-lg border border-border p-2.5 group relative">
+                          <p className="text-[11px] text-foreground/90 whitespace-pre-wrap leading-relaxed pr-5">{nota.conteudo}</p>
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            <Clock className="h-2.5 w-2.5 text-muted-foreground" />
+                            <span className="text-[9px] text-muted-foreground">
+                              {new Date(nota.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                            {nota.autor && <span className="text-[9px] text-muted-foreground">· {nota.autor}</span>}
+                          </div>
+                          <button onClick={() => handleDeleteNota(nota.id)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive">
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="border-t border-border" />
+
+              {/* ── 3. MOVER ETAPA (lógica de transições) ── */}
+              <div>
+                <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mover Etapa</h3>
+                {pendingMove ? (
+                  /* Inline confirm with annotation prompt */
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+                    <p className="text-xs font-medium text-foreground">
+                      Mover para <span className="text-primary">{pendingMove.label}</span>
+                    </p>
+                    <Textarea
+                      value={moveNote}
+                      onChange={e => setMoveNote(e.target.value)}
+                      placeholder="O que aconteceu? (opcional — mas ajuda o histórico)"
+                      rows={2}
+                      className="text-[11px] resize-none bg-background"
+                      autoFocus
+                    />
+                    <div className="flex gap-2">
+                      <Button size="sm" className="flex-1 text-xs h-7" onClick={async () => {
+                        if (moveNote.trim()) {
+                          setNovaNota(moveNote.trim());
+                          await handleAddNota();
+                        }
+                        handleMoveStatus(pendingMove.key);
+                        setPendingMove(null);
+                        setMoveNote("");
+                      }}>
+                        <ArrowRight className="h-3 w-3 mr-1" />Confirmar
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => { setPendingMove(null); setMoveNote(""); }}>
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {/* Current stage */}
+                    <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-muted/50">
+                      <span className={`w-2 h-2 rounded-full shrink-0 ${PIPELINE_STAGES.find(s => s.key === prospect.status)?.color ?? "bg-slate-500"}`} />
+                      <span className="text-[11px] font-medium text-foreground">
+                        {PIPELINE_STAGES.find(s => s.key === prospect.status)?.label ?? prospect.status}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground ml-auto">atual</span>
+                    </div>
+                    {/* Valid next stages */}
+                    {(STAGE_TRANSITIONS[prospect.status] ?? []).length === 0 ? (
+                      <p className="text-[11px] text-muted-foreground px-2">Nenhuma etapa disponível</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {(STAGE_TRANSITIONS[prospect.status] ?? []).map(key => {
+                          const s = PIPELINE_STAGES.find(ps => ps.key === key);
+                          if (!s) return null;
+                          const isFrio = key === "frio" || key === "blacklist";
+                          return (
+                            <button key={key}
+                              onClick={() => setPendingMove({ key, label: s.label })}
+                              className={`flex items-center gap-1.5 text-[11px] rounded-full border px-3 py-1 transition-colors ${
+                                isFrio
+                                  ? "border-muted text-muted-foreground hover:border-destructive/40 hover:text-destructive hover:bg-destructive/5"
+                                  : "border-primary/30 text-primary hover:bg-primary/10"
+                              }`}>
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${s.color}`} />
+                              {s.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-border" />
+
+              {/* ── 4. AÇÕES BDR (sem Bluepaint) ── */}
+              <div>
+                <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Ações</h3>
                 <div className="space-y-1.5">
                   {prospect.status === "novo" && onAbordar && (
                     <ActionButton icon={<Megaphone className="h-4 w-4" />} label="Enviar Abordagem" desc="Script automático via WhatsApp" loading={loadingAbordar} onClick={() => onAbordar(prospect)} />
                   )}
                   {["abordado", "respondeu"].includes(prospect.status) && onCadencia && (
-                    <ActionButton icon={<PlayCircle className="h-4 w-4" />} label="Iniciar Cadência" desc="Sequência de follow-ups" loading={loadingCadencia} onClick={() => onCadencia(prospect)} />
+                    <ActionButton icon={<PlayCircle className="h-4 w-4" />} label="Iniciar Cadência" desc="Sequência de follow-ups D1→D30" loading={loadingCadencia} onClick={() => onCadencia(prospect)} />
                   )}
                   {prospect.status === "frio" && onReativar && (
                     <ActionButton icon={<RotateCcw className="h-4 w-4" />} label="Reativar Lead" desc="Volta para cadência D1" loading={loadingReativar} onClick={() => onReativar(prospect)} />
                   )}
-                  <ActionButton icon={<BrainCircuit className="h-4 w-4" />} label="Classificar com IA" desc="Analisa e classifica o lead" loading={loadingClassify} onClick={handleClassify} />
-                  <ActionButton icon={<Wand2 className="h-4 w-4" />} label="Bluepaint" desc="Kit de vendas gerado por IA" loading={false} onClick={() => setBluepaintOpen(true)} />
+                  <ActionButton icon={<BrainCircuit className="h-4 w-4" />} label="Classificar com IA" desc="Score 0–100 + quente/morno/frio" loading={loadingClassify} onClick={handleClassify} />
                 </div>
               </div>
 
-              {/* Checklist VS AUTO */}
-              <ChecklistEtapa
-                prospect={prospect}
-                onUpdate={onProspectUpdate}
-              />
-
-              <div className="border-t border-border pt-4" />
-
-              {/* Move Stage */}
-              <div>
-                <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Mover Etapa</h3>
-                <div className="grid grid-cols-2 gap-1.5">
-                  {PIPELINE_STAGES.map(s => (
-                    <button key={s.key} onClick={() => handleMoveStatus(s.key)} disabled={s.key === prospect.status}
-                      className={`flex items-center gap-2 text-xs text-left rounded-lg border p-2 transition-colors ${
-                        s.key === prospect.status
-                          ? "border-primary/40 bg-primary/10 text-primary font-medium"
-                          : "border-border hover:border-primary/30 hover:bg-primary/5"
-                      }`}>
-                      <span className={`w-2 h-2 rounded-full shrink-0 ${s.color}`} />
-                      <span className="truncate text-[11px]">{s.label}</span>
-                    </button>
-                  ))}
+              {/* ── 5. BLUEPAINT — apenas para estágios de fechamento ── */}
+              {["respondeu", "call_agendada", "call_realizada", "proposta_enviada", "quente"].includes(prospect.status) && (
+                <div className="rounded-lg border border-dashed border-primary/30 p-3 flex items-center gap-3">
+                  <Wand2 className="h-4 w-4 text-primary shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-foreground">Kit de Fechamento IA</p>
+                    <p className="text-[10px] text-muted-foreground">Script + confronto + objeções gerados por IA</p>
+                  </div>
+                  <Button size="sm" variant="outline" className="text-xs h-7 shrink-0" onClick={() => setBluepaintOpen(true)}>
+                    Gerar
+                  </Button>
                 </div>
-              </div>
+              )}
 
-              {/* Details */}
+              {/* ── 6. CONFRONTO — só para estágios de qualificação/fechamento ── */}
+              {STAGES_CONFRONTO.includes(prospect.status) && (
+                <div className="border-t border-border pt-3">
+                  <ConfrontCalculator feeVsDefault={(prospect as any).mrr_estimado ?? 800} />
+                </div>
+              )}
+
+              {/* ── 7. DETALHES ── */}
               <div>
                 <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Detalhes</h3>
                 <div className="rounded-lg border border-border divide-y divide-border">
@@ -886,67 +1031,14 @@ export function ProspectWorkspace({
                 </div>
               )}
 
-              {/* B3 — Calculadora de Confronto */}
-              <div className="border-t border-border pt-4">
-                <ConfrontCalculator feeVsDefault={(prospect as any).mrr_estimado ?? 800} />
-              </div>
-
-              {/* Notas / Anotações */}
-              <div>
-                <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                  <StickyNote className="h-3 w-3" />
-                  Anotações
-                  {notas && notas.length > 0 && (
-                    <Badge variant="secondary" className="text-[9px] h-4 px-1">{notas.length}</Badge>
-                  )}
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex gap-1.5">
-                    <Textarea
-                      value={novaNota}
-                      onChange={e => setNovaNota(e.target.value)}
-                      onKeyDown={e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); handleAddNota(); } }}
-                      placeholder="Escreva uma anotação sobre a negociação..."
-                      className="min-h-[60px] max-h-[100px] resize-none text-[11px] bg-background"
-                    />
-                  </div>
-                  <Button size="sm" variant="outline" className="w-full text-xs h-7 gap-1.5" onClick={handleAddNota} disabled={savingNota || !novaNota.trim()}>
-                    {savingNota ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                    Salvar Nota
-                  </Button>
-                  {notas && notas.length > 0 && (
-                    <div className="space-y-1.5 mt-2">
-                      {notas.map((nota: any) => (
-                        <div key={nota.id} className="rounded-lg border border-border p-2.5 group relative">
-                          <p className="text-[11px] text-foreground/90 whitespace-pre-wrap leading-relaxed pr-5">{nota.conteudo}</p>
-                          <div className="flex items-center gap-1.5 mt-1.5">
-                            <Clock className="h-2.5 w-2.5 text-muted-foreground" />
-                            <span className="text-[9px] text-muted-foreground">
-                              {new Date(nota.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                            </span>
-                            {nota.autor && <span className="text-[9px] text-muted-foreground">· {nota.autor}</span>}
-                          </div>
-                          <button
-                            onClick={() => handleDeleteNota(nota.id)}
-                            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Cadência history */}
+              {/* ── 8. HISTÓRICO CADÊNCIA ── */}
               {cadenciaHistory && cadenciaHistory.length > 0 && (
                 <div>
                   <h3 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                     Cadência <Badge variant="secondary" className="ml-1 text-[9px] h-4 px-1">{cadenciaHistory.length}</Badge>
                   </h3>
                   <div className="space-y-1.5">
-                    {cadenciaHistory.slice(0, 5).map(c => (
+                    {cadenciaHistory.slice(0, 5).map((c: any) => (
                       <div key={c.id} className="rounded-lg border border-border p-2.5 space-y-1">
                         <div className="flex items-center justify-between">
                           <Badge variant="secondary" className="text-[10px] h-5">{c.dia === 0 ? "Abordagem" : `D${c.dia}`}</Badge>
@@ -967,6 +1059,7 @@ export function ProspectWorkspace({
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
         </div>
+
 
         {/* Collapsed tabs on the right edge */}
         {(!centerPanelOpen || !rightPanelOpen) && (
