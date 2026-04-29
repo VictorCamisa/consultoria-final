@@ -55,7 +55,7 @@ export default function Configuracoes() {
         .select("id, nome, categoria, tipo, ativo, nichos")
         .order("ordem", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Produto[];
+      return ((data ?? []) as unknown) as Produto[];
     },
   });
 
