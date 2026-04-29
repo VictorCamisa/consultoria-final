@@ -124,13 +124,20 @@ export type Database = {
           data_pagamento: string | null
           data_prev_entrega: string | null
           decisor: string
+          depoimento: string | null
+          descricao_negocio: string | null
+          dores_mapeadas: string | null
           email: string | null
+          equipe_info: string | null
+          faturamento_est: string | null
           faturamento_estimado: string | null
           github_url: string | null
           health_score: number | null
+          historico: string | null
           id: string
           instagram: string | null
           legado: boolean
+          metricas_antes_depois: string | null
           nicho: string
           nome_negocio: string
           nps: number | null
@@ -145,7 +152,9 @@ export type Database = {
           proximo_checkin: string | null
           responsavel: string | null
           responsavel_imersao: string | null
+          resultados: string | null
           segmento: string | null
+          sistemas_atuais: string | null
           site: string | null
           status: string
           tipo_cobranca: string
@@ -162,13 +171,20 @@ export type Database = {
           data_pagamento?: string | null
           data_prev_entrega?: string | null
           decisor: string
+          depoimento?: string | null
+          descricao_negocio?: string | null
+          dores_mapeadas?: string | null
           email?: string | null
+          equipe_info?: string | null
+          faturamento_est?: string | null
           faturamento_estimado?: string | null
           github_url?: string | null
           health_score?: number | null
+          historico?: string | null
           id?: string
           instagram?: string | null
           legado?: boolean
+          metricas_antes_depois?: string | null
           nicho: string
           nome_negocio: string
           nps?: number | null
@@ -183,7 +199,9 @@ export type Database = {
           proximo_checkin?: string | null
           responsavel?: string | null
           responsavel_imersao?: string | null
+          resultados?: string | null
           segmento?: string | null
+          sistemas_atuais?: string | null
           site?: string | null
           status?: string
           tipo_cobranca?: string
@@ -200,13 +218,20 @@ export type Database = {
           data_pagamento?: string | null
           data_prev_entrega?: string | null
           decisor?: string
+          depoimento?: string | null
+          descricao_negocio?: string | null
+          dores_mapeadas?: string | null
           email?: string | null
+          equipe_info?: string | null
+          faturamento_est?: string | null
           faturamento_estimado?: string | null
           github_url?: string | null
           health_score?: number | null
+          historico?: string | null
           id?: string
           instagram?: string | null
           legado?: boolean
+          metricas_antes_depois?: string | null
           nicho?: string
           nome_negocio?: string
           nps?: number | null
@@ -221,7 +246,9 @@ export type Database = {
           proximo_checkin?: string | null
           responsavel?: string | null
           responsavel_imersao?: string | null
+          resultados?: string | null
           segmento?: string | null
+          sistemas_atuais?: string | null
           site?: string | null
           status?: string
           tipo_cobranca?: string
