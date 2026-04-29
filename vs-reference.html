@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VS Design System · Reference</title>
+
+  <!-- Tokens VS (autocontido neste arquivo para portabilidade) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,800;1,900&family=Montserrat:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --vs-deep-space: #050814;
+      --vs-cyber-orange: #FF5300;
+      --vs-cyber-hover: #E64A00;
+      --vs-cyber-soft: rgba(255, 83, 0, 0.12);
+      --vs-cyber-glow: rgba(255, 83, 0, 0.35);
+      --vs-pure-white: #FFFFFF;
+      --vs-surface: #0A0F1F;
+      --vs-surface-2: #0F172A;
+      --vs-surface-3: #1A2236;
+      --vs-border: #1E293B;
+      --vs-border-strong: #334155;
+      --vs-text-primary: #FFFFFF;
+      --vs-text-secondary: #94A3B8;
+      --vs-text-tertiary: #64748B;
+      --vs-success: #10B981;
+      --vs-warning: #F59E0B;
+      --vs-danger: #EF4444;
+      --vs-success-soft: rgba(16, 185, 129, 0.12);
+      --vs-warning-soft: rgba(245, 158, 11, 0.12);
+      --vs-danger-soft: rgba(239, 68, 68, 0.12);
+
+      --vs-font-display: 'Poppins', system-ui, sans-serif;
+      --vs-font-body: 'Montserrat', system-ui, sans-serif;
+      --vs-font-mono: 'JetBrains Mono', Consolas, monospace;
+
+      --vs-radius-sm: 4px;
+      --vs-radius-md: 8px;
+      --vs-radius-lg: 12px;
+      --vs-radius-xl: 16px;
+      --vs-radius-full: 9999px;
+
+      --vs-shadow-md: 0 4px 12px rgba(0,0,0,.4);
+      --vs-shadow-lg: 0 12px 32px rgba(0,0,0,.5);
+      --vs-shadow-xl: 0 24px 48px rgba(0,0,0,.6);
+      --vs-shadow-cyber: 0 0 0 3px rgba(255, 83, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background-color: var(--vs-deep-space);
+      color: var(--vs-text-primary);
+      font-family: var(--vs-font-body);
+      font-weight: 400;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Background grid sutil tipo o do PDF */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 64px 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    @media (min-width: 768px) {
+      .container { padding: 96px 48px; }
+    }
+
+    /* Section */
+    .section { margin-bottom: 96px; }
+    .section-header { margin-bottom: 48px; }
+
+    .eyebrow {
+      font-family: var(--vs-font-mono);
+      font-weight: 500;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--vs-cyber-orange);
+      display: block;
+      margin-bottom: 16px;
+    }
+
+    h1, h2, h3 {
+      font-family: var(--vs-font-display);
+      font-weight: 900;
+      font-style: italic;
+      letter-spacing: -0.025em;
+      line-height: 1.1;
+      margin: 0 0 16px 0;
+    }
+
+    h1 { font-size: clamp(48px, 8vw, 96px); line-height: 1; }
+    h2 { font-size: clamp(36px, 5vw, 56px); }
+    h3 { font-size: clamp(24px, 3vw, 32px); }
+
+    .highlight { color: var(--vs-cyber-orange); }
+
+    p { margin: 0 0 16px 0; color: var(--vs-text-secondary); max-width: 65ch; }
+
+    .grid { display: grid; gap: 24px; }
+    .grid-2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .grid-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+
+    /* === HERO === */
+    .hero {
+      padding: 120px 0 80px;
+      position: relative;
+    }
+
+    .logo-mark {
+      font-family: var(--vs-font-display);
+      font-weight: 900;
+      font-style: italic;
+      font-size: 96px;
+      line-height: 1;
+      letter-spacing: -0.025em;
+      margin-bottom: 32px;
+    }
+    .logo-mark .v { color: var(--vs-pure-white); }
+    .logo-mark .s { color: var(--vs-cyber-orange); }
+
+    .hero-tagline {
+      font-family: var(--vs-font-body);
+      font-weight: 500;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.3em;
+      color: var(--vs-text-secondary);
+      margin-bottom: 64px;
+    }
+
+    /* === BUTTONS === */
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: var(--vs-font-body);
+      font-weight: 600;
+      letter-spacing: 0.025em;
+      border: none;
+      border-radius: var(--vs-radius-md);
+      cursor: pointer;
+      transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      white-space: nowrap;
+      text-decoration: none;
+    }
+
+    .button-md { height: 40px; padding: 0 20px; font-size: 14px; }
+    .button-lg { height: 48px; padding: 0 28px; font-size: 16px; }
+    .button-sm { height: 32px; padding: 0 12px; font-size: 13px; }
+
+    .button-primary {
+      background-color: var(--vs-cyber-orange);
+      color: var(--vs-deep-space);
+    }
+    .button-primary:hover { background-color: var(--vs-cyber-hover); }
+    .button-primary:focus-visible { outline: none; box-shadow: var(--vs-shadow-cyber); }
+
+    .button-secondary {
+      background: transparent;
+      color: var(--vs-text-primary);
+      border: 1px solid var(--vs-border-strong);
+    }
+    .button-secondary:hover {
+      background-color: var(--vs-surface);
+      border-color: var(--vs-text-secondary);
+    }
+
+    .button-ghost {
+      background: transparent;
+      color: var(--vs-text-primary);
+    }
+    .button-ghost:hover { background-color: var(--vs-surface); }
+
+    .button-outline-cyber {
+      background: transparent;
+      color: var(--vs-cyber-orange);
+      border: 1px solid var(--vs-cyber-orange);
+    }
+    .button-outline-cyber:hover { background-color: var(--vs-cyber-soft); }
+
+    .button-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+    /* === COLOR SWATCHES === */
+    .swatch-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+
+    .swatch {
+      background-color: var(--vs-surface);
+      border: 1px solid var(--vs-border);
+      border-radius: var(--vs-radius-lg);
+      overflow: hidden;
+    }
+    .swatch-color { height: 120px; }
+    .swatch-info { padding: 20px; }
+    .swatch-name {
+      font-family: var(--vs-font-display);
+      font-weight: 800;
+      font-style: italic;
+      font-size: 18px;
+      color: var(--vs-text-primary);
+      margin: 0 0 8px 0;
+    }
+    .swatch-hex {
+      font-family: var(--vs-font-mono);
+      font-size: 13px;
+      color: var(--vs-cyber-orange);
+      margin-bottom: 4px;
+    }
+    .swatch-use {
+      font-size: 12px;
+      color: var(--vs-text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin: 0;
+    }
+
+    /* === TYPOGRAPHY DEMO === */
+    .type-row {
+      padding: 24px 0;
+      border-bottom: 1px solid var(--vs-border);
+    }
+    .type-row:last-child { border-bottom: none; }
+    .type-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      font-family: var(--vs-font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--vs-text-tertiary);
+      margin-top: 12px;
+    }
+
+    /* === CARDS === */
+    .card {
+      background-color: var(--vs-surface);
+      border: 1px solid var(--vs-border);
+      border-radius: var(--vs-radius-lg);
+      padding: 24px;
+      transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .card-elevated {
+      background-color: var(--vs-surface-2);
+      box-shadow: var(--vs-shadow-md);
+    }
+    .card-cyber { border-color: var(--vs-cyber-orange); }
+    .card-interactive { cursor: pointer; }
+    .card-interactive:hover {
+      background-color: var(--vs-surface-3);
+      border-color: var(--vs-border-strong);
+      transform: translateY(-2px);
+    }
+    .card-eyebrow {
+      font-family: var(--vs-font-mono);
+      font-weight: 500;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--vs-cyber-orange);
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-family: var(--vs-font-display);
+      font-weight: 900;
+      font-style: italic;
+      font-size: 24px;
+      letter-spacing: -0.025em;
+      line-height: 1.2;
+      margin: 0 0 8px 0;
+      color: var(--vs-text-primary);
+    }
+    .card-subtitle {
+      font-size: 14px;
+      color: var(--vs-text-secondary);
+      margin: 0;
+    }
+
+    /* === KPI CARDS === */
+    .kpi-grid {
+      display: grid;
+      gap: 24px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+    .kpi {
+      background-color: var(--vs-surface);
+      border: 1px solid var(--vs-border);
+      border-radius: var(--vs-radius-lg);
+      padding: 24px;
+      transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .kpi:hover {
+      border-color: var(--vs-border-strong);
+      transform: translateY(-2px);
+    }
+    .kpi-label {
+      font-family: var(--vs-font-mono);
+      font-weight: 500;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--vs-text-secondary);
+      margin-bottom: 8px;
+    }
+    .kpi-value {
+      font-family: var(--vs-font-display);
+      font-weight: 900;
+      font-style: italic;
+      font-size: 48px;
+      line-height: 1;
+      letter-spacing: -0.025em;
+      margin: 4px 0;
+    }
+    .kpi-value-highlight { color: var(--vs-cyber-orange); }
+    .kpi-desc { font-size: 14px; color: var(--vs-text-secondary); margin: 4px 0 0 0; }
+    .kpi-trend {
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 8px;
+    }
+    .kpi-trend-up { color: var(--vs-success); }
+
+    /* === BADGES === */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      font-family: var(--vs-font-body);
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 4px 10px;
+      border-radius: var(--vs-radius-full);
+    }
+    .badge-default { background: var(--vs-surface-3); color: var(--vs-text-secondary); }
+    .badge-cyber { background: var(--vs-cyber-soft); color: var(--vs-cyber-orange); }
+    .badge-success { background: var(--vs-success-soft); color: var(--vs-success); }
+    .badge-warning { background: var(--vs-warning-soft); color: var(--vs-warning); }
+    .badge-danger { background: var(--vs-danger-soft); color: var(--vs-danger); }
+    .badge-solid { background: var(--vs-cyber-orange); color: var(--vs-deep-space); }
+
+    .badge-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+    /* === INPUTS === */
+    .input-field { display: flex; flex-direction: column; gap: 8px; }
+    .input-label {
+      font-family: var(--vs-font-body);
+      font-weight: 500;
+      font-size: 13px;
+      color: var(--vs-text-secondary);
+      letter-spacing: 0.025em;
+    }
+    .input-wrapper {
+      display: flex;
+      align-items: center;
+      background-color: var(--vs-surface);
+      border: 1px solid var(--vs-border);
+      border-radius: var(--vs-radius-md);
+      padding: 0 16px;
+      min-height: 40px;
+      transition: all 180ms;
+    }
+    .input-wrapper:hover { border-color: var(--vs-border-strong); }
+    .input-wrapper:focus-within {
+      border-color: var(--vs-cyber-orange);
+      box-shadow: var(--vs-shadow-cyber);
+    }
+    .input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: var(--vs-font-body);
+      font-size: 14px;
+      color: var(--vs-text-primary);
+      padding: 12px 0;
+      width: 100%;
+    }
+    .input::placeholder { color: var(--vs-text-tertiary); }
+
+    /* === DASHBOARD MOCK === */
+    .dashboard-mock {
+      background-color: var(--vs-surface);
+      border: 1px solid var(--vs-border);
+      border-radius: var(--vs-radius-xl);
+      overflow: hidden;
+    }
+    .dashboard-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--vs-border);
+    }
+    .dashboard-toolbar-dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      background-color: var(--vs-border-strong);
+    }
+    .dashboard-toolbar-title {
+      font-family: var(--vs-font-mono);
+      font-size: 12px;
+      color: var(--vs-text-secondary);
+      margin-left: 12px;
+    }
+    .dashboard-body { padding: 32px; }
+    .dashboard-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--vs-border);
+    }
+    .dashboard-row:last-of-type { border-bottom: none; }
+    .dashboard-row-label { font-size: 14px; color: var(--vs-text-secondary); }
+    .dashboard-row-value {
+      font-family: var(--vs-font-mono);
+      font-weight: 500;
+      font-size: 16px;
+      color: var(--vs-cyber-orange);
+    }
+
+    /* === SEMIOTIC V/S === */
+    .semiotic-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+    .semiotic-card {
+      background-color: var(--vs-surface);
+      border: 1px solid var(--vs-border);
+      border-radius: var(--vs-radius-lg);
+      padding: 32px;
+      text-align: center;
+    }
+    .semiotic-letter {
+      font-family: var(--vs-font-display);
+      font-weight: 900;
+      font-style: italic;
+      font-size: 200px;
+      line-height: 1;
+      letter-spacing: -0.025em;
+      margin-bottom: 16px;
+    }
+    .semiotic-letter-v { color: var(--vs-pure-white); }
+    .semiotic-letter-s { color: var(--vs-cyber-orange); }
+
+    /* === LOGO VARIANTS === */
+    .logo-variants {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .logo-variant {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      border-radius: var(--vs-radius-lg);
+      font-family: var(--vs-font-display);
+      font-weight: 900;
+      font-style: italic;
+      font-size: 96px;
+      letter-spacing: -0.025em;
+    }
+    .logo-variant-dark { background-color: var(--vs-deep-space); border: 1px solid var(--vs-border); }
+    .logo-variant-dark .v { color: var(--vs-pure-white); }
+    .logo-variant-dark .s { color: var(--vs-cyber-orange); }
+
+    .logo-variant-light { background-color: var(--vs-pure-white); }
+    .logo-variant-light .v { color: var(--vs-deep-space); }
+    .logo-variant-light .s { color: var(--vs-cyber-orange); }
+
+    .logo-variant-cyber { background-color: var(--vs-cyber-orange); }
+    .logo-variant-cyber .v { color: var(--vs-pure-white); }
+    .logo-variant-cyber .s { color: var(--vs-deep-space); }
+
+    .logo-caption {
+      font-family: var(--vs-font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--vs-text-tertiary);
+      text-align: center;
+      margin-top: 12px;
+    }
+
+    /* === DO/DONT === */
+    .dodont {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+    .dodont-card {
+      background-color: var(--vs-surface);
+      border: 1px solid var(--vs-border);
+      border-radius: var(--vs-radius-lg);
+      padding: 24px;
+    }
+    .dodont-title {
+      font-family: var(--vs-font-mono);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 16px;
+    }
+    .dodont-do .dodont-title { color: var(--vs-cyber-orange); }
+    .dodont-dont .dodont-title { color: var(--vs-text-secondary); }
+    .dodont-list { list-style: none; padding: 0; margin: 0; }
+    .dodont-list li {
+      padding: 8px 0;
+      font-size: 14px;
+      color: var(--vs-text-primary);
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .dodont-do li::before { content: '+'; color: var(--vs-cyber-orange); font-weight: 700; }
+    .dodont-dont li::before { content: '×'; color: var(--vs-text-tertiary); font-weight: 700; }
+
+    /* === PROPORTION BAR === */
+    .proportion-bar {
+      display: flex;
+      height: 80px;
+      border-radius: var(--vs-radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--vs-border);
+    }
+    .proportion-deep {
+      flex: 7;
+      background-color: var(--vs-deep-space);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--vs-text-secondary);
+      font-family: var(--vs-font-mono);
+      font-size: 14px;
+    }
+    .proportion-white {
+      flex: 2;
+      background-color: var(--vs-pure-white);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--vs-deep-space);
+      font-family: var(--vs-font-mono);
+      font-size: 14px;
+    }
+    .proportion-cyber {
+      flex: 1;
+      background-color: var(--vs-cyber-orange);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--vs-deep-space);
+      font-family: var(--vs-font-mono);
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    /* === FOOTER === */
+    .footer {
+      border-top: 1px solid var(--vs-border);
+      padding: 48px 0;
+      margin-top: 96px;
+      text-align: center;
+    }
+    .footer-text {
+      font-family: var(--vs-font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.2em;
+      color: var(--vs-text-tertiary);
+    }
+
+    /* === FORM CONTROLS === */
+    .control { display: inline-flex; align-items: center; gap: 12px; cursor: pointer; }
+    .control input { display: none; }
+    .check-box {
+      width: 18px; height: 18px;
+      border: 1.5px solid var(--vs-border-strong);
+      border-radius: var(--vs-radius-sm);
+      background: var(--vs-surface);
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: all 180ms;
+    }
+    .control input:checked + .check-box {
+      background: var(--vs-cyber-orange); border-color: var(--vs-cyber-orange);
+    }
+    .control input:checked + .check-box::after {
+      content: ''; width: 10px; height: 6px;
+      border-left: 2px solid #050814; border-bottom: 2px solid #050814;
+      transform: rotate(-45deg) translate(1px, -1px);
+    }
+    .switch-track {
+      width: 36px; height: 20px;
+      background: var(--vs-border-strong);
+      border-radius: 9999px;
+      position: relative;
+      transition: background 180ms;
+    }
+    .switch-thumb {
+      position: absolute; top: 2px; left: 2px;
+      width: 16px; height: 16px;
+      background: #FFFFFF; border-radius: 50%;
+      transition: transform 180ms;
+    }
+    .control input:checked ~ .switch-track { background: var(--vs-cyber-orange); }
+    .control input:checked ~ .switch-track .switch-thumb { transform: translateX(16px); }
+
+    /* === Toast === */
+    .toast {
+      display: flex; gap: 12px;
+      max-width: 360px;
+      padding: 16px;
+      background: var(--vs-surface-2);
+      border-radius: var(--vs-radius-lg);
+      box-shadow: var(--vs-shadow-lg);
+      border-left: 4px solid var(--vs-cyber-orange);
+    }
+    .toast-title { font-weight: 600; font-size: 14px; margin: 0 0 4px 0; }
+    .toast-desc { font-size: 13px; color: var(--vs-text-secondary); margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- ====== HERO ====== -->
+    <section class="hero">
+      <div class="logo-mark">
+        <span class="v">V</span><span class="s">S</span>
+      </div>
+      <span class="hero-tagline">VENDAS DE SOLUÇÕES · ECOSSISTEMAS DIGITAIS</span>
+      <h1>Era <span class="highlight">Cyber Orange</span>.<br>Design system v2026.1</h1>
+      <p style="font-size: 18px; max-width: 620px; margin-top: 24px;">
+        Esta é a fonte da verdade visual da VS. Cores, tipografia, componentes,
+        tom de voz, regras para IAs. Tudo que outro sistema precisa para
+        replicar a marca pixel por pixel, palavra por palavra.
+      </p>
+      <div class="button-row" style="margin-top: 32px;">
+        <button class="button button-primary button-lg">Começar a aplicar →</button>
+        <button class="button button-ghost button-lg">Ver tokens técnicos</button>
+      </div>
+    </section>
+
+    <!-- ====== PALETA ====== -->
+    <section class="section">
+      <div class="section-header">
+        <span class="eyebrow">— 01 / PALETA</span>
+        <h2>Três cores. <span class="highlight">Zero ambiguidade.</span></h2>
+        <p>Cada cor tem função semântica clara. Nenhuma é ornamental.</p>
+      </div>
+
+      <div class="swatch-grid">
+        <div class="swatch">
+          <div class="swatch-color" style="background:#050814; border-bottom: 1px solid var(--vs-border);"></div>
+          <div class="swatch-info">
+            <h3 class="swatch-name">Deep Space Blue</h3>
+            <div class="swatch-hex">#050814 · rgb(5, 8, 20)</div>
+            <p class="swatch-use">Background dominante</p>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#FF5300;"></div>
+          <div class="swatch-info">
+            <h3 class="swatch-name">Cyber Orange</h3>
+            <div class="swatch-hex">#FF5300 · rgb(255, 83, 0)</div>
+            <p class="swatch-use">CTA · Destaque</p>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#FFFFFF;"></div>
+          <div class="swatch-info">
+            <h3 class="swatch-name">Branco Puro</h3>
+            <div class="swatch-hex">#FFFFFF · rgb(255, 255, 255)</div>
+            <p class="swatch-use">Texto · Fundação</p>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin-top: 48px;">Proporção <span class="highlight">70 / 20 / 10</span></h3>
+      <p>O laranja é tempero, não prato principal. Usado demais, perde força.</p>
+      <div class="proportion-bar">
+        <div class="proportion-deep">70% Deep Space</div>
+        <div class="proportion-white">20% Branco</div>
+        <div class="proportion-cyber">10% Cyber</div>
+      </div>
+    </section>
+
+    <!-- ====== TIPOGRAFIA ====== -->
+    <section class="section">
+      <div class="section-header">
+        <span class="eyebrow">— 02 / TIPOGRAFIA</span>
+        <h2>A marca <span class="highlight">é</span> a tipografia.</h2>
+        <p>Não há símbolo, ícone ou pictograma. O monograma VS é a marca completa.</p>
+      </div>
+
+      <div class="card">
+        <div class="type-row">
+          <div style="font-family: var(--vs-font-display); font-weight: 900; font-style: italic; font-size: 64px; line-height: 1; letter-spacing: -0.025em;">
+            Vendas de <span class="highlight">Soluções</span>.
+          </div>
+          <div class="type-meta">
+            <span>FONTE: POPPINS BLACK ITALIC</span>
+            <span>PESO: 900</span>
+            <span>TRACKING: -2.5%</span>
+            <span>USO: HEADLINES</span>
+          </div>
+        </div>
+
+        <div class="type-row">
+          <div style="font-family: var(--vs-font-body); font-weight: 500; font-size: 14px; text-transform: uppercase; letter-spacing: 0.3em; color: var(--vs-text-secondary);">
+            VENDAS DE SOLUÇÕES · ECOSSISTEMAS DIGITAIS
+          </div>
+          <div class="type-meta">
+            <span>FONTE: MONTSERRAT</span>
+            <span>PESO: 500</span>
+            <span>TRACKING: 0.30em</span>
+            <span>USO: TAGLINES</span>
+          </div>
+        </div>
+
+        <div class="type-row">
+          <div style="font-family: var(--vs-font-body); font-weight: 400; font-size: 16px; line-height: 1.6;">
+            Substituímos seu departamento comercial. Captura, qualificação por IA,
+            follow-up automatizado e dashboard em tempo real — em uma única operação.
+          </div>
+          <div class="type-meta">
+            <span>FONTE: MONTSERRAT</span>
+            <span>PESO: 400</span>
+            <span>LINE-HEIGHT: 1.6</span>
+            <span>USO: CORPO</span>
+          </div>
+        </div>
+
+        <div class="type-row">
+          <div style="font-family: var(--vs-font-mono); font-weight: 500; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--vs-cyber-orange);">
+            — 03 / SEÇÃO TÉCNICA
+          </div>
+          <div class="type-meta">
+            <span>FONTE: JETBRAINS MONO</span>
+            <span>PESO: 500</span>
+            <span>TRACKING: 0.1em</span>
+            <span>USO: HEADERS DE SEÇÃO</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== MONOGRAMA ====== -->
+    <section class="section">
+      <div class="section-header">
+        <span class="eyebrow">— 03 / MONOGRAMA</span>
+        <h2>Três <span class="highlight">formas</span> de assinar.</h2>
+      </div>
+
+      <div class="logo-variants">
+        <div>
+          <div class="logo-variant logo-variant-dark">
+            <span class="v">V</span><span class="s">S</span>
+          </div>
+          <div class="logo-caption">PRIMÁRIA · FUNDO ESCURO</div>
+        </div>
+        <div>
+          <div class="logo-variant logo-variant-light">
+            <span class="v">V</span><span class="s">S</span>
+          </div>
+          <div class="logo-caption">SECUNDÁRIA · FUNDO CLARO</div>
+        </div>
+        <div>
+          <div class="logo-variant logo-variant-cyber">
+            <span class="v">V</span><span class="s">S</span>
+          </div>
+          <div class="logo-caption">TERCIÁRIA · FUNDO CYBER</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== SEMIÓTICA ====== -->
+    <section class="section">
+      <div class="section-header">
+        <span class="eyebrow">— 04 / SEMIÓTICA</span>
+        <h2>O que cada <span class="highlight">letra significa.</span></h2>
+      </div>
+
+      <div class="semiotic-grid">
+        <div class="semiotic-card">
+          <div class="semiotic-letter semiotic-letter-v">V</div>
+          <div class="card-eyebrow">— A FUNDAÇÃO</div>
+          <h3 class="card-title">Vendas · Visão · Estrutura</h3>
+          <p style="margin: 0;">A base sólida. A engenharia que sustenta a operação. <strong style="color: var(--vs-text-primary);">O "V" é o que não pode falhar.</strong></p>
+        </div>
+        <div class="semiotic-card">
+          <div class="semiotic-letter semiotic-letter-s">S</div>
+          <div class="card-eyebrow">— A SOLUÇÃO</div>
+          <h3 class="card-title">Soluções · Garra · Diferencial</h3>
+          <p style="margin: 0;">A cor que brilha e age. O resultado entregue. <strong style="color: var(--vs-text-primary);">O "S" é o que faz o cliente lembrar.</strong></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== BUTTONS ====== -->
+    <section class="section">
+      <div class="section-header">
+        <span class="eyebrow">— 05 / BOTÕES</span>
+        <h2>Um CTA. <span class="highlight">Por viewport.</span></h2>
+        <p>Múltiplos botões laranja diluem a hierarquia. Apenas uma ação primária visível por vez.</p>
+      </div>
+
+      <div class="card">
+        <h3 style="font-size: 16px; color: var(--vs-text-secondary); margin-bottom: 16px;">VARIANTES</h3>
+        <div class="button-row" style="margin-bottom: 32px;">
+          <button class="button button-primary button-md">Primary CTA</button>
+          <button class="button button-secondary button-md">Secondary</button>
+          <button class="button button-ghost button-md">Ghost</button>
+          <button class="button button-outline-cyber button-md">Outline Cyber</button>
+        </div>
+
+        <h3 style="font-size: 16px; color: var(--vs-text-secondary); margin-bottom: 16px;">TAMANHOS</h3>
+        <div class="button-row" style="margin-bottom: 32px;">
+          <button class="button button-primary button-sm">Small</button>
+          <button class="button button-primary button-md">Medium</button>
+          <button class="button button-primary button-lg">Large</button>
+        </div>
+
+        <h3 style="font-size: 16px; color: var(--vs-text-secondary); margin-bottom: 16px;">ESTADOS</h3>
+        <div class="button-row">
+          <button class="button button-primary button-md">Default</button>
+          <button class="button button-primary button-md" style="background: var(--vs-cyber-hover);">Hover</button>
+          <button class="button button-primary button-md" disabled style="opacity: 0.5; cursor: not-allowed;">Disabled</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== KPI DASHBOARD ====== -->
+    <section class="section">
+      <div class="section-header">
+        <span class="eyebrow">— 06 / DASHBOARD</span>
+        <h2>A marca <span class="highlight">em produto.</span></h2>
+        <p>Toda interface VS nasce em Deep Space Blue. Ações em Cyber Orange. CTAs nunca azuis.</p>
+      </div>
+
+      <div class="kpi-grid" style="margin-bottom: 32px;">
+        <div class="kpi">
+          <div class="kpi-label">Leads capturados</div>
+          <div class="kpi-value">2.847</div>
+          <p class="kpi-trend kpi-trend-up">↑ +12% vs. mês anterior</p>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Qualificados pela IA</div>
+          <div class="kpi-value">1.203</div>
+          <p class="kpi-desc">42% do total capturado</p>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Conversão em venda</div>
+          <div class="kpi-value kpi-value-highlight">14,2%</div>
+          <p class="kpi-desc">Acima da média do nicho</p>
+        </div>
+        <div class="kpi">
+          <div class="kpi-label">Receita gerada</div>
+          <div class="kpi-value">R$ 187k</div>
+          <p class="kpi-trend kpi-trend-up">↑ +R$ 23k</p>
+        </div>
+      </div>
+
+      <div class="dashboard-mock">
+        <div class="dashboard-toolbar">
+          <span class="dashboard-toolbar-dot"></span>
+          <span class="dashboard-toolbar-dot"></span>
+          <span class="dashboard-toolbar-dot"></span>
+          <span class="dashboard-toolbar-title">VS Sales · Dashboard</span>
+        </div>
+        <div class="dashboard-body">
+          <h3 class="card-title" style="font-size: 28px;">Performance — Outubro</h3>
+          <p style="font-size: 13px; color: var(--vs-text-tertiary); margin-bottom: 24px;">Últimos 30 dias · Atualizado agora</p>
+
+          <div class="dashboard-row">
+            <span class="dashboard-row-label">Leads capturados</span>
+            <span class="dashboard-row-value">2.847</span>
+          </div>
+          <div class="dashboard-row">
+            <span class="dashboard-row-label">Qualificados pela IA</span>
+            <span class="dashboard-row-value">1.203</span>
+          </div>
+          <div class="dashboard-row">
+            <span class="dashboard-row-label">Conversão em venda</span>
+            <span class="dashboard-row-value">14,2%</span>
+          </div>
+          <div class="dashboard-row">
+            <span class="dashboard-row-label">Receita gerada</span>
+            <span class="dashboard-row-value">R$ 187.300</span>
+          </div>
+
+          <div style="margin-top: 24px;">
+            <button class="button button-primary button-md">Ver relatório completo →</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== CARDS ====== -->
+    <section class="section">
+      <div class="section-header">
+        <span class="eyebrow">— 07 / CARDS</span>
+        <h2>Containers <span class="highlight">restritos.</span></h2>
+      </div>
+
+      <div class="grid grid-3">
+        <div class="card">
+          <div class="card-eyebrow">DEFAULT</div>
+          <h3 class="card-title">Card padrão</h3>
+          <p class="card-subtitle">Background surface, border sutil, radius 12px. Uso geral.</p>
+        </div>
+        <div class="card card-elevated">
+          <div class="card-eyebrow">ELEVATED</div>
+          <h3 class="card-title">Card elevado</h3>
+          <p class="card-subtitle">Surface 2 + sombra md. Para painéis com mais peso.</p>
+        </div>
+        <div class="card card-cyber">
+          <div class="card-eyebrow">CYBER</div>
+          <h3 class="card-title">Destaque único</h3>
+          <p class="card-subtitle">Borda Cyber Orange. Apenas um por viewport.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== FORMS ====== -->
+    <section class="section">
+      <div class="section-header">
+        <span class="eyebrow">— 08 / FORMULÁRIOS</span>
+        <h2>Inputs <span class="highlight">limpos.</span></h2>
+      </div>
+
+      <div class="card" style="max-width: 560px;">
+        <div class="input-field" style="margin-bottom: 24px;">
+          <label class="input-label">Nome completo *</label>
+          <div class="input-wrapper">
+            <input class="input" type="text" placeholder="Como o cliente vai te chamar?">
+          </div>
+        </div>
+
+        <div class="input-field" style="margin-bottom: 24px;">
+          <label class="input-label">E-mail</label>
+          <div class="input-wrapper">
+            <input class="input" type="email" placeholder="voce@empresa.com.br">
+          </div>
+        </div>
+
+        <div class="input-field" style="margin-bottom: 24px;">
+          <label class="input-label">Mensagem</label>
+          <div class="input-wrapper" style="padding: 12px 16px;">
+            <textarea class="input" rows="3" placeholder="Em uma frase: o que você precisa resolver?"></textarea>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+          <label class="control">
+            <input type="checkbox" checked>
+            <span class="check-box"></span>
+            <span style="font-size: 14px;">Quero receber a primeira análise grátis</span>
+          </label>
+
+          <label class="control">
+            <input type="checkbox">
+            <div class="switch-track"><div class="switch-thumb"></div></div>
+            <span style="font-size: 14px;">Notificações por WhatsApp</span>
+          </label>
+
+          <label class="control">
+            <input type="checkbox" checked>
+            <div class="switch-track"><div class="switch-thumb"></div></div>
+            <span style="font-size: 14px;">Relatório semanal no e-mail</span>
+          </label>
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+          <button class="button button-ghost button-md">Cancelar</button>
+          <button class="button button-primary button-md">Agendar diagnóstico →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== BADGES + TOAST ====== -->
+    <section class="section">
+      <div class="section-header">
+        <span class="eyebrow">— 09 / FEEDBACK</span>
+        <h2>Badges <span class="highlight">e toasts.</span></h2>
+      </div>
+
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 24px;">
+        <div class="card">
+          <h3 style="font-size: 14px; color: var(--vs-text-secondary); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px;">BADGES</h3>
+          <div class="badge-row">
+            <span class="badge badge-default">Default</span>
+            <span class="badge badge-cyber">Em destaque</span>
+            <span class="badge badge-success">Ativo</span>
+            <span class="badge badge-warning">Pendente</span>
+            <span class="badge badge-danger">Crítico</span>
+            <span class="badge badge-solid">NOVO</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="font-size: 14px; color: var(--vs-text-secondary); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 16px;">TOAST</h3>
+          <div class="toast">
+            <div>
+              <p class="toast-title">Lead capturado às 14:32</p>
+              <p class="toast-desc">A IA respondeu em 47s. Em fila de qualificação.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== DO/DONT ====== -->
+    <section class="section">
+      <div class="section-header">
+        <span class="eyebrow">— 10 / DO'S & DON'TS</span>
+        <h2>O que <span class="highlight">fazer</span><br>e o que nunca.</h2>
+      </div>
+
+      <div class="dodont">
+        <div class="dodont-card dodont-do">
+          <div class="dodont-title">— FAÇA</div>
+          <ul class="dodont-list">
+            <li>Use Deep Space Blue como background dominante</li>
+            <li>Reserve Cyber Orange para CTAs e destaques únicos</li>
+            <li>Aplique Poppins Black Italic no monograma VS</li>
+            <li>Mantenha tracking amplo em taglines em caixa alta</li>
+            <li>Escreva copy direta, em frases curtas</li>
+            <li>Faça o "V" branco e o "S" laranja</li>
+            <li>Trabalhe em flat design moderno</li>
+            <li>Use números reais e métricas concretas</li>
+            <li>Respeite a proporção 70/20/10</li>
+          </ul>
+        </div>
+        <div class="dodont-card dodont-dont">
+          <div class="dodont-title">— NÃO FAÇA</div>
+          <ul class="dodont-list">
+            <li>Adicionar efeitos 3D, sombras dramáticas ou texturas</li>
+            <li>Usar gradientes coloridos no fundo principal</li>
+            <li>Quebrar o monograma em ícone separado</li>
+            <li>Incluir cores além das três oficiais</li>
+            <li>Escrever "transformação digital", "soluções inovadoras"</li>
+            <li>Aplicar Cyber Orange em mais de uma ação por tela</li>
+            <li>Usar fontes serifadas ou manuscritas</li>
+            <li>Reduzir o monograma abaixo de 24px</li>
+            <li>Voltar para a paleta azul neon</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== FOOTER ====== -->
+    <footer class="footer">
+      <div class="logo-mark" style="font-size: 48px; margin-bottom: 16px;">
+        <span class="v">V</span><span class="s">S</span>
+      </div>
+      <p class="footer-text">VS SOLUÇÕES · 2026 · DESIGN SYSTEM v2026.1</p>
+      <p class="footer-text" style="margin-top: 8px; font-size: 10px;">VALE DO PARAÍBA · BR</p>
+    </footer>
+
+  </div>
+</body>
+</html>
