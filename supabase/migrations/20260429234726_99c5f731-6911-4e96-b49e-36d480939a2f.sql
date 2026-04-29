@@ -1,0 +1,1 @@
+ALTER TABLE public.vs_produtos ADD COLUMN IF NOT EXISTS ordem integer DEFAULT 0;

@@ -1332,6 +1332,7 @@ export type Database = {
           id: string
           nichos: string[] | null
           nome: string
+          ordem: number | null
           preco: number | null
           tipo: string
           updated_at: string | null
@@ -1344,6 +1345,7 @@ export type Database = {
           id?: string
           nichos?: string[] | null
           nome: string
+          ordem?: number | null
           preco?: number | null
           tipo?: string
           updated_at?: string | null
@@ -1356,6 +1358,7 @@ export type Database = {
           id?: string
           nichos?: string[] | null
           nome?: string
+          ordem?: number | null
           preco?: number | null
           tipo?: string
           updated_at?: string | null

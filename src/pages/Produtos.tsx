@@ -66,7 +66,7 @@ export default function Produtos() {
         .select("*")
         .order("ordem", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Produto[];
+      return ((data ?? []) as unknown) as Produto[];
     },
   });
 
