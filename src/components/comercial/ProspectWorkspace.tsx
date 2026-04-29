@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,13 +13,15 @@ import {
   Send, Sparkles, Loader2, BrainCircuit, CheckCircle2, XCircle,
   X, Phone, MapPin, Instagram, Globe, User,
   Megaphone, PlayCircle, RotateCcw, ChevronRight, Copy,
-  AlertTriangle, Target, Lightbulb, ArrowRight, Zap, MessageSquare, RefreshCw,
+  AlertTriangle, Target, Lightbulb, ArrowRight, Zap, MessageSquare, RefreshCw, Wand2,
 } from "lucide-react";
 import { StickyNote, Plus, Trash2, Clock } from "lucide-react";
 import { Prospect, PIPELINE_STAGES, classificacaoConfig, scoreColor, timeAgo } from "./types";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChatInputBar, ChatBubble } from "./WhatsAppChat";
 import { ChecklistEtapa } from "./ChecklistEtapa";
+import { BluepaintModal } from "./BluepaintModal";
+import { ConfrontCalculator } from "./ConfrontCalculator";
 
 interface Props {
   prospect: Prospect | null;
@@ -52,8 +55,10 @@ export function ProspectWorkspace({
   loadingAbordar, loadingCadencia, loadingReativar,
 }: Props) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [mensagem, setMensagem] = useState("");
+  const [bluepaintOpen, setBluepaintOpen] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const [centerPanelOpen, setCenterPanelOpen] = useState(true);
   const [loadingSuggest, setLoadingSuggest] = useState(false);
@@ -405,6 +410,57 @@ export function ProspectWorkspace({
       queryClient.invalidateQueries({ queryKey: ["prospects"] });
       onProspectUpdate({ status });
       toast({ title: `Movido para ${PIPELINE_STAGES.find(s => s.key === status)?.label}` });
+
+      if (status === "fechado") {
+        // B2: auto-create client, avoid duplicates
+        const { data: existing } = await supabase
+          .from("consultoria_clientes")
+          .select("id")
+          .eq("whatsapp", prospect.whatsapp)
+          .maybeSingle();
+
+        if (existing?.id) {
+          toast({ title: "Cliente já existe", description: "Redirecionando..." });
+          navigate(`/clientes/${existing.id}`);
+          return;
+        }
+
+        const { data: novo, error: createErr } = await supabase
+          .from("consultoria_clientes")
+          .insert({
+            nome_negocio: prospect.nome_negocio,
+            decisor: prospect.nome_contato ?? prospect.nome_negocio,
+            whatsapp: prospect.whatsapp,
+            cidade: prospect.cidade ?? "",
+            nicho: prospect.nicho ?? "",
+            status: "aguardando_imersao",
+            data_fechamento: new Date().toISOString(),
+            valor_fee: (prospect as any).mrr_estimado ?? 800,
+            tipo_cobranca: "fee_mensal",
+            site: (prospect as any).site ?? "",
+            origem_prospect_id: prospect.id,
+            responsavel_imersao: prospect.responsavel ?? "victor",
+            responsavel: prospect.responsavel ?? "victor",
+          })
+          .select("id")
+          .single();
+
+        if (!createErr && novo) {
+          queryClient.invalidateQueries({ queryKey: ["clientes"] });
+          toast({
+            title: "✅ Cliente criado!",
+            description: `${prospect.nome_negocio} foi adicionado em /clientes`,
+            action: (
+              <button
+                className="text-xs underline text-primary"
+                onClick={() => navigate(`/clientes/${novo.id}`)}
+              >
+                Ver cliente
+              </button>
+            ) as any,
+          });
+        }
+      }
     }
   };
 
@@ -776,6 +832,7 @@ export function ProspectWorkspace({
                     <ActionButton icon={<RotateCcw className="h-4 w-4" />} label="Reativar Lead" desc="Volta para cadência D1" loading={loadingReativar} onClick={() => onReativar(prospect)} />
                   )}
                   <ActionButton icon={<BrainCircuit className="h-4 w-4" />} label="Classificar com IA" desc="Analisa e classifica o lead" loading={loadingClassify} onClick={handleClassify} />
+                  <ActionButton icon={<Wand2 className="h-4 w-4" />} label="Bluepaint" desc="Kit de vendas gerado por IA" loading={false} onClick={() => setBluepaintOpen(true)} />
                 </div>
               </div>
 
@@ -828,6 +885,11 @@ export function ProspectWorkspace({
                   </p>
                 </div>
               )}
+
+              {/* B3 — Calculadora de Confronto */}
+              <div className="border-t border-border pt-4">
+                <ConfrontCalculator feeVsDefault={(prospect as any).mrr_estimado ?? 800} />
+              </div>
 
               {/* Notas / Anotações */}
               <div>
@@ -936,6 +998,13 @@ export function ProspectWorkspace({
           </div>
         )}
       </div>
+      {prospect && (
+        <BluepaintModal
+          prospect={prospect}
+          open={bluepaintOpen}
+          onOpenChange={setBluepaintOpen}
+        />
+      )}
     </div>,
     document.body
   );

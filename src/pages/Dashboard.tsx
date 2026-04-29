@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Users, TrendingUp, DollarSign, Target, Phone, BarChart3,
-  AlertTriangle, BrainCircuit, Flame, Thermometer, Snowflake, Clock, Rocket,
+  AlertTriangle, BrainCircuit, Flame, Thermometer, Snowflake, Clock, Rocket, Timer,
 } from "lucide-react";
 import ProspectingWizard from "@/components/dashboard/ProspectingWizard";
 import { VSAutoMetrics } from "@/components/dashboard/VSAutoMetrics";
@@ -73,6 +73,13 @@ export default function Dashboard() {
 
   const convertidos = clientes?.filter((c) => c.status === "convertido_recorrente").length ?? 0;
   const taxaConversao = clientes?.length ? Math.round((convertidos / clientes.length) * 100) : 0;
+
+  // --- SLA vencidos ---
+  const slaVencidos = prospects?.filter((p) => {
+    if (!((p as any).sla_expires_at)) return false;
+    if (["fechado", "perdido", "convertido", "blacklist"].includes(p.status)) return false;
+    return new Date((p as any).sla_expires_at) < now;
+  }) ?? [];
 
   // --- Alertas urgentes ---
   const respondeuAguardando = prospects?.filter((p) => p.status === "quenterespondeu" || p.status === "respondeu") ?? [];
@@ -153,6 +160,34 @@ export default function Dashboard() {
       </div>
 
       <VSAutoMetrics />
+
+      {/* SLA Vencidos */}
+      {slaVencidos.length > 0 && (
+        <div className="rounded-xl border border-orange-500/40 bg-orange-500/8 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-orange-500/20 flex items-center justify-center shrink-0">
+              <Timer className="h-4 w-4 text-orange-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-orange-400">
+                {slaVencidos.length} prospect{slaVencidos.length > 1 ? "s" : ""} com SLA vencido
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {slaVencidos.slice(0, 3).map(p => p.nome_negocio).join(" · ")}
+                {slaVencidos.length > 3 && ` +${slaVencidos.length - 3} outros`}
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            className="bg-orange-500 hover:bg-orange-400 text-white shrink-0"
+            onClick={() => navigate("/comercial")}
+          >
+            Ver agora
+          </Button>
+        </div>
+      )}
+
       <div className="border-t border-border" />
 
       {/* KPIs */}

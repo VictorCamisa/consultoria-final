@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
 import { NewProspectDialog } from "./NewProspectDialog";
+import { cn } from "@/lib/utils";
 
 interface Props {
   prospect: Prospect;
@@ -30,18 +31,34 @@ export function ProspectCard({
   const [editOpen, setEditOpen] = useState(false);
   const classif = classificacaoConfig(p.classificacao_ia);
   const nichoCat = nichoCategory(p.nicho);
+  const slaExpired = (p as any).sla_expires_at
+    ? new Date((p as any).sla_expires_at) < new Date()
+    : false;
+
   return (
     <>
     <div
-      className="group bg-background rounded-lg border border-border hover:border-primary/30 p-3.5 space-y-3 cursor-pointer transition-all duration-150 hover:shadow-sm"
+      className={cn(
+        "group rounded-lg border p-3.5 space-y-3 cursor-pointer transition-all duration-150 hover:shadow-sm",
+        slaExpired
+          ? "border-orange-500 bg-orange-500/10 shadow-orange-500/20 shadow-md animate-pulse"
+          : "bg-background border-border hover:border-primary/30"
+      )}
       onClick={onSelect}
     >
       {/* Row 1: Name + Score */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold text-foreground leading-tight truncate">
-            {p.nome_negocio}
-          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-[13px] font-semibold text-foreground leading-tight truncate">
+              {p.nome_negocio}
+            </p>
+            {slaExpired && (
+              <Badge className="bg-orange-500 text-white text-[10px] h-[16px] px-1.5 animate-pulse shrink-0">
+                ⚠ SLA VENCIDO
+              </Badge>
+            )}
+          </div>
           <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">
             {p.cidade}
           </p>
