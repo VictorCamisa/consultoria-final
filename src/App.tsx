@@ -21,6 +21,7 @@ import Prospeccao from "@/pages/Prospeccao";
 import MeuVendedor from "@/pages/MeuVendedor";
 import Operacional from "@/pages/Operacional";
 import Leads from "@/pages/Leads";
+import LandingPage from "@/pages/LandingPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient({
@@ -46,6 +47,7 @@ const App = () => (
             <BrowserRouter>
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/site" element={<LandingPage />} />
                 <Route
                   element={
                     <ProtectedRoute>
