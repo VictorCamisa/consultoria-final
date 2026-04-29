@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -48,6 +48,7 @@ const App = () => (
             <WhatsAppNotificationListener />
             <BrowserRouter>
               <Routes>
+                <Route path="/" element={<Navigate to="/site" replace />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/site" element={<LandingPage />} />
                 <Route
@@ -57,7 +58,7 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 >
-                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/comercial" element={<Comercial />} />
                   <Route path="/agente-ia" element={<AgenteIA />} />
                   <Route path="/prospeccao" element={<Prospeccao />} />

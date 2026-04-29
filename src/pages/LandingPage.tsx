@@ -9,14 +9,13 @@ import ROICalculator from '@/components/landing/ROICalculator';
 import FAQAccordion from '@/components/landing/FAQAccordion';
 import CTASection from '@/components/landing/CTASection';
 import LandingFooter from '@/components/landing/LandingFooter';
-
-const WS_NUMBER = '5512999999999';
+import VSChatAgent from '@/components/landing/VSChatAgent';
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[#050814] text-white overflow-x-hidden">
       <LandingNav />
-      <HeroSection whatsappNumber={WS_NUMBER} />
+      <HeroSection />
       <ProblemSection />
       <ProductsGrid />
       <StatsBar />
@@ -24,8 +23,9 @@ export default function LandingPage() {
       <HowItWorks />
       <ROICalculator />
       <FAQAccordion />
-      <CTASection whatsappNumber={WS_NUMBER} />
+      <CTASection />
       <LandingFooter />
+      <VSChatAgent />
     </div>
   );
 }

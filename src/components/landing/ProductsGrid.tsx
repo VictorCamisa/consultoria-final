@@ -1,7 +1,6 @@
 import { Bot, Megaphone, Building2, Globe, ArrowRight } from 'lucide-react';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
-
-const WS_NUMBER = '5512999999999';
+import { openVSChat } from './VSChatAgent';
 
 interface Product {
   icon: React.ElementType;
@@ -113,10 +112,8 @@ export default function ProductsGrid() {
 
               <div className="flex items-center justify-between">
                 <span className="font-sans text-white/75 text-sm font-semibold">{price}</span>
-                <a
-                  href={`https://wa.me/${WS_NUMBER}?text=Ol%C3%A1%2C%20tenho%20interesse%20no%20${encodeURIComponent(name)}!`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => openVSChat(name)}
                   className={`inline-flex items-center gap-1.5 text-sm font-sans font-semibold transition-colors ${
                     highlight
                       ? 'text-[#FF5300] hover:text-orange-400'
@@ -125,7 +122,7 @@ export default function ProductsGrid() {
                 >
                   Falar com especialista
                   <ArrowRight className="w-3.5 h-3.5" />
-                </a>
+                </button>
               </div>
             </div>
           ))}

@@ -29,7 +29,7 @@ const navSections: NavSection[] = [
   {
     label: "",
     items: [
-      { title: "Dashboard", url: "/", icon: LayoutDashboard },
+      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
     ],
   },
   {

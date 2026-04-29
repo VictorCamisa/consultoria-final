@@ -12,7 +12,7 @@ export default function LandingFooter() {
               <VSLogo size="md" />
             </div>
             <p className="font-sans text-white/40 text-sm leading-relaxed max-w-xs mt-3">
-              Agentes de IA para vendas e operações via WhatsApp. Implantação rápida, resultado mensurável.
+              Consultoria + IA para vendas, marketing e operações. Implantação rápida, resultado mensurável.
             </p>
             <div className="flex items-center gap-3 mt-5">
               <a

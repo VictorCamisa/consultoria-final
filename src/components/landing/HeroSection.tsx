@@ -1,10 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, ChevronDown } from 'lucide-react';
 import VSLogo from './VSLogo';
+import { openVSChat } from './VSChatAgent';
 
-interface HeroSectionProps {
-  whatsappNumber: string;
-}
 
 /* ── Particles ── */
 const PARTICLES = Array.from({ length: 24 }, (_, i) => ({
@@ -173,8 +171,7 @@ function ScrollIndicator() {
 }
 
 /* ── Main ── */
-export default function HeroSection({ whatsappNumber }: HeroSectionProps) {
-  const waLink = `https://wa.me/${whatsappNumber}?text=Quero%20ver%20uma%20demo%20da%20VS%20Solu%C3%A7%C3%B5es!`;
+export default function HeroSection() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   /* Mouse parallax on desktop */
@@ -318,15 +315,13 @@ export default function HeroSection({ whatsappNumber }: HeroSectionProps) {
               className="flex flex-col sm:flex-row gap-4 animate-reveal-up"
               style={{ animationDelay: '550ms' }}
             >
-              <a
-                href={waLink}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={() => openVSChat()}
                 className="group inline-flex items-center justify-center gap-2 bg-[#FF5300] hover:bg-orange-400 text-white font-sans font-semibold px-6 py-3.5 rounded-md transition-all duration-200 hover:shadow-lg hover:shadow-[#FF5300]/30 hover:-translate-y-0.5"
               >
                 Quero um diagnóstico gratuito
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </a>
+              </button>
               <a
                 href="#solucao"
                 className="inline-flex items-center justify-center gap-2 border border-white/15 hover:border-[#FF5300]/40 text-white/70 hover:text-white font-sans font-medium px-6 py-3.5 rounded-md transition-all duration-200 hover:-translate-y-0.5"
