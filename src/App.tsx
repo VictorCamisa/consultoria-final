@@ -21,6 +21,8 @@ import Prospeccao from "@/pages/Prospeccao";
 import MeuVendedor from "@/pages/MeuVendedor";
 import Operacional from "@/pages/Operacional";
 import Leads from "@/pages/Leads";
+import Financeiro from "@/pages/Financeiro";
+import Produtos from "@/pages/Produtos";
 import LandingPage from "@/pages/LandingPage";
 import NotFound from "@/pages/NotFound";
 
@@ -65,6 +67,8 @@ const App = () => (
                   <Route path="/clientes/:id" element={<ClienteDetalhe />} />
                   <Route path="/acompanhamento" element={<Acompanhamento />} />
                   <Route path="/operacional" element={<Operacional />} />
+                  <Route path="/financeiro" element={<Financeiro />} />
+                  <Route path="/produtos" element={<Produtos />} />
                   <Route path="/configuracoes" element={<Configuracoes />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />

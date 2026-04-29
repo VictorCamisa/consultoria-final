@@ -23,7 +23,15 @@ export default function Login() {
     try {
       await signIn(email, password);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Erro ao autenticar";
+      const raw = err instanceof Error ? err.message : "";
+      const msg =
+        raw.includes("Invalid login credentials") || raw.includes("invalid_credentials")
+          ? "E-mail ou senha incorretos."
+          : raw.includes("Email not confirmed")
+          ? "Confirme seu e-mail antes de entrar."
+          : raw.includes("Too many requests")
+          ? "Muitas tentativas. Aguarde alguns minutos."
+          : raw || "Não foi possível autenticar. Tente novamente.";
       toast({ title: "Acesso negado", description: msg, variant: "destructive" });
     } finally {
       setLoading(false);
@@ -104,8 +112,9 @@ export default function Login() {
             <ArrowLeft className="w-3 h-3" />
             Voltar para o site
           </Link>
-          <p className="text-[11px] text-muted-foreground">
-            VS Consultoria · Sistema interno
+          <p className="text-[11px] text-muted-foreground text-center leading-relaxed">
+            Acesso restrito à equipe VS.{" "}
+            <span className="opacity-60">Solicite seu acesso pelo WhatsApp.</span>
           </p>
         </div>
       </div>
