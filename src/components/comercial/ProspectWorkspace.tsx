@@ -450,7 +450,7 @@ export function ProspectWorkspace({
           .from("consultoria_clientes")
           .insert({
             nome_negocio: prospect.nome_negocio,
-            decisor: prospect.nome_contato ?? prospect.nome_negocio,
+            decisor: (prospect as any).nome_contato ?? prospect.decisor ?? prospect.nome_negocio,
             whatsapp: prospect.whatsapp,
             cidade: prospect.cidade ?? "",
             nicho: prospect.nicho ?? "",
