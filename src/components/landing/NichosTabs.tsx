@@ -15,41 +15,41 @@ const nichos: Nicho[] = [
     id: 'estetica',
     label: 'Estética',
     icon: Sparkles,
-    dor: 'Clínicas de estética perdem até 60% dos leads por demora no retorno. Clientes pesquisam em 3–5 clínicas simultaneamente e fecham com quem responde primeiro. Agendamentos por WhatsApp viram caos sem sistema.',
+    dor: 'Clínicas de estética perdem até 60% dos leads por demora no retorno. Agendamentos por WhatsApp viram caos sem sistema, a recepção se sobrecarrega e processos internos (controle de caixa, agenda, estoque) ainda são feitos no papel ou em planilhas.',
     solucao:
-      'O VS Sales responde em segundos, qualifica o interesse (procedimento, urgência, orçamento), agenda direto no calendário e envia confirmação + lembrete automático — tudo sem humano.',
+      'O VS Sales responde e agenda 24/7. O VS Departamentos automatiza processos internos — controle financeiro, confirmações e lembretes de retorno. Para clínicas que querem crescer, o VS Marketing estrutura conteúdo e tráfego para atrair mais pacientes.',
     resultado:
-      'Clínicas parceiras relatam +35% em agendamentos confirmados e redução de 70% no no-show com lembretes automatizados.',
+      'Clínicas parceiras relatam +35% em agendamentos confirmados, redução de 70% no no-show e liberação de horas semanais da equipe com automação de processos administrativos.',
   },
   {
     id: 'odonto',
     label: 'Odonto',
     icon: Stethoscope,
-    dor: 'Consultórios odontológicos têm pico de interesse no primeiro contato, mas recepcionistas não conseguem atender todos simultaneamente. Leads de procedimentos de alto ticket (implante, facetas) somem no silêncio.',
+    dor: 'Consultórios odontológicos perdem leads de alto ticket (implante, facetas) porque a recepção não dá conta do volume simultâneo. Além disso, gestão de retornos, cobranças e controle de estoque de materiais consomem tempo precioso da equipe.',
     solucao:
-      'O agente qualifica interesse em procedimento, simula orçamento baseado no menu de preços da clínica, agenda avaliação gratuita e faz follow-up automático com os não-respondentes.',
+      'O VS Sales qualifica interesse, simula orçamento e agenda avaliação gratuita automaticamente. O VS Departamentos organiza cobranças, retornos e comunicação com pacientes. O VS 360 entrega a transformação completa da operação com acompanhamento semanal.',
     resultado:
-      'Parceiros relatam agendamentos de avaliação triplicados e ticket médio 20% maior por melhor qualificação antes do atendimento presencial.',
+      'Parceiros relatam agendamentos de avaliação triplicados, ticket médio 20% maior e economia de até 15h/semana da equipe administrativa com processos automatizados.',
   },
   {
     id: 'advocacia',
     label: 'Advocacia',
     icon: Scale,
-    dor: 'Escritórios de advocacia recebem consultas de casos inviáveis que consomem o tempo dos sócios. Casos de alto valor são perdidos porque a resposta demorou mais de 2 horas — concorrente ágil ganhou o cliente.',
+    dor: 'Escritórios recebem consultas de casos inviáveis que consomem o tempo dos sócios. Processos internos — controle de prazos, envio de documentos, cobrança de honorários — ainda dependem de e-mails manuais e planilhas pouco confiáveis.',
     solucao:
-      'O VS Sales faz triagem inteligente: identifica área do direito, urgência e viabilidade. Casos elegíveis são agendados para consulta; casos inviáveis recebem indicação cortês. Sócios só falam com leads qualificados.',
+      'O VS Sales faz triagem inteligente: sócios só falam com leads qualificados. O VS Departamentos automatiza comunicação com clientes, alertas de prazo e fluxo de cobrança de honorários. Tudo integrado, rastreado e com histórico completo.',
     resultado:
-      'Escritórios parceiros reduziram 80% das consultas não-qualificadas e aumentaram taxa de conversão para contratos em 28%.',
+      'Escritórios parceiros reduziram 80% das consultas não-qualificadas, aumentaram conversão para contratos em 28% e eliminaram atrasos no envio de documentos com automações.',
   },
   {
     id: 'revendas',
     label: 'Revendas de Veículos',
     icon: Car,
-    dor: 'Revendas recebem centenas de consultas mensais. Vendedores demoram para responder, mandam tabelas em PDF ilegíveis e perdem leads para concessionárias com resposta instantânea. Negociação se arrasta por dias.',
+    dor: 'Revendas recebem centenas de consultas mensais. Vendedores demoram para responder, perdem leads para concorrentes com resposta instantânea, e o marketing de anúncios é feito sem estratégia ou mensuração de retorno.',
     solucao:
-      'O agente responde com detalhes do veículo consultado, simula financiamento em segundos, qualifica intenção de compra e marca test-drive. Para interessados quentes, faz handoff imediato para o vendedor humano.',
+      'O VS Sales responde com detalhes do veículo, simula financiamento e agenda test-drive automaticamente. O VS Marketing estrutura campanhas pagas e orgânicas com foco em conversão. O VS AUTO oferece um sistema completo de gestão de leads e vendas para revendas.',
     resultado:
-      'Revendas parceiras registram 3x mais test-drives agendados e ciclo de venda 40% mais curto com qualificação prévia da IA.',
+      'Revendas parceiras registram 3× mais test-drives agendados, ciclo de venda 40% mais curto e ROI mensurável em cada campanha de marketing — sem achismo.',
   },
 ];
 

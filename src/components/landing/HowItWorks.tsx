@@ -6,28 +6,28 @@ const steps = [
     icon: Search,
     title: 'Diagnóstico gratuito',
     description:
-      '30 minutos com o time VS para entender seu negócio, volume de leads, processo atual e onde está a maior perda de receita.',
+      '30 minutos com o time VS para entender seu negócio, mapear onde estão as maiores perdas — em vendas, operações ou marketing — e definir qual produto faz mais sentido para agora.',
     detail: 'Chamada de 30min · sem custo',
   },
   {
     icon: FileText,
     title: 'Blueprint personalizado',
     description:
-      'Documento com o mapeamento completo da sua operação de vendas, os agentes de IA recomendados e a projeção de ROI para o seu caso.',
+      'Documento com o mapeamento completo da sua operação, os produtos VS recomendados para cada área e a projeção de impacto real para o seu negócio.',
     detail: 'Entregue em até 48h',
   },
   {
     icon: Rocket,
     title: 'Implantação em 10 dias',
     description:
-      'Configuração do agente, integração com seu WhatsApp, treinamento na sua linguagem e testes antes do go-live. Zero código da sua parte.',
+      'Configuração das soluções, integração com seus sistemas atuais, treinamento e testes antes do go-live. Zero código da sua parte — a VS cuida de tudo.',
     detail: 'Go-live em até 10 dias úteis',
   },
   {
     icon: HeartHandshake,
-    title: 'Acompanhamento mensal',
+    title: 'Acompanhamento contínuo',
     description:
-      'Reunião mensal de performance, ajustes no agente conforme aprendizado e relatório de resultados com métricas de conversão.',
+      'Reunião mensal de performance, ajustes e evolução das automações conforme o negócio cresce. Você tem um gerente de conta dedicado e relatório de impacto mensal.',
     detail: 'Suporte contínuo incluso',
   },
 ];
@@ -48,7 +48,7 @@ export default function HowItWorks() {
             Como Funciona
           </p>
           <h2 className="font-display font-black text-3xl sm:text-4xl text-white italic">
-            De zero a IA vendendo em 4 passos
+            De diagnóstico à transformação em 4 passos
           </h2>
         </div>
 

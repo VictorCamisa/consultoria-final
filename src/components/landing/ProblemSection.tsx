@@ -1,27 +1,27 @@
-import { Clock, TrendingDown, BarChart2 } from 'lucide-react';
+import { Clock, Cog, BarChart2 } from 'lucide-react';
 import { useScrollReveal } from '@/hooks/useScrollReveal';
 
 const problems = [
   {
     icon: Clock,
     number: '73%',
-    title: 'Lead chega, vendedor demora — concorrente fecha.',
+    title: 'Lead chega, ninguém responde rápido — concorrente fecha.',
     description:
-      'Pesquisas mostram que 73% dos leads compram do primeiro fornecedor que responde. Cada minuto de demora é receita indo embora.',
+      'Pesquisas mostram que 73% dos leads compram do primeiro fornecedor que responde. Cada minuto de demora é receita indo embora. Atendimento manual não consegue acompanhar o volume.',
   },
   {
-    icon: TrendingDown,
+    icon: Cog,
     number: '5×',
-    title: 'Equipe não aguenta o volume e a qualidade cai.',
+    title: 'Processos internos manuais travam o crescimento.',
     description:
-      'Vendedores esgotados cometem erros, perdem o timing certo e deixam leads quentes esfriar. Escalar time humano custa 5x mais.',
+      'Tarefas repetitivas em RH, financeiro, atendimento e operações consomem tempo que deveria ir para o que realmente importa. Escalar time humano custa 5× mais do que automatizar com IA.',
   },
   {
     icon: BarChart2,
     number: '0',
-    title: 'Sem dados, sem previsibilidade — só feeling.',
+    title: 'Sem dados, sem estratégia — só feeling e retrabalho.',
     description:
-      'Sem rastreamento de cada interação, não há como saber onde os leads somem, qual script converte e onde o funil vaza.',
+      'Sem rastreamento de cada interação — de vendas a operações — não há como saber onde o negócio vaza, qual canal converte e onde investir para crescer com previsibilidade.',
   },
 ];
 
@@ -41,7 +41,7 @@ export default function ProblemSection() {
             O Problema
           </p>
           <h2 className="font-display font-black text-3xl sm:text-4xl text-white italic">
-            Por que você está perdendo leads agora mesmo
+            Por que empresas deixam dinheiro na mesa todo mês
           </h2>
         </div>
 

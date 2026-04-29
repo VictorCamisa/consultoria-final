@@ -28,7 +28,7 @@ function maskPhone(raw: string) {
 }
 
 export default function CTASection({ whatsappNumber }: CTASectionProps) {
-  const waLink = `https://wa.me/${whatsappNumber}?text=Ol%C3%A1%2C%20quero%20parar%20de%20perder%20leads%20com%20a%20VS!`;
+  const waLink = `https://wa.me/${whatsappNumber}?text=Ol%C3%A1%2C%20quero%20um%20diagn%C3%B3stico%20gratuito%20com%20a%20VS!`;
 
   const [form, setForm] = useState<FormState>({
     nome: '',
@@ -86,10 +86,10 @@ export default function CTASection({ whatsappNumber }: CTASectionProps) {
         {/* Header */}
         <div className="text-center mb-14">
           <h2 className="font-display font-black text-4xl sm:text-5xl text-white italic mb-4">
-            Pronto para parar de perder leads?
+            Pronto para transformar sua empresa com IA?
           </h2>
           <p className="font-sans text-white/80 text-lg max-w-xl mx-auto">
-            Comece com um diagnóstico gratuito de 30 minutos. Sem compromisso, sem enrolação.
+            Comece com um diagnóstico gratuito de 30 minutos. Identificamos onde estão suas maiores oportunidades — em vendas, marketing ou operações.
           </p>
         </div>
 
@@ -112,7 +112,7 @@ export default function CTASection({ whatsappNumber }: CTASectionProps) {
               className="inline-flex items-center gap-2 bg-white text-[#FF5300] hover:bg-orange-50 font-sans font-bold px-6 py-3.5 rounded-md transition-colors"
             >
               <MessageCircle className="w-4 h-4" />
-              Falar no WhatsApp agora
+              Quero meu diagnóstico gratuito
             </a>
           </div>
 
@@ -174,7 +174,7 @@ export default function CTASection({ whatsappNumber }: CTASectionProps) {
                     className="w-full bg-white/10 border border-white/20 rounded-md px-4 py-2.5 text-white placeholder-white/40 text-sm font-sans focus:outline-none focus:border-white/60 transition-colors"
                   />
                   <textarea
-                    placeholder="Mensagem (opcional)"
+                    placeholder="O que você quer transformar na empresa? (opcional)"
                     value={form.mensagem}
                     onChange={(e) => set('mensagem', e.target.value)}
                     rows={2}

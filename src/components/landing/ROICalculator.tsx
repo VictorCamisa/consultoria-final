@@ -1,20 +1,21 @@
 import { useState } from 'react';
-import { Calculator } from 'lucide-react';
+import { TrendingUp } from 'lucide-react';
 
 const WS_NUMBER = '5512999999999';
 
 export default function ROICalculator() {
   const [leadsPerMonth, setLeadsPerMonth] = useState(80);
   const [ticketMedio, setTicketMedio] = useState(2000);
-  const [vendedores, setVendedores] = useState(2);
+  const [horasProcessos, setHorasProcessos] = useState(20);
 
   const taxaPerda = 0.4;
   const melhoriaConversao = 0.16;
-  const custoVS = 800;
+  const custoHora = 50;
 
   const leadsPerdisosMes = Math.round(leadsPerMonth * taxaPerda);
   const receitaPerda = leadsPerdisosMes * ticketMedio * melhoriaConversao;
-  const roi = receitaPerda / custoVS;
+  const economiaProcessos = horasProcessos * custoHora * 4; // 4 semanas
+  const impactoTotal = receitaPerda + economiaProcessos;
 
   const fmt = (n: number) =>
     n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
@@ -25,13 +26,13 @@ export default function ROICalculator() {
         {/* Header */}
         <div className="text-center mb-14">
           <p className="font-sans text-xs font-semibold uppercase tracking-widest text-[#FF5300] mb-3">
-            Calculadora de ROI
+            Calculadora de Impacto
           </p>
           <h2 className="font-display font-black text-3xl sm:text-4xl text-white italic mb-4">
-            Quanto você está perdendo agora?
+            Quanto sua empresa pode recuperar?
           </h2>
           <p className="font-sans text-white/50 text-base max-w-xl mx-auto">
-            Ajuste os sliders abaixo com os dados do seu negócio e veja o impacto real em segundos.
+            Ajuste os números abaixo e veja o impacto combinado de vendas + automação de processos no seu resultado mensal.
           </p>
         </div>
 
@@ -67,7 +68,7 @@ export default function ROICalculator() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <label className="font-sans text-sm font-semibold text-white/80">
-                  Ticket médio
+                  Ticket médio por venda
                 </label>
                 <span className="font-display font-black text-xl text-[#FF5300] italic">
                   {fmt(ticketMedio)}
@@ -88,28 +89,28 @@ export default function ROICalculator() {
               </div>
             </div>
 
-            {/* Vendedores */}
+            {/* Horas em processos manuais */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <label className="font-sans text-sm font-semibold text-white/80">
-                  Nº de vendedores
+                  Horas/semana em tarefas manuais
                 </label>
                 <span className="font-display font-black text-xl text-[#FF5300] italic">
-                  {vendedores}
+                  {horasProcessos}h
                 </span>
               </div>
               <input
                 type="range"
-                min={1}
-                max={10}
-                step={1}
-                value={vendedores}
-                onChange={(e) => setVendedores(Number(e.target.value))}
+                min={2}
+                max={80}
+                step={2}
+                value={horasProcessos}
+                onChange={(e) => setHorasProcessos(Number(e.target.value))}
                 className="w-full accent-[#FF5300] cursor-pointer"
               />
               <div className="flex justify-between mt-1">
-                <span className="text-white/30 text-xs font-sans">1</span>
-                <span className="text-white/30 text-xs font-sans">10</span>
+                <span className="text-white/30 text-xs font-sans">2h</span>
+                <span className="text-white/30 text-xs font-sans">80h</span>
               </div>
             </div>
 
@@ -118,63 +119,62 @@ export default function ROICalculator() {
               <p className="font-sans text-xs font-semibold uppercase tracking-widest text-white/30 mb-2">
                 Premissas utilizadas
               </p>
-              <p className="font-sans text-xs text-white/40">• 40% de leads perdidos por demora</p>
-              <p className="font-sans text-xs text-white/40">• +16% de conversão vs. humano (dado VS)</p>
-              <p className="font-sans text-xs text-white/40">• VS Sales base: R$800/mês</p>
+              <p className="font-sans text-xs text-white/40">• 40% de leads perdidos por demora no atendimento</p>
+              <p className="font-sans text-xs text-white/40">• +16% de melhoria de conversão com VS Sales</p>
+              <p className="font-sans text-xs text-white/40">• R$50/h de custo médio de mão de obra manual</p>
             </div>
           </div>
 
           {/* Output */}
           <div className="flex flex-col gap-5">
-            {/* Main result */}
+            {/* Impacto em vendas */}
+            <div className="bg-[#0D1117] border border-white/10 rounded-2xl p-6">
+              <p className="font-sans text-xs font-semibold uppercase tracking-widest text-white/40 mb-1">
+                Recuperação em vendas (VS Sales)
+              </p>
+              <p className="font-display font-black text-3xl text-white italic">
+                {fmt(receitaPerda)}<span className="text-[#FF5300] text-lg">/mês</span>
+              </p>
+              <p className="font-sans text-white/35 text-xs mt-1">
+                {leadsPerdisosMes} leads perdidos × {fmt(ticketMedio)} × 16%
+              </p>
+            </div>
+
+            {/* Economia em processos */}
+            <div className="bg-[#0D1117] border border-white/10 rounded-2xl p-6">
+              <p className="font-sans text-xs font-semibold uppercase tracking-widest text-white/40 mb-1">
+                Economia em processos (VS Departamentos)
+              </p>
+              <p className="font-display font-black text-3xl text-white italic">
+                {fmt(economiaProcessos)}<span className="text-[#FF5300] text-lg">/mês</span>
+              </p>
+              <p className="font-sans text-white/35 text-xs mt-1">
+                {horasProcessos}h/sem × 4 semanas × R$50/h automatizados
+              </p>
+            </div>
+
+            {/* Total */}
             <div className="bg-[#FF5300]/10 border border-[#FF5300]/30 rounded-2xl p-8 flex-1">
               <p className="font-sans text-xs font-semibold uppercase tracking-widest text-[#FF5300] mb-3">
-                Você está perdendo todo mês
+                Impacto total estimado por mês
               </p>
               <p className="font-display font-black text-5xl sm:text-6xl text-white italic mb-2">
-                {fmt(receitaPerda)}
+                {fmt(impactoTotal)}
               </p>
               <p className="font-sans text-white/50 text-sm">
-                {leadsPerdisosMes} leads perdidos × {fmt(ticketMedio)} × 16% de melhoria
-              </p>
-            </div>
-
-            {/* ROI */}
-            <div className="bg-[#0D1117] border border-white/10 rounded-2xl p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-sans text-xs font-semibold uppercase tracking-widest text-white/40 mb-1">
-                    ROI estimado com VS Sales
-                  </p>
-                  <p className="font-display font-black text-3xl text-white italic">
-                    {roi.toFixed(1)}
-                    <span className="text-[#FF5300]">×</span> o investimento
-                  </p>
-                </div>
-                <Calculator className="w-10 h-10 text-[#FF5300]/30" />
-              </div>
-            </div>
-
-            {/* Cost comparison */}
-            <div className="bg-[#0D1117] border border-white/10 rounded-2xl p-6">
-              <div className="flex items-center justify-between mb-4">
-                <p className="font-sans text-sm text-white/60">Custo VS Sales</p>
-                <p className="font-display font-black text-xl text-white italic">{fmt(custoVS)}/mês</p>
-              </div>
-              <div className="h-px bg-white/5 mb-4" />
-              <p className="font-sans text-xs text-white/40 text-center">
-                Retorno potencial de {fmt(receitaPerda)}/mês pagando apenas {fmt(custoVS)}/mês
+                Combinando VS Sales + VS Departamentos
               </p>
             </div>
 
             {/* CTA */}
             <a
-              href={`https://wa.me/${WS_NUMBER}?text=Quero%20calcular%20meu%20ROI%20com%20a%20VS!`}
+              href={`https://wa.me/${WS_NUMBER}?text=Quero%20calcular%20o%20impacto%20da%20VS%20no%20meu%20neg%C3%B3cio!`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 bg-[#FF5300] hover:bg-orange-400 text-white font-sans font-semibold px-6 py-3.5 rounded-md transition-colors text-center"
             >
-              Quero recuperar esses leads agora
+              <TrendingUp className="w-4 h-4" />
+              Quero esse impacto na minha empresa
             </a>
           </div>
         </div>
