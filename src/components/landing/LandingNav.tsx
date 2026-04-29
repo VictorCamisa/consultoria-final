@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Menu, X, Zap } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
+import VSLogo from './VSLogo';
 
 const WS_NUMBER = '5512999999999';
 
@@ -25,19 +26,20 @@ export default function LandingNav() {
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled ? 'bg-[#050814]/95 backdrop-blur-md border-b border-white/10' : 'bg-transparent'
+        scrolled
+          ? 'bg-[#050814]/95 backdrop-blur-md border-b border-white/8 shadow-lg shadow-black/30'
+          : 'bg-transparent'
       }`}
     >
+      {/* Top accent line */}
+      {!scrolled && (
+        <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#FF5300]/40 to-transparent" />
+      )}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <a href="#hero" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-[#FF5300] rounded flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white" fill="currentColor" />
-            </div>
-            <span className="font-display font-black text-white tracking-tight text-lg">
-              VS <span className="text-[#FF5300]">Soluções</span>
-            </span>
+          <a href="#hero">
+            <VSLogo size="sm" />
           </a>
 
           {/* Desktop links */}
@@ -46,7 +48,7 @@ export default function LandingNav() {
               <a
                 key={l.href}
                 href={l.href}
-                className="text-sm font-sans font-medium text-white/70 hover:text-white transition-colors"
+                className="text-sm font-sans font-medium text-white/60 hover:text-white transition-colors"
               >
                 {l.label}
               </a>
@@ -59,13 +61,12 @@ export default function LandingNav() {
               href={`https://wa.me/${WS_NUMBER}?text=Ol%C3%A1%2C%20quero%20saber%20mais%20sobre%20a%20VS%20Solu%C3%A7%C3%B5es!`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-[#FF5300] hover:bg-orange-400 text-white font-sans font-semibold text-sm px-4 py-2 rounded-md transition-colors"
+              className="inline-flex items-center gap-2 bg-[#FF5300] hover:bg-orange-400 text-white font-sans font-semibold text-sm px-4 py-2 rounded-md transition-all hover:shadow-md hover:shadow-[#FF5300]/30"
             >
               Falar agora
             </a>
           </div>
 
-          {/* Mobile toggle */}
           <button
             className="md:hidden text-white p-2"
             onClick={() => setOpen(!open)}
@@ -76,7 +77,6 @@ export default function LandingNav() {
         </div>
       </div>
 
-      {/* Mobile menu */}
       {open && (
         <div className="md:hidden bg-[#050814] border-t border-white/10 px-4 py-4 flex flex-col gap-4">
           {links.map((l) => (

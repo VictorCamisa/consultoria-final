@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, ArrowRight, Zap, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft } from "lucide-react";
+import VSLogo from "@/components/landing/VSLogo";
 
 export default function Login() {
   const { signIn, session, loading: authLoading } = useAuth();
@@ -39,14 +40,7 @@ export default function Login() {
         <div className="rounded-2xl border border-border bg-background p-8 shadow-xl">
           {/* Brand */}
           <div className="flex flex-col items-center gap-3 mb-8">
-            <div className="flex items-center gap-2.5">
-              <div className="w-10 h-10 bg-[#FF5300] rounded-lg flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" fill="currentColor" />
-              </div>
-              <span className="font-display font-black text-xl text-foreground tracking-tight">
-                VS <span className="text-[#FF5300]">Soluções</span>
-              </span>
-            </div>
+            <VSLogo size="md" />
             <div className="text-center">
               <h1 className="text-sm font-semibold text-foreground tracking-tight">VS Growth Hub</h1>
               <p className="text-xs text-muted-foreground mt-0.5">Acesse seu painel de crescimento</p>

@@ -1,4 +1,5 @@
-import { Zap, Instagram, Linkedin } from 'lucide-react';
+import { Instagram, Linkedin } from 'lucide-react';
+import VSLogo from './VSLogo';
 
 export default function LandingFooter() {
   return (
@@ -7,15 +8,10 @@ export default function LandingFooter() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-8 h-8 bg-[#FF5300] rounded flex items-center justify-center">
-                <Zap className="w-4 h-4 text-white" fill="currentColor" />
-              </div>
-              <span className="font-display font-black text-white tracking-tight text-lg">
-                VS <span className="text-[#FF5300]">Soluções</span>
-              </span>
+            <div className="mb-4">
+              <VSLogo size="md" />
             </div>
-            <p className="font-sans text-white/40 text-sm leading-relaxed max-w-xs">
+            <p className="font-sans text-white/40 text-sm leading-relaxed max-w-xs mt-3">
               Agentes de IA para vendas e operações via WhatsApp. Implantação rápida, resultado mensurável.
             </p>
             <div className="flex items-center gap-3 mt-5">
@@ -90,9 +86,7 @@ export default function LandingFooter() {
           <p className="font-sans text-xs text-white/20">
             © {new Date().getFullYear()} VS Soluções. CNPJ 00.000.000/0001-00. Todos os direitos reservados.
           </p>
-          <p className="font-sans text-xs text-white/20">
-            Feito com IA por VS Soluções
-          </p>
+          <p className="font-sans text-xs text-white/20">Feito com IA pela VS Soluções</p>
         </div>
       </div>
     </footer>
