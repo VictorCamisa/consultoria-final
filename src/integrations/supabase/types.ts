@@ -123,10 +123,13 @@ export type Database = {
           data_pagamento: string | null
           decisor: string
           faturamento_estimado: string | null
+          github_url: string | null
           id: string
+          legado: boolean
           nicho: string
           nome_negocio: string
           pagamento_confirmado: boolean | null
+          projeto_legado: string | null
           prospect_id: string | null
           responsavel_imersao: string | null
           status: string
@@ -143,10 +146,13 @@ export type Database = {
           data_pagamento?: string | null
           decisor: string
           faturamento_estimado?: string | null
+          github_url?: string | null
           id?: string
+          legado?: boolean
           nicho: string
           nome_negocio: string
           pagamento_confirmado?: boolean | null
+          projeto_legado?: string | null
           prospect_id?: string | null
           responsavel_imersao?: string | null
           status?: string
@@ -163,10 +169,13 @@ export type Database = {
           data_pagamento?: string | null
           decisor?: string
           faturamento_estimado?: string | null
+          github_url?: string | null
           id?: string
+          legado?: boolean
           nicho?: string
           nome_negocio?: string
           pagamento_confirmado?: boolean | null
+          projeto_legado?: string | null
           prospect_id?: string | null
           responsavel_imersao?: string | null
           status?: string
