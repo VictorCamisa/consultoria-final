@@ -19,10 +19,10 @@ const PARTICLES = Array.from({ length: 24 }, (_, i) => ({
 
 /* ── Animated WhatsApp Mockup ── */
 const messages = [
-  { from: 'in',  text: 'Oi! Vi o anúncio. Qual o preço?', delay: 0 },
-  { from: 'out', text: 'Olá! Sou a Ana da VS 👋 Temos planos a partir de R$800/mês. Me conta: quantos leads você recebe por mês?', delay: 1400 },
-  { from: 'in',  text: 'Umas 80 por mês, perco muitos...', delay: 2800 },
-  { from: 'out', text: 'Com 80 leads e 40% de perda, você deixa ~R$32k na mesa todo mês. Quer resolver isso agora? 🚀', delay: 4200 },
+  { from: 'in',  text: 'Oi! Como a VS pode ajudar minha clínica?', delay: 0 },
+  { from: 'out', text: 'Olá! Sou a Ana da VS 👋 Atuamos em vendas, marketing e operações com IA. Por onde quer começar?', delay: 1400 },
+  { from: 'in',  text: 'Perco muitos leads e meu time está sobrecarregado...', delay: 2800 },
+  { from: 'out', text: 'Entendi! Temos soluções pra isso: VS Sales (atendimento 24/7) + VS Departamentos (automatiza processos internos). Posso te explicar? 🚀', delay: 4200 },
 ];
 
 function ChatMockup() {
@@ -48,7 +48,7 @@ function ChatMockup() {
             <span className="text-white text-[10px] font-black font-display italic">VS</span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white text-xs font-semibold leading-none">VS Sales — Ana IA</p>
+            <p className="text-white text-xs font-semibold leading-none">VS Soluções — Ana IA</p>
             <p className="text-green-300 text-[10px] mt-0.5 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-green-400 inline-block animate-pulse" />
               online agora
@@ -118,12 +118,12 @@ function ChatMockup() {
 
       {/* Floating badges */}
       <div className="absolute -left-8 top-16 bg-[#050814] border border-[#FF5300]/30 rounded-xl px-3 py-2 shadow-lg shadow-black/40 animate-float-slow" style={{ animationDelay: '1s' }}>
-        <p className="text-[#FF5300] text-xs font-semibold font-sans">+16%</p>
-        <p className="text-white/50 text-[9px] font-sans">vs humano</p>
+        <p className="text-[#FF5300] text-xs font-semibold font-sans">4 produtos</p>
+        <p className="text-white/50 text-[9px] font-sans">portfólio VS</p>
       </div>
       <div className="absolute -right-6 bottom-24 bg-[#050814] border border-green-500/30 rounded-xl px-3 py-2 shadow-lg shadow-black/40 animate-float" style={{ animationDelay: '2s' }}>
-        <p className="text-green-400 text-xs font-semibold font-sans">98,9%</p>
-        <p className="text-white/50 text-[9px] font-sans">assertividade</p>
+        <p className="text-green-400 text-xs font-semibold font-sans">10 dias</p>
+        <p className="text-white/50 text-[9px] font-sans">implantação</p>
       </div>
     </div>
   );
@@ -131,7 +131,7 @@ function ChatMockup() {
 
 /* ── Animated headline words ── */
 function AnimatedHeadline() {
-  const words = ['Sua empresa vende pelo WhatsApp.', 'A VS faz isso', 'acontecer 24/7.'];
+  const words = ['Sua empresa tem potencial.', 'A VS transforma', 'isso em resultado.'];
   const [step, setStep] = useState(0);
 
   useEffect(() => {
@@ -146,17 +146,17 @@ function AnimatedHeadline() {
       <span
         className={`block transition-all duration-500 ${step >= 1 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
       >
-        Sua empresa vende
+        Sua empresa tem
       </span>
       <span
         className={`block transition-all duration-500 delay-150 ${step >= 2 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
       >
-        pelo WhatsApp.
+        potencial.
       </span>
       <span
         className={`block transition-all duration-500 delay-300 text-[#FF5300] ${step >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}
       >
-        A VS faz isso acontecer 24/7.
+        A VS transforma isso em resultado.
       </span>
     </h1>
   );
@@ -277,7 +277,7 @@ export default function HeroSection({ whatsappNumber }: HeroSectionProps) {
             >
               <div className="w-1.5 h-1.5 rounded-full bg-[#FF5300] animate-pulse" />
               <span className="text-[#FF5300] text-xs font-sans font-semibold uppercase tracking-widest">
-                IA para vendas via WhatsApp · 24/7
+                Consultoria + IA · Vendas, Marketing e Operações
               </span>
             </div>
 
@@ -291,7 +291,7 @@ export default function HeroSection({ whatsappNumber }: HeroSectionProps) {
               className="font-sans text-white/55 text-base sm:text-lg leading-relaxed mb-8 max-w-lg animate-reveal-up"
               style={{ animationDelay: '350ms' }}
             >
-              Agentes de IA que abordam, qualificam e convertem leads no WhatsApp — sem vendedor, sem demora, sem lead desperdiçado. Resultado mensurável em até 10 dias.
+              Da automação de vendas à inteligência nos departamentos — a VS implanta IA em cada área da sua empresa com estratégia, acompanhamento e resultado mensurável em até 10 dias.
             </p>
 
             {/* Stats row */}
@@ -300,8 +300,8 @@ export default function HeroSection({ whatsappNumber }: HeroSectionProps) {
               style={{ animationDelay: '450ms' }}
             >
               {[
-                { v: '98,9%', l: 'Assertividade' },
-                { v: '+16%', l: 'vs Humano' },
+                { v: '4', l: 'Produtos VS' },
+                { v: '+16%', l: 'Eficiência média' },
                 { v: '10 dias', l: 'Implantação' },
               ].map(({ v, l }) => (
                 <div key={l}>
@@ -324,14 +324,14 @@ export default function HeroSection({ whatsappNumber }: HeroSectionProps) {
                 rel="noopener noreferrer"
                 className="group inline-flex items-center justify-center gap-2 bg-[#FF5300] hover:bg-orange-400 text-white font-sans font-semibold px-6 py-3.5 rounded-md transition-all duration-200 hover:shadow-lg hover:shadow-[#FF5300]/30 hover:-translate-y-0.5"
               >
-                Quero ver uma demo
+                Quero um diagnóstico gratuito
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </a>
               <a
-                href="#roi"
+                href="#solucao"
                 className="inline-flex items-center justify-center gap-2 border border-white/15 hover:border-[#FF5300]/40 text-white/70 hover:text-white font-sans font-medium px-6 py-3.5 rounded-md transition-all duration-200 hover:-translate-y-0.5"
               >
-                Calcular meu ROI
+                Ver nossos produtos
               </a>
             </div>
           </div>

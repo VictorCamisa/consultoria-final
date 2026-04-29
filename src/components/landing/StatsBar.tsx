@@ -8,11 +8,11 @@ interface Stat {
 }
 
 const stats: Stat[] = [
-  { value: 2500, suffix: '+', label: 'Leads gerados' },
-  { value: 180, suffix: 'k', label: 'Mensagens de IA' },
+  { value: 4, suffix: '', label: 'Produtos VS' },
+  { value: 10, suffix: ' dias', label: 'Implantação média' },
   { value: 40, suffix: '%', label: 'Ganho de eficiência' },
-  { value: 16, suffix: '%', prefix: '+', label: 'Superior ao humano' },
-  { value: 98.9, suffix: '%', label: 'Assertividade' },
+  { value: 80, suffix: '%', label: 'Redução de tarefas manuais' },
+  { value: 100, suffix: '%', label: 'Sem código da sua parte' },
 ];
 
 function useCountUp(target: number, active: boolean, duration = 1400) {

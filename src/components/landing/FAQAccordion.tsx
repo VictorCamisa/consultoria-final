@@ -8,24 +8,39 @@ interface FAQ {
 
 const faqs: FAQ[] = [
   {
-    question: 'Quanto custa a VS Soluções?',
+    question: 'Quais são os produtos da VS Soluções?',
     answer:
-      'Os planos começam a partir de R$800/mês para o VS Sales (agente de IA para vendas no WhatsApp). O VS 360, nosso plano completo, vai de R$6.000 a R$12.000/mês dependendo do escopo. Fazemos um diagnóstico gratuito antes de qualquer proposta para garantir que o investimento faça sentido para o seu momento.',
+      'Temos quatro produtos principais: VS Sales (agente IA para atendimento e vendas via WhatsApp), VS Marketing (conteúdo estratégico, tráfego pago e automação de campanhas), VS Departamentos (IA para processos internos: RH, financeiro, atendimento, operações) e VS 360 (transformação completa com todos os produtos integrados e acompanhamento semanal). Também oferecemos o Diagnóstico Estratégico e o Acompanhamento Mensal como serviços avulsos.',
+  },
+  {
+    question: 'Quanto custa cada produto?',
+    answer:
+      'Os valores variam conforme o escopo: VS Sales a partir de R$800/mês, VS Marketing a partir de R$1.200/mês, VS Departamentos entre R$800 e R$3.000/mês, e o VS 360 (stack completo) de R$6.000 a R$12.000/mês. Realizamos um diagnóstico gratuito antes de qualquer proposta para garantir que o produto certo faça sentido para o seu momento.',
   },
   {
     question: 'Quanto tempo demora para implantar?',
     answer:
-      'Nossa implantação padrão leva até 10 dias úteis a partir da assinatura do contrato. Isso inclui configuração do agente, treinamento na linguagem do seu negócio, integração com seu WhatsApp e testes antes do go-live. Projetos maiores (VS 360) podem levar até 21 dias.',
+      'A implantação padrão leva até 10 dias úteis. Isso inclui configuração das soluções, integração com seus sistemas atuais, treinamento e testes antes do go-live. Projetos maiores como o VS 360 podem levar até 21 dias. A VS cuida de toda a parte técnica — você não precisa de equipe de TI.',
   },
   {
-    question: 'Preciso ter equipe técnica ou saber de TI?',
+    question: 'Preciso contratar todos os produtos de uma vez?',
     answer:
-      'Não. A VS cuida de toda a parte técnica. Você só precisa ter um número de WhatsApp Business e nos passar acesso. Nossa equipe configura tudo — agente, integrações, automações — sem exigir nenhum conhecimento técnico da sua parte.',
+      'Não. Você pode começar com o produto que resolve a dor mais urgente (ex: VS Sales para atendimento ou VS Departamentos para processos) e evoluir para outros conforme o negócio cresce. O Diagnóstico Estratégico gratuito ajuda a definir o melhor ponto de entrada.',
   },
   {
     question: 'Funciona para o meu nicho de mercado?',
     answer:
-      'Já atendemos estética, odontologia, advocacia, revendas de veículos, educação e outros segmentos. A IA é treinada com o contexto, linguagem e objeções específicas do seu mercado. Se o seu nicho for diferente, fazemos uma avaliação de viabilidade no diagnóstico gratuito.',
+      'Já atendemos estética, odontologia, advocacia, revendas de veículos, educação, clínicas de saúde e outros segmentos. Todos os produtos são configurados com o contexto, linguagem e processos específicos do seu mercado. Se o seu nicho for diferente, avaliamos a viabilidade no diagnóstico gratuito.',
+  },
+  {
+    question: 'O VS Departamentos substitui meu software de gestão atual?',
+    answer:
+      'Não necessariamente. O VS Departamentos geralmente se integra com os sistemas que você já usa (WhatsApp, e-mail, planilhas, ERPs), automatizando tarefas repetitivas sem exigir que você troque de plataforma. Em alguns casos sugerimos substituições pontuais, mas sempre após análise.',
+  },
+  {
+    question: 'O agente de IA (VS Sales) substitui meu vendedor?',
+    answer:
+      'Não necessariamente. O agente funciona como primeiro atendimento: responde instantaneamente, qualifica o lead e, quando o timing é ideal, faz handoff para o vendedor humano fechar. A IA elimina o trabalho repetitivo e garante que nenhum lead fique sem resposta, liberando seu time para o que realmente importa.',
   },
   {
     question: 'Posso cancelar quando quiser?',
@@ -33,19 +48,9 @@ const faqs: FAQ[] = [
       'Sim. Nossos contratos são mensais, sem fidelidade. Pedimos apenas 30 dias de aviso prévio para encerramento. Não acreditamos em reter cliente com multa — queremos que você continue porque os resultados justificam.',
   },
   {
-    question: 'Como é o suporte? Tenho algum contato direto?',
+    question: 'Como é o suporte após a implantação?',
     answer:
-      'Cada cliente tem um gerente de conta dedicado acessível via WhatsApp em horário comercial. Realizamos reuniões mensais de performance para revisar métricas e ajustar a estratégia. Ajustes urgentes no agente são atendidos em até 24h úteis.',
-  },
-  {
-    question: 'O agente de IA substitui meu vendedor?',
-    answer:
-      'Não necessariamente. O agente funciona como primeiro atendimento: responde instantaneamente, qualifica o lead e, quando o timing é ideal, faz handoff para o vendedor humano fechar. A IA elimina o trabalho repetitivo e garante que nenhum lead fique sem resposta, liberando seu vendedor para fechar negócios.',
-  },
-  {
-    question: 'Meus clientes vão saber que é uma IA?',
-    answer:
-      'O agente tem personalidade e nome próprios (ex: "Ana da Clínica X") e se comporta de forma natural. A maioria dos leads não percebe que é IA até você querer revelar. Trabalhamos com transparência total — se quiser deixar claro que é assistente virtual, configuramos isso também.',
+      'Cada cliente tem um gerente de conta dedicado acessível via WhatsApp em horário comercial. Realizamos reuniões mensais de performance para revisar métricas e ajustar as soluções. Ajustes urgentes são atendidos em até 24h úteis.',
   },
 ];
 
