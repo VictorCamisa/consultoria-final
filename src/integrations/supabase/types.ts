@@ -118,20 +118,35 @@ export type Database = {
         Row: {
           cidade: string
           created_at: string | null
-          data_fechamento: string
+          data_fechamento: string | null
           data_imersao: string | null
+          data_inicio: string | null
           data_pagamento: string | null
+          data_prev_entrega: string | null
           decisor: string
+          email: string | null
           faturamento_estimado: string | null
           github_url: string | null
+          health_score: number | null
           id: string
+          instagram: string | null
           legado: boolean
           nicho: string
           nome_negocio: string
+          nps: number | null
+          obs_contrato: string | null
+          obs_internas: string | null
+          origem_prospect_id: string | null
           pagamento_confirmado: boolean | null
+          potencial_upsell: string | null
+          produto_vs: string | null
           projeto_legado: string | null
           prospect_id: string | null
+          proximo_checkin: string | null
+          responsavel: string | null
           responsavel_imersao: string | null
+          segmento: string | null
+          site: string | null
           status: string
           tipo_cobranca: string
           updated_at: string | null
@@ -141,20 +156,35 @@ export type Database = {
         Insert: {
           cidade: string
           created_at?: string | null
-          data_fechamento: string
+          data_fechamento?: string | null
           data_imersao?: string | null
+          data_inicio?: string | null
           data_pagamento?: string | null
+          data_prev_entrega?: string | null
           decisor: string
+          email?: string | null
           faturamento_estimado?: string | null
           github_url?: string | null
+          health_score?: number | null
           id?: string
+          instagram?: string | null
           legado?: boolean
           nicho: string
           nome_negocio: string
+          nps?: number | null
+          obs_contrato?: string | null
+          obs_internas?: string | null
+          origem_prospect_id?: string | null
           pagamento_confirmado?: boolean | null
+          potencial_upsell?: string | null
+          produto_vs?: string | null
           projeto_legado?: string | null
           prospect_id?: string | null
+          proximo_checkin?: string | null
+          responsavel?: string | null
           responsavel_imersao?: string | null
+          segmento?: string | null
+          site?: string | null
           status?: string
           tipo_cobranca?: string
           updated_at?: string | null
@@ -164,20 +194,35 @@ export type Database = {
         Update: {
           cidade?: string
           created_at?: string | null
-          data_fechamento?: string
+          data_fechamento?: string | null
           data_imersao?: string | null
+          data_inicio?: string | null
           data_pagamento?: string | null
+          data_prev_entrega?: string | null
           decisor?: string
+          email?: string | null
           faturamento_estimado?: string | null
           github_url?: string | null
+          health_score?: number | null
           id?: string
+          instagram?: string | null
           legado?: boolean
           nicho?: string
           nome_negocio?: string
+          nps?: number | null
+          obs_contrato?: string | null
+          obs_internas?: string | null
+          origem_prospect_id?: string | null
           pagamento_confirmado?: boolean | null
+          potencial_upsell?: string | null
+          produto_vs?: string | null
           projeto_legado?: string | null
           prospect_id?: string | null
+          proximo_checkin?: string | null
+          responsavel?: string | null
           responsavel_imersao?: string | null
+          segmento?: string | null
+          site?: string | null
           status?: string
           tipo_cobranca?: string
           updated_at?: string | null
@@ -1250,6 +1295,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vs_produtos: {
+        Row: {
+          ativo: boolean
+          categoria: string
+          created_at: string | null
+          descricao: string | null
+          id: string
+          nichos: string[] | null
+          nome: string
+          preco: number | null
+          tipo: string
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          categoria?: string
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nichos?: string[] | null
+          nome: string
+          preco?: number | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string
+          created_at?: string | null
+          descricao?: string | null
+          id?: string
+          nichos?: string[] | null
+          nome?: string
+          preco?: number | null
+          tipo?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       vs_users: {
         Row: {
