@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import VSLogo from './VSLogo';
-
-const WS_NUMBER = '5512999999999';
+import { openVSChat } from './VSChatAgent';
 
 export default function LandingNav() {
   const [open, setOpen] = useState(false);
@@ -31,7 +30,6 @@ export default function LandingNav() {
           : 'bg-transparent'
       }`}
     >
-      {/* Top accent line */}
       {!scrolled && (
         <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-[#FF5300]/40 to-transparent" />
       )}
@@ -57,14 +55,12 @@ export default function LandingNav() {
 
           {/* CTA */}
           <div className="hidden md:block">
-            <a
-              href={`https://wa.me/${WS_NUMBER}?text=Ol%C3%A1%2C%20quero%20saber%20mais%20sobre%20a%20VS%20Solu%C3%A7%C3%B5es!`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => openVSChat()}
               className="inline-flex items-center gap-2 bg-[#FF5300] hover:bg-orange-400 text-white font-sans font-semibold text-sm px-4 py-2 rounded-md transition-all hover:shadow-md hover:shadow-[#FF5300]/30"
             >
               Falar agora
-            </a>
+            </button>
           </div>
 
           <button
@@ -89,14 +85,12 @@ export default function LandingNav() {
               {l.label}
             </a>
           ))}
-          <a
-            href={`https://wa.me/${WS_NUMBER}?text=Ol%C3%A1%2C%20quero%20saber%20mais%20sobre%20a%20VS%20Solu%C3%A7%C3%B5es!`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => { setOpen(false); openVSChat(); }}
             className="inline-flex justify-center bg-[#FF5300] hover:bg-orange-400 text-white font-sans font-semibold text-sm px-4 py-2 rounded-md transition-colors"
           >
             Falar agora
-          </a>
+          </button>
         </div>
       )}
     </nav>

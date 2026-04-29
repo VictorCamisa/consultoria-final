@@ -1,9 +1,6 @@
 import { useState } from 'react';
 import { MessageCircle, Send, CheckCircle2, Loader2 } from 'lucide-react';
-
-interface CTASectionProps {
-  whatsappNumber: string;
-}
+import { openVSChat } from './VSChatAgent';
 
 type Nicho = 'estetica' | 'odonto' | 'advocacia' | 'revendas' | 'outro';
 
@@ -27,9 +24,7 @@ function maskPhone(raw: string) {
   return raw;
 }
 
-export default function CTASection({ whatsappNumber }: CTASectionProps) {
-  const waLink = `https://wa.me/${whatsappNumber}?text=Ol%C3%A1%2C%20quero%20um%20diagn%C3%B3stico%20gratuito%20com%20a%20VS!`;
-
+export default function CTASection() {
   const [form, setForm] = useState<FormState>({
     nome: '',
     empresa: '',
@@ -94,26 +89,24 @@ export default function CTASection({ whatsappNumber }: CTASectionProps) {
         </div>
 
         <div className="grid lg:grid-cols-2 gap-10 max-w-4xl mx-auto">
-          {/* WhatsApp CTA */}
+          {/* Chat CTA */}
           <div className="bg-white/10 rounded-2xl p-8 flex flex-col items-center text-center">
             <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mb-5">
               <MessageCircle className="w-8 h-8 text-white" />
             </div>
             <h3 className="font-display font-black text-2xl text-white italic mb-3">
-              Resposta em minutos
+              Fale agora com a Ana
             </h3>
             <p className="font-sans text-white/70 text-sm mb-6">
-              Fale direto com um especialista VS via WhatsApp. Sem robô, sem fila de espera.
+              Nossa consultora virtual responde na hora, identifica a melhor solução pro seu negócio e agenda seu diagnóstico.
             </p>
-            <a
-              href={waLink}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => openVSChat()}
               className="inline-flex items-center gap-2 bg-white text-[#FF5300] hover:bg-orange-50 font-sans font-bold px-6 py-3.5 rounded-md transition-colors"
             >
               <MessageCircle className="w-4 h-4" />
-              Quero meu diagnóstico gratuito
-            </a>
+              Iniciar conversa agora
+            </button>
           </div>
 
           {/* Form */}

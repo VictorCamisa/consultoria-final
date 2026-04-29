@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { TrendingUp } from 'lucide-react';
-
-const WS_NUMBER = '5512999999999';
+import { openVSChat } from './VSChatAgent';
 
 export default function ROICalculator() {
   const [leadsPerMonth, setLeadsPerMonth] = useState(80);
@@ -167,15 +166,13 @@ export default function ROICalculator() {
             </div>
 
             {/* CTA */}
-            <a
-              href={`https://wa.me/${WS_NUMBER}?text=Quero%20calcular%20o%20impacto%20da%20VS%20no%20meu%20neg%C3%B3cio!`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() => openVSChat()}
               className="inline-flex items-center justify-center gap-2 bg-[#FF5300] hover:bg-orange-400 text-white font-sans font-semibold px-6 py-3.5 rounded-md transition-colors text-center"
             >
               <TrendingUp className="w-4 h-4" />
               Quero esse impacto na minha empresa
-            </a>
+            </button>
           </div>
         </div>
       </div>
