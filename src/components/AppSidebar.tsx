@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, Megaphone, Users, CalendarCheck, Settings,
   LogOut, BrainCircuit, Search, UserRoundCog, FolderKanban, Users2,
+  DollarSign, Package,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,26 +9,60 @@ import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  useSidebar,
+  Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu,
+  SidebarMenuItem, useSidebar,
 } from "@/components/ui/sidebar";
 
-const navItems = [
-  { title: "Dashboard",      url: "/",               icon: LayoutDashboard },
-  { title: "Comercial",      url: "/comercial",       icon: Megaphone,      badgeKey: "unread" },
-  { title: "Agente IA",      url: "/agente-ia",       icon: BrainCircuit },
-  { title: "Prospecção",     url: "/prospeccao",      icon: Search },
-  { title: "Leads",          url: "/leads",           icon: Users2 },
-  { title: "Meu Vendedor",   url: "/meu-vendedor",    icon: UserRoundCog },
-  { title: "Clientes",       url: "/clientes",        icon: Users },
-  { title: "Operacional",    url: "/operacional",     icon: FolderKanban },
-  { title: "Acompanhamento", url: "/acompanhamento",  icon: CalendarCheck,  badgeKey: "pendentes" },
-  { title: "Configurações",  url: "/configuracoes",   icon: Settings },
+interface NavItem {
+  title: string;
+  url: string;
+  icon: React.ElementType;
+  badgeKey?: string;
+}
+
+interface NavSection {
+  label: string;
+  items: NavItem[];
+}
+
+const navSections: NavSection[] = [
+  {
+    label: "",
+    items: [
+      { title: "Dashboard", url: "/", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "Vendas",
+    items: [
+      { title: "Comercial",  url: "/comercial",  icon: Megaphone, badgeKey: "unread" },
+      { title: "Agente IA",  url: "/agente-ia",  icon: BrainCircuit },
+      { title: "Prospecção", url: "/prospeccao", icon: Search },
+      { title: "Leads",      url: "/leads",       icon: Users2 },
+    ],
+  },
+  {
+    label: "Clientes",
+    items: [
+      { title: "Clientes",       url: "/clientes",       icon: Users },
+      { title: "Meu Vendedor",   url: "/meu-vendedor",   icon: UserRoundCog },
+      { title: "Acompanhamento", url: "/acompanhamento", icon: CalendarCheck, badgeKey: "pendentes" },
+    ],
+  },
+  {
+    label: "Operacional",
+    items: [
+      { title: "Operacional", url: "/operacional", icon: FolderKanban },
+      { title: "Financeiro",  url: "/financeiro",  icon: DollarSign },
+      { title: "Produtos",    url: "/produtos",    icon: Package },
+    ],
+  },
+  {
+    label: "Sistema",
+    items: [
+      { title: "Configurações", url: "/configuracoes", icon: Settings },
+    ],
+  },
 ];
 
 function getInitials(name: string | null) {
@@ -86,25 +121,18 @@ export function AppSidebar() {
           className={cn("flex items-center cursor-pointer", collapsed ? "justify-center" : "gap-3")}
           onClick={() => navigate("/")}
         >
-          {/* VS monogram — V branco · S Cyber Orange (Brand Bible 2026) */}
           <div className="rounded-lg w-8 h-8 flex-shrink-0 flex items-center justify-center bg-card border border-border">
-            <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 900, fontStyle: 'italic', fontSize: 16, letterSpacing: "-0.04em", lineHeight: 1 }}>
+            <span style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 900, fontStyle: "italic", fontSize: 16, letterSpacing: "-0.04em", lineHeight: 1 }}>
               <span style={{ color: "#FFFFFF" }}>V</span>
               <span style={{ color: "#FF5300" }}>S</span>
             </span>
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <p
-                className="leading-none text-foreground"
-                style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: "0.01em" }}
-              >
+              <p className="leading-none text-foreground" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, letterSpacing: "0.01em" }}>
                 VS Growth Hub
               </p>
-              <p
-                className="mt-0.5 leading-none text-muted-foreground"
-                style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 600, fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase" }}
-              >
+              <p className="mt-0.5 leading-none text-muted-foreground" style={{ fontFamily: "'Barlow', sans-serif", fontWeight: 600, fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase" }}>
                 Ecossistemas Digitais
               </p>
             </div>
@@ -113,49 +141,57 @@ export function AppSidebar() {
       </SidebarHeader>
 
       {/* ── Navigation ── */}
-      <SidebarContent className={cn("py-3 flex-1 overflow-y-auto", collapsed ? "px-1" : "px-2")}>
-        <SidebarMenu className="space-y-0.5">
-          {navItems.map((item) => {
-            const active = isActive(item.url);
-            const badgeCount = item.badgeKey ? badgeCounts[item.badgeKey] ?? 0 : 0;
-            return (
-              <SidebarMenuItem key={item.title}>
-                <button
-                  onClick={() => navigate(item.url)}
-                  className={cn(
-                    collapsed
-                      ? "flex items-center justify-center w-full p-2 rounded-md transition-colors relative"
-                      : "nav-item w-full",
-                    active && !collapsed && "active",
-                    active && collapsed && "bg-primary/10 text-primary",
-                    !active && collapsed && "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
-                  )}
-                  title={collapsed ? item.title : undefined}
-                >
-                  <item.icon
-                    className={cn(
-                      "h-4 w-4 flex-shrink-0",
-                      active ? "text-primary" : "text-sidebar-foreground"
-                    )}
-                  />
-                  {!collapsed && (
-                    <span className={cn("flex-1 text-left", active ? "text-primary" : "")}>
-                      {item.title}
-                    </span>
-                  )}
-                  {badgeCount > 0 && (
-                    <span className={cn(
-                      "bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center",
-                      collapsed && "absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] text-[8px]"
-                    )}>
-                      {badgeCount > 99 ? "99+" : badgeCount}
-                    </span>
-                  )}
-                </button>
-              </SidebarMenuItem>
-            );
-          })}
-        </SidebarMenu>
+      <SidebarContent className={cn("py-2 flex-1 overflow-y-auto", collapsed ? "px-1" : "px-2")}>
+        {navSections.map((section, si) => (
+          <div key={si} className={si > 0 ? "mt-1" : ""}>
+            {/* Section label */}
+            {section.label && !collapsed && (
+              <p className="px-2 pt-3 pb-1 text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground/50 select-none">
+                {section.label}
+              </p>
+            )}
+            {section.label && collapsed && si > 0 && (
+              <div className="mx-auto my-2 w-4 border-t border-border" />
+            )}
+            <SidebarMenu className="space-y-0.5">
+              {section.items.map((item) => {
+                const active = isActive(item.url);
+                const badgeCount = item.badgeKey ? badgeCounts[item.badgeKey] ?? 0 : 0;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <button
+                      onClick={() => navigate(item.url)}
+                      className={cn(
+                        collapsed
+                          ? "flex items-center justify-center w-full p-2 rounded-md transition-colors relative"
+                          : "nav-item w-full",
+                        active && !collapsed && "active",
+                        active && collapsed && "bg-primary/10 text-primary",
+                        !active && collapsed && "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent"
+                      )}
+                      title={collapsed ? item.title : undefined}
+                    >
+                      <item.icon className={cn("h-4 w-4 flex-shrink-0", active ? "text-primary" : "text-sidebar-foreground")} />
+                      {!collapsed && (
+                        <span className={cn("flex-1 text-left", active ? "text-primary" : "")}>
+                          {item.title}
+                        </span>
+                      )}
+                      {badgeCount > 0 && (
+                        <span className={cn(
+                          "bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center",
+                          collapsed && "absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] text-[8px]"
+                        )}>
+                          {badgeCount > 99 ? "99+" : badgeCount}
+                        </span>
+                      )}
+                    </button>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </div>
+        ))}
       </SidebarContent>
 
       {/* ── User footer ── */}
