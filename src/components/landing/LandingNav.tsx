@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, LogIn } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import VSLogo from './VSLogo';
 import { openVSChat } from './VSChatAgent';
 
@@ -54,7 +55,14 @@ export default function LandingNav() {
           </div>
 
           {/* CTA */}
-          <div className="hidden md:block">
+          <div className="hidden md:flex items-center gap-3">
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-1.5 text-sm font-sans font-medium text-white/70 hover:text-white border border-white/15 hover:border-white/30 px-3 py-2 rounded-md transition-colors"
+            >
+              <LogIn className="w-4 h-4" />
+              Login
+            </Link>
             <button
               onClick={() => openVSChat()}
               className="inline-flex items-center gap-2 bg-[#FF5300] hover:bg-orange-400 text-white font-sans font-semibold text-sm px-4 py-2 rounded-md transition-all hover:shadow-md hover:shadow-[#FF5300]/30"
@@ -85,6 +93,14 @@ export default function LandingNav() {
               {l.label}
             </a>
           ))}
+          <Link
+            to="/login"
+            onClick={() => setOpen(false)}
+            className="inline-flex justify-center items-center gap-1.5 border border-white/15 text-white/80 font-sans font-medium text-sm px-4 py-2 rounded-md transition-colors"
+          >
+            <LogIn className="w-4 h-4" />
+            Login
+          </Link>
           <button
             onClick={() => { setOpen(false); openVSChat(); }}
             className="inline-flex justify-center bg-[#FF5300] hover:bg-orange-400 text-white font-sans font-semibold text-sm px-4 py-2 rounded-md transition-colors"
