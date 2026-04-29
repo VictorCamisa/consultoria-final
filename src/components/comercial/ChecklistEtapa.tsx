@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { CheckCircle2, Circle, ClipboardList, ChevronDown, ChevronUp } from "lucide-react";
+import { CheckCircle2, Circle, ClipboardList, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { Prospect, nichoCategory } from "./types";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -208,9 +208,11 @@ interface ChecklistItem {
 interface Props {
   prospect: Prospect;
   onUpdate: (updated: Partial<Prospect>) => void;
+  onClassifyICP?: () => void;
+  loadingClassify?: boolean;
 }
 
-export function ChecklistEtapa({ prospect, onUpdate }: Props) {
+export function ChecklistEtapa({ prospect, onUpdate, onClassifyICP, loadingClassify }: Props) {
   const [saving, setSaving] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [notaTemp, setNotaTemp] = useState<Record<string, string>>({});
@@ -349,13 +351,26 @@ export function ChecklistEtapa({ prospect, onUpdate }: Props) {
               {/* Expanded: nota capture */}
               {isExpanded && (
                 <div className="px-2 pb-2 space-y-1.5">
+                  {/* ICP: IA auto-score button */}
+                  {item.id === "pesq_score" && onClassifyICP && (
+                    <button
+                      onClick={() => { onClassifyICP(); setExpanded(null); }}
+                      disabled={loadingClassify}
+                      className="w-full flex items-center justify-center gap-1.5 text-[11px] rounded-md border border-primary/40 bg-primary/10 text-primary px-2 py-1.5 hover:bg-primary/20 transition-colors disabled:opacity-50"
+                    >
+                      {loadingClassify
+                        ? <><Loader2 className="h-3 w-3 animate-spin" />Analisando ICP...</>
+                        : <>✦ Calcular ICP com IA (recomendado)</>
+                      }
+                    </button>
+                  )}
                   <Textarea
                     value={currentNota}
                     onChange={e => setNotaTemp(prev => ({ ...prev, [item.id]: e.target.value }))}
                     placeholder={item.placeholder ?? "Registre dados coletados nesta etapa..."}
                     rows={2}
                     className="text-[11px] resize-none bg-background/60"
-                    autoFocus
+                    autoFocus={item.id !== "pesq_score"}
                   />
                   <div className="flex gap-1.5 justify-end">
                     <button
