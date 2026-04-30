@@ -30,7 +30,7 @@ async function fetchAsInlineImage(url: string): Promise<{ mimeType: string; data
     const ct = res.headers.get("content-type") || "image/png";
     if (!ct.startsWith("image/")) return null; // skip PDFs, docs
     const buf = new Uint8Array(await res.arrayBuffer());
-    if (buf.byteLength > 4 * 1024 * 1024) return null; // cap at 4MB to be safe
+    if (buf.byteLength > 1.5 * 1024 * 1024) return null; // cap at 1.5MB to avoid worker resource limit
     return { mimeType: ct.split(";")[0], data: bytesToBase64(buf) };
   } catch (e) {
     console.warn("fetchAsInlineImage failed:", url, e);
