@@ -43,8 +43,8 @@ serve(async (req) => {
 
   try {
     const { prompt, style = "dark", platform = "Instagram", imageHeadline = "" } = await req.json();
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -89,9 +89,12 @@ serve(async (req) => {
         ? `BRAND REFERENCES: The ${inlineRefs.length} image(s) above are official VS brand assets. Replicate the exact logo shape and visual language. Do not invent a different identity.`
         : ``,
       ``,
+      `═══ ABSOLUTE PROHIBITION — VS LOGO ═══`,
+      `NEVER draw the letters "VS" together as a logo, monogram, lockup, or large display element. NEVER render the "VS" wordmark in any form (no cracked VS, no italic VS, no stencil VS, no VS with arrows). The brand identity must come ONLY from typography, color and composition — not from drawing letters that spell "VS".`,
+      ``,
       `═══ TEXT ON THE IMAGE — STRICTEST RULE ═══`,
       hasHeadline
-        ? `The image MUST contain EXACTLY ONE text element with these EXACT characters and nothing else:\n\n"${cleanHeadline}"\n\nRules:\n- Spell it character-for-character. Do NOT alter, translate, abbreviate, or invent variations.\n- Do NOT add any other word, slogan, tagline, percentage, fake metric, version number, file name, hashtag, URL, watermark, or fake logo (no "BRUTAL.AI", no "REBRAND_V2", no "ONLINE", no "ECOSSISTEMAS DIGITAIS").\n- Do NOT add the VS logo unless an official reference logo was provided above — never draw a fake VS lockup.\n- Render in Poppins Black Italic style (ultra-bold, condensed, oblique). All caps. White (#FFFFFF) — optionally a SINGLE word in Cyber Orange (#FF5300) if there are 2-3 words. Massive scale, occupying 35-55% of canvas height.`
+        ? `The image MUST contain EXACTLY ONE text element with these EXACT characters and nothing else:\n\n"${cleanHeadline}"\n\nRules:\n- Spell it character-for-character. Do NOT alter, translate, abbreviate, or invent variations.\n- Do NOT add ANY other word, slogan, tagline, percentage, fake metric, version number, file name, hashtag, URL, watermark, or fake logo. Forbidden examples: "BRUTAL.AI", "REBRAND_V2", "ONLINE", "ECOSSISTEMAS DIGITAIS", "DIGIALS", "VS".\n- Do NOT render the letters "VS" anywhere — not as logo, not as decoration, not in the corner.\n- Render in a heavy modern sans-serif (Poppins Black / Inter Black style). All caps. White (#FFFFFF) — optionally ONE word in Cyber Orange (#FF5300) if there are 2-3 words. Massive scale, occupying 35-55% of canvas height. Perfect kerning, no broken letters, no cracked glyphs, no halftone destruction of the text.`
         : `The image MUST contain ZERO text. No words, no letters, no numbers, no fake logos, no watermarks. Pure visual composition only.`,
       `If you cannot render the text correctly in Portuguese with perfect spelling, render NO text at all instead of inventing.`,
       ``,
@@ -103,8 +106,8 @@ serve(async (req) => {
       ``,
       `═══ COMPOSITION (editorial, brutalist) ═══`,
       `- Massive negative space. ${hasHeadline ? "Headline anchored to one side or centered with bold off-balance composition." : "Pure abstract geometric composition."}`,
-      `- Allowed motifs (subtle, monochromatic, palette-only): faint dotted grid background, single thin orange line/arrow, abstract bar-chart silhouette, terminal-style data block, geometric primitive (square/triangle), monospace tickers in tiny size.`,
-      `- Forbidden motifs: cartoon people, smiling avatars, 3D blobs, sparkles, ribbons, handshake clichés, generic stock photography, decorative icons, gradients of other hues, fake software screenshots with invented UI text.`,
+      `- Allowed motifs (subtle, monochromatic, palette-only): faint dotted grid background, single thin orange line/arrow, abstract bar-chart silhouette, terminal-style data block, geometric primitive (square/triangle).`,
+      `- Forbidden motifs: cartoon people, smiling avatars, 3D blobs, sparkles, ribbons, handshake clichés, generic stock photography, decorative icons, gradients of other hues, fake software screenshots with invented UI text, halftone dot patterns destroying typography, cracked/broken letters, childish bar charts that look like drawings.`,
       `- Inspiration to MATCH in feel: V4 Company Instagram feed, Linear marketing site, Vercel hero pages, Nubank product shots.`,
       ``,
       `═══ THEME OF THIS POST (context only — DO NOT render this text on the image) ═══`,
@@ -114,50 +117,64 @@ serve(async (req) => {
       textRules ? `\nADDITIONAL BRAND RULES FROM DATABASE:\n${textRules}` : ``,
     ];
 
-    const requestParts: any[] = inlineRefs.map((r) => ({ inlineData: { mimeType: r.mimeType, data: r.data } }));
-    requestParts.push({ text: promptSections.filter(Boolean).join("\n") });
+    // Constrói mensagem multimodal no formato OpenAI-compatible (Lovable AI Gateway)
+    const userContent: any[] = [
+      { type: "text", text: promptSections.filter(Boolean).join("\n") },
+      ...inlineRefs.map((r) => ({
+        type: "image_url",
+        image_url: { url: `data:${r.mimeType};base64,${r.data}` },
+      })),
+    ];
 
-    // Gemini 2.5 Flash Image (Nano Banana) — modelo estável de imagem via API direta do Google
-    const MODEL = "gemini-2.5-flash-image";
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-    const response = await fetch(geminiUrl, {
+    // Nano Banana 2 (Gemini 3.1 Flash Image Preview) via Lovable AI Gateway
+    const MODEL = "google/gemini-3.1-flash-image-preview";
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: requestParts }],
-        generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+        model: MODEL,
+        messages: [{ role: "user", content: userContent }],
+        modalities: ["image", "text"],
       }),
     });
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições do Gemini atingido." }), {
+        return new Response(JSON.stringify({ error: "Limite de requisições atingido. Tente novamente em alguns segundos." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 401 || response.status === 403) {
-        return new Response(JSON.stringify({ error: "GEMINI_API_KEY inválida ou sem permissão." }), {
-          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "Créditos da Lovable AI esgotados. Adicione créditos em Settings → Workspace → Usage." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
-      console.error("Gemini image error:", response.status, t);
+      console.error("Lovable AI image error:", response.status, t);
       return new Response(JSON.stringify({ error: "Erro ao gerar imagem" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const data = await response.json();
-    const respParts = data?.candidates?.[0]?.content?.parts || [];
-    const inlineImage = respParts.find((p: any) => p?.inlineData?.data || p?.inline_data?.data);
-    const base64 = inlineImage?.inlineData?.data || inlineImage?.inline_data?.data;
-    const mimeType = inlineImage?.inlineData?.mimeType || inlineImage?.inline_data?.mime_type || "image/png";
-    if (!base64) {
-      console.error("No image in Gemini response:", JSON.stringify(data).slice(0, 500));
+    const imageDataUrl: string | undefined = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    if (!imageDataUrl || !imageDataUrl.startsWith("data:")) {
+      console.error("No image in Lovable AI response:", JSON.stringify(data).slice(0, 500));
       return new Response(JSON.stringify({ error: "Nenhuma imagem retornada pela IA" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) {
+      return new Response(JSON.stringify({ error: "Formato de imagem inválido" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const mimeType = match[1];
+    const base64 = match[2];
 
     const bytes = decodeBase64(base64);
     const ext = mimeType.includes("jpeg") ? "jpg" : "png";
