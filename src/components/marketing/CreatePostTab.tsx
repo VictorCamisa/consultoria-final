@@ -51,6 +51,7 @@ export function CreatePostTab() {
   const [imageLoading, setImageLoading] = useState(false);
   const [imageVariant, setImageVariant] = useState(0);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [bgImage, setBgImage] = useState<string | null>(null);
   const [generatedPost, setGeneratedPost] = useState<GeneratedPost | null>(null);
   const [showBrandAssets, setShowBrandAssets] = useState(false);
 
@@ -92,6 +93,7 @@ export function CreatePostTab() {
     setLoading(true);
     setGeneratedPost(null);
     setGeneratedImage(null);
+    setBgImage(null);
 
     try {
       const { data, error } = await supabase.functions.invoke("vs-generate-post", {
@@ -127,6 +129,17 @@ export function CreatePostTab() {
 
       setImageLoading(true);
       try {
+        const { data: bgData, error: bgError } = await supabase.functions.invoke("vs-generate-post-image", {
+          body: {
+            prompt: `Contexto completo do post: ${post.caption}. Sugestão de imagem: ${post.visual_suggestion || prompt}`,
+            platform,
+          },
+        });
+        
+        if (bgError) console.error("Background generation error:", bgError);
+        const newBgUrl = bgData?.image_url;
+        setBgImage(newBgUrl || null);
+
         const currentVariant = 0;
         setImageVariant(currentVariant);
         const imageUrl = await renderAndUpload({
@@ -136,6 +149,7 @@ export function CreatePostTab() {
           variant: currentVariant,
           logoUrl: vsLogoUrl,
           platform,
+          bgImageUrl: newBgUrl || undefined,
           supabase,
         });
         setGeneratedImage(imageUrl);
@@ -172,6 +186,7 @@ export function CreatePostTab() {
         variant: nextVariant,
         logoUrl: vsLogoUrl,
         platform,
+        bgImageUrl: bgImage || undefined,
         supabase,
       });
       setGeneratedImage(imageUrl);
@@ -481,7 +496,10 @@ export function CreatePostTab() {
                     visual_suggestion: "",
                     best_time: h.best_time || "",
                   });
-                  if (h.image_url) setGeneratedImage(h.image_url);
+                  if (h.image_url) {
+                    setGeneratedImage(h.image_url);
+                    setBgImage(null); // Clear background image when loading history since we just have the composed image
+                  }
                   if (h.platform) setPlatform(h.platform);
                 }}
               >
