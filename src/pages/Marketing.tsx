@@ -36,7 +36,7 @@ export default function Marketing() {
           <PostsGalleryTab />
         </TabsContent>
         <TabsContent value="brand" className="mt-4">
-          <BrandAssetsPanel />
+          <BrandAssetsPanel onClose={() => {}} />
         </TabsContent>
       </Tabs>
     </div>
