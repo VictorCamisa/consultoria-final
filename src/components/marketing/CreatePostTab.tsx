@@ -442,6 +442,16 @@ export function CreatePostTab() {
                   <CardTitle className="text-sm flex items-center gap-2">
                     <span>{PLATFORM_EMOJI[platform]}</span>
                     Post para {platform}
+                    {generatedMeta?.pilar && (
+                      <Badge variant="secondary" className="text-[9px] uppercase tracking-wider">
+                        {generatedMeta.pilar}
+                      </Badge>
+                    )}
+                    {generatedMeta?.formato && (
+                      <Badge variant="outline" className="text-[9px]">
+                        {generatedMeta.formato.replace(/_/g, " ")}
+                      </Badge>
+                    )}
                   </CardTitle>
                   <Button size="sm" variant="outline" onClick={copyFull}>
                     <Copy className="h-3 w-3 mr-1" />Copiar Tudo
