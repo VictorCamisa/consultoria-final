@@ -547,7 +547,7 @@ export default function Leads() {
         ].map((kpi) => (
           <div key={kpi.label} className="bg-card border border-border rounded-lg p-3.5 text-center">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{kpi.label}</p>
-            <p className={`text-2xl font-bold mt-1 ${kpi.color}`} style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <p className={`text-2xl font-display italic font-black mt-1 tabular ${kpi.color}`}>
               {kpi.value}
             </p>
           </div>
@@ -912,7 +912,7 @@ function LeadCard({
       {/* Top row */}
       <div className="flex items-start justify-between mb-2.5">
         <div className="flex-1 min-w-0 mr-2">
-          <h3 className="font-semibold text-foreground text-sm truncate" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+          <h3 className="font-display italic font-black text-foreground text-sm truncate tracking-tight">
             {lead.nome}
           </h3>
           {lead.decisor && (
@@ -1083,10 +1083,7 @@ function LeadDetailModal({
         <DialogHeader className="p-4 pb-3 border-b border-border">
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={`text-[9px] flex-shrink-0 ${fb.color}`}>{fb.label}</Badge>
-            <DialogTitle
-              className="text-lg font-bold text-foreground truncate"
-              style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
-            >
+            <DialogTitle className="text-lg font-display italic font-black text-foreground truncate tracking-tight">
               {lead.nome}
             </DialogTitle>
           </div>
