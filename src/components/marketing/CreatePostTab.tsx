@@ -131,25 +131,36 @@ Retorne APENAS um JSON válido (sem markdown, sem \`\`\`json) com este formato e
       }
 
       const geminiTextData = await geminiTextRes.json();
-      // Gemini 2.5-flash has thinking mode - find the actual response part (not thought parts)
+      // Gemini 2.5-flash has thinking mode - find actual response (skip thought parts)
       const parts = geminiTextData?.candidates?.[0]?.content?.parts ?? [];
       const rawText = parts
         .filter((p: any) => !p.thought && typeof p.text === "string")
         .map((p: any) => p.text)
         .join("") || parts[parts.length - 1]?.text || "";
 
-      // Robustly extract JSON - find the {...} block
+      // Sanitize JSON: escape literal newlines inside string values so JSON.parse works
+      const sanitizeJSON = (s: string) => {
+        let out = ""; let inStr = false; let esc = false;
+        for (const c of s) {
+          if (esc) { out += c; esc = false; continue; }
+          if (c === "\\" && inStr) { out += c; esc = true; continue; }
+          if (c === '"') { out += c; inStr = !inStr; continue; }
+          if (inStr && (c === "\n" || c === "\r")) { out += "\\n"; continue; }
+          out += c;
+        }
+        return out;
+      };
+
       let post: GeneratedPost;
       try {
         const jsonMatch = rawText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) throw new Error("No JSON found");
-        post = JSON.parse(jsonMatch[0]);
-        if (!post.caption) throw new Error("Invalid post structure");
+        post = JSON.parse(sanitizeJSON(jsonMatch[0]));
+        if (!post.caption) throw new Error("Missing caption");
       } catch {
-        // Fallback: clean markdown fences
         try {
           const cleaned = rawText.replace(/```[\w]*\n?/g, "").replace(/```/g, "").trim();
-          post = JSON.parse(cleaned);
+          post = JSON.parse(sanitizeJSON(cleaned));
         } catch {
           post = {
             image_headline: prompt.split(" ").slice(0, 3).join(" ").toUpperCase(),
@@ -161,6 +172,7 @@ Retorne APENAS um JSON válido (sem markdown, sem \`\`\`json) com este formato e
           };
         }
       }
+
 
 
       setGeneratedPost(post);
