@@ -14,120 +14,141 @@ function decodeBase64(base64: string): Uint8Array {
   return arr;
 }
 
-function bytesToBase64(bytes: Uint8Array): string {
-  let bin = "";
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
-  }
-  return btoa(bin);
+// Build a rich editorial prompt from the post theme
+function buildPrompt(theme: string): string {
+  return [
+    `Editorial photography background for a premium B2B business post about: ${theme}.`,
+    "Visual style: high-end cinematic, like Bloomberg Businessweek, Harvard Business Review covers, or HBO Succession.",
+    "Choose the most fitting compositional approach:",
+    "— A focused executive or professional under dramatic studio or window lighting, shallow depth of field, serious expression",
+    "— A modern corporate architectural space: glass, concrete, steel, moody shadows and beams of light",
+    "— Abstract close-up of premium materials: leather briefcase, metal desk surface, glass skyscraper reflection, hands typing",
+    "— A serious team meeting in a dark boardroom, dramatic overhead lighting",
+    "— Environmental detail shot: a city skyline at dusk from an executive office window",
+    "Color palette: Deep blacks, dark navy, charcoal grey, with subtle warm accent light or cold blue-grey tones.",
+    "Lighting: Hard shadows, dramatic side lighting, rim light, cinematic color grade.",
+    "ABSOLUTE BANS — any of these ruins the image:",
+    "NO text, words, letters, numbers, watermarks or labels of any kind.",
+    "NO logos or brand marks.",
+    "NO illustrations, vector art, flat design, 2D graphics, infographics.",
+    "NO bar charts, pie charts, graphs, arrows, icons, UI elements.",
+    "NO robots, sci-fi elements, holograms, cartoons, anime.",
+    "MUST look like a real photograph taken with a professional full-frame camera.",
+  ].join(" ");
 }
 
-async function fetchAsInlineImage(url: string): Promise<{ mimeType: string; data: string } | null> {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const ct = res.headers.get("content-type") || "image/png";
-    if (!ct.startsWith("image/")) return null;
-    const buf = new Uint8Array(await res.arrayBuffer());
-    if (buf.byteLength > 1.5 * 1024 * 1024) return null;
-    return { mimeType: ct.split(";")[0], data: bytesToBase64(buf) };
-  } catch (e) {
-    console.warn("fetchAsInlineImage failed:", url, e);
+async function generateWithImagen3(
+  theme: string,
+  apiKey: string
+): Promise<string | null> {
+  const prompt = buildPrompt(theme);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      instances: [{ prompt }],
+      parameters: {
+        sampleCount: 1,
+        aspectRatio: "9:16",
+        safetyFilterLevel: "block_some",
+        personGeneration: "allow_adult",
+      },
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("Imagen3 error:", res.status, text.slice(0, 400));
     return null;
   }
+
+  const json = await res.json();
+  const b64 = json?.predictions?.[0]?.bytesBase64Encoded;
+  return b64 ?? null;
+}
+
+async function generateWithDallE3(
+  theme: string,
+  apiKey: string
+): Promise<string | null> {
+  const prompt = buildPrompt(theme);
+
+  const res = await fetch("https://api.openai.com/v1/images/generations", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "dall-e-3",
+      prompt,
+      size: "1024x1792",
+      quality: "hd",
+      response_format: "b64_json",
+      n: 1,
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("DALL-E 3 error:", res.status, text.slice(0, 400));
+    return null;
+  }
+
+  const json = await res.json();
+  return json?.data?.[0]?.b64_json ?? null;
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, platform = "Instagram", imageHeadline = "" } = await req.json();
+    const { prompt, platform = "Instagram" } = await req.json();
+
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY");
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
+
+    if (!GOOGLE_API_KEY && !OPENAI_API_KEY) {
+      throw new Error("Nenhuma API key configurada (GOOGLE_API_KEY ou OPENAI_API_KEY)");
+    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: assets } = await supabase
-      .from("vs_brand_assets")
-      .select("type, title, content, file_url")
-      .eq("is_active", true);
+    // Imagen 3 first (better photorealism), DALL-E 3 as fallback
+    let base64: string | null = null;
+    let source = "";
 
-    const textRules = (assets || [])
-      .filter((a) => a.content && ["rule", "tone", "manual", "palette", "typography"].includes(a.type))
-      .map((a) => `[${a.type.toUpperCase()}] ${a.title}: ${a.content}`)
-      .join("\n");
-
-    const finalPrompt = `
-I need a strictly photorealistic, cinematic background image for a premium business Instagram post. 
-
-THEME CONTEXT:
-${prompt}
-
-MANDATORY STYLE (PHOTOREALISM ONLY):
-- This MUST be a REAL PHOTOGRAPH. 
-- Style: High-end editorial photography, cinematic lighting, shot on 35mm lens, f/1.8 (like HBO Succession, Bloomberg Magazine, or premium corporate shoots).
-- Subject: Focus on REAL humans (e.g., intense executives, people in meetings, realistic professional environments, serious faces) or highly realistic cinematic office environments. 
-- Lighting: Moody, dark, dramatic shadows, professional studio or high-end office lighting.
-- Color Palette: Deep dark tones, blacks, dark blues, with extremely subtle cinematic color grading.
-
-ABSOLUTE BANS (IF YOU INCLUDE ANY OF THESE, THE IMAGE IS RUINED):
-- NO ILLUSTRATIONS, NO VECTORS, NO 2D ART, NO CARTOONS, NO FLAT GRAPHICS, NO 3D RENDERS.
-- NO ROBOTS, NO CYBORGS, NO GLOWING BRAINS, NO HOLOGRAMS.
-- NO GRAPHS, NO BAR CHARTS, NO ICONS, NO UI ELEMENTS.
-- NO TEXT, NO LETTERS, NO NUMBERS, NO WORDS, NO LOGOS, NO WATERMARKS.
-
-The final image MUST look exactly like a real photo taken by a professional photographer of a real-life situation.
-`.trim();
-
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "dall-e-3",
-        prompt: finalPrompt,
-        size: "1024x1792",
-        quality: "hd",
-        response_format: "b64_json",
-        n: 1,
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições da OpenAI atingido. Tente novamente em alguns segundos." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    if (GOOGLE_API_KEY) {
+      console.log("Trying Imagen 3...");
+      base64 = await generateWithImagen3(prompt, GOOGLE_API_KEY);
+      if (base64) {
+        source = "imagen3";
+        console.log("Imagen 3 succeeded.");
+      } else {
+        console.warn("Imagen 3 failed — trying DALL-E 3 fallback.");
       }
-      if (response.status === 401 || response.status === 403) {
-        return new Response(JSON.stringify({ error: "OPENAI_API_KEY inválida ou sem acesso ao modelo gpt-image-1 (requer organização verificada)." }), {
-          status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const t = await response.text();
-      console.error("OpenAI image error:", response.status, t);
-      return new Response(JSON.stringify({ error: `Erro ao gerar imagem: ${t.slice(0, 200)}` }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
 
-    const data = await response.json();
-    const base64: string | undefined = data?.data?.[0]?.b64_json;
+    if (!base64 && OPENAI_API_KEY) {
+      console.log("Trying DALL-E 3...");
+      base64 = await generateWithDallE3(prompt, OPENAI_API_KEY);
+      if (base64) source = "dalle3";
+    }
+
     if (!base64) {
-      console.error("No image in OpenAI response:", JSON.stringify(data).slice(0, 500));
-      return new Response(JSON.stringify({ error: "Nenhuma imagem retornada pela IA" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Nenhum modelo conseguiu gerar a imagem." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
-    const mimeType = "image/png";
 
+    const mimeType = "image/png";
     const bytes = decodeBase64(base64);
-    const fileName = `posts/${Date.now()}-${platform.toLowerCase()}-feed.png`;
+    const fileName = `posts/${Date.now()}-${platform.toLowerCase()}-${source}.png`;
 
     const { error: uploadError } = await supabase.storage
       .from("vs-marketing")
@@ -135,20 +156,22 @@ The final image MUST look exactly like a real photo taken by a professional phot
 
     if (uploadError) {
       console.error("Upload error:", uploadError);
-      const dataUrl = `data:${mimeType};base64,${base64}`;
-      return new Response(JSON.stringify({ image_url: dataUrl }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ image_url: `data:${mimeType};base64,${base64}`, source }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const { data: pub } = supabase.storage.from("vs-marketing").getPublicUrl(fileName);
-    return new Response(JSON.stringify({ image_url: pub.publicUrl }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ image_url: pub.publicUrl, source }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (e) {
     console.error("vs-generate-post-image error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });

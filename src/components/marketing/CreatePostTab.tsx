@@ -1,13 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { createClient } from "@supabase/supabase-js";
-
-// Secondary client pointing to the VS controlled project where vs-generate-post-image is deployed
-const supabaseVS = createClient(
-  "https://imgoqlawniirfwosbizl.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltZ29xbGF3bmlpcmZ3b3NiaXpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzODIzMzIsImV4cCI6MjA4MTk1ODMzMn0.RL0B__gUZhLuArvqjUrO9iDzKN_G9Jet4aM6F-hg6UM"
-);
 import { useNichos } from "@/hooks/useNichos";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -136,17 +129,53 @@ export function CreatePostTab() {
 
       setImageLoading(true);
       try {
-        // Try to generate a photorealistic background - gracefully skip if billing/error
+        // Generate photorealistic background directly via Gemini API (client-side, no edge function needed)
         let newBgUrl: string | undefined = undefined;
         try {
           const photoTheme = post.caption.split("\n").slice(0, 3).join(" ").slice(0, 300);
-          const { data: bgData, error: bgError } = await supabaseVS.functions.invoke("vs-generate-post-image", {
-            body: { prompt: photoTheme, platform },
-          });
-          if (bgError || bgData?.error) {
-            console.warn("Background photo skipped:", bgError || bgData?.error);
+          const geminiPrompt = [
+            `Photorealistic editorial photography background for a B2B business post about: ${photoTheme}.`,
+            "Style: cinematic, like Bloomberg Businessweek or HBO Succession.",
+            "Subject: executive under dramatic studio lighting, corporate architecture, premium materials close-up, or boardroom.",
+            "Colors: deep blacks, dark navy, charcoal, subtle accent light.",
+            "NO text, NO logos, NO charts, NO icons, NO robots, NO illustrations. ONLY photorealistic photography.",
+          ].join(" ");
+
+          const geminiRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=AIzaSyAlC4s60GJ3-v7-dLwyNm8lJBCOEoDKKB8`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                contents: [{ parts: [{ text: geminiPrompt }] }],
+                generationConfig: { responseModalities: ["IMAGE"], responseMimeType: "image/jpeg" },
+              }),
+            }
+          );
+
+          if (geminiRes.ok) {
+            const geminiData = await geminiRes.json();
+            const parts = geminiData?.candidates?.[0]?.content?.parts ?? [];
+            const imgPart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
+            if (imgPart?.inlineData?.data) {
+              // Convert base64 to blob and upload to Supabase storage
+              const b64 = imgPart.inlineData.data;
+              const mimeType = imgPart.inlineData.mimeType;
+              const byteChars = atob(b64);
+              const byteArr = new Uint8Array(byteChars.length);
+              for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+              const blob = new Blob([byteArr], { type: mimeType });
+              const bgFileName = `posts/${Date.now()}-bg-gemini.jpg`;
+              const { error: bgUploadErr } = await supabase.storage
+                .from("vs-marketing")
+                .upload(bgFileName, blob, { contentType: mimeType, upsert: true });
+              if (!bgUploadErr) {
+                const { data: bgPub } = supabase.storage.from("vs-marketing").getPublicUrl(bgFileName);
+                newBgUrl = bgPub.publicUrl;
+              }
+            }
           } else {
-            newBgUrl = bgData?.image_url;
+            console.warn("Gemini image API error:", geminiRes.status, await geminiRes.text().then(t => t.slice(0, 200)));
           }
         } catch (bgErr) {
           console.warn("Background photo generation failed (non-fatal):", bgErr);
