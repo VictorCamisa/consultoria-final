@@ -17,6 +17,7 @@ import {
 import { BrandAssetsPanel } from "./BrandAssetsPanel";
 
 type GeneratedPost = {
+  image_headline?: string;
   caption: string;
   hashtags: string[];
   platform_tips: string;
@@ -29,12 +30,12 @@ const PLATFORM_EMOJI: Record<string, string> = {
 };
 
 const QUICK_IDEAS = [
-  "Erro nº 1 que faz PMEs perderem leads",
-  "Como automatizar follow-up no WhatsApp",
-  "Case: clínica que dobrou agendamentos com IA",
-  "Diferença entre CRM e ecossistema digital",
-  "Bastidores de uma imersão VS",
-  "Por que o dono não escala sozinho",
+  "Por que seu time comercial é caro e ineficiente",
+  "Follow-up no WhatsApp sem depender de humano",
+  "Como uma clínica substituiu a recepcionista por IA",
+  "O CRM morreu. O que vem depois.",
+  "Quanto custa um vendedor que não vende",
+  "Pare de contratar. Comece a automatizar.",
 ];
 
 export function CreatePostTab() {
@@ -127,7 +128,12 @@ export function CreatePostTab() {
       setImageLoading(true);
       try {
         const { data: imgData, error: imgErr } = await supabase.functions.invoke("vs-generate-post-image", {
-          body: { prompt, platform, style: resolvedStyle },
+          body: {
+            prompt,
+            platform,
+            style: resolvedStyle,
+            imageHeadline: post.image_headline || "",
+          },
         });
         if (imgErr) throw imgErr;
         if (imgData?.error) { toast.error(imgData.error); return; }
@@ -161,7 +167,12 @@ export function CreatePostTab() {
     try {
       const resolvedStyle = postStyle === "auto" ? (postCount % 2 === 0 ? "light" : "dark") : postStyle;
       const { data: imgData, error: imgErr } = await supabase.functions.invoke("vs-generate-post-image", {
-        body: { prompt, platform, style: resolvedStyle },
+        body: {
+          prompt,
+          platform,
+          style: resolvedStyle,
+          imageHeadline: generatedPost.image_headline || "",
+        },
       });
       if (imgErr) throw imgErr;
       if (imgData?.error) { toast.error(imgData.error); return; }
