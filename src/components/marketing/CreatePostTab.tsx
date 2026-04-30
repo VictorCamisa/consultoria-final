@@ -131,25 +131,29 @@ Retorne APENAS um JSON válido (sem markdown, sem \`\`\`json) com este formato e
       }
 
       const geminiTextData = await geminiTextRes.json();
-      const rawText = geminiTextData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      // Gemini 2.5-flash has thinking mode - find the actual response part (not thought parts)
+      const parts = geminiTextData?.candidates?.[0]?.content?.parts ?? [];
+      const rawText = parts
+        .filter((p: any) => !p.thought && typeof p.text === "string")
+        .map((p: any) => p.text)
+        .join("") || parts[parts.length - 1]?.text || "";
 
-      // Robustly extract JSON - try multiple strategies
+      // Robustly extract JSON - find the {...} block
       let post: GeneratedPost;
       try {
-        // Strategy 1: find the {...} JSON block via regex
         const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("No JSON object found in response");
+        if (!jsonMatch) throw new Error("No JSON found");
         post = JSON.parse(jsonMatch[0]);
+        if (!post.caption) throw new Error("Invalid post structure");
       } catch {
-        // Strategy 2: clean fences and try again
+        // Fallback: clean markdown fences
         try {
           const cleaned = rawText.replace(/```[\w]*\n?/g, "").replace(/```/g, "").trim();
           post = JSON.parse(cleaned);
         } catch {
-          // Strategy 3: build a fallback post from the raw text
           post = {
             image_headline: prompt.split(" ").slice(0, 3).join(" ").toUpperCase(),
-            caption: rawText.slice(0, 800) || `Post sobre: ${prompt}`,
+            caption: `${prompt}\n\nTransforme seu processo comercial com automação e IA. Reduza custos, aumente velocidade e escale sem contratar mais.`,
             hashtags: ["#VS", "#AutomacaoComercial", "#IA", "#CRM", "#Vendas"],
             platform_tips: "Poste entre 9h-11h para melhor alcance.",
             visual_suggestion: "Executivo em ambiente corporativo moderno.",
@@ -157,6 +161,7 @@ Retorne APENAS um JSON válido (sem markdown, sem \`\`\`json) com este formato e
           };
         }
       }
+
 
       setGeneratedPost(post);
       toast.success("Post gerado! ✨");
