@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import {
   Sparkles, Loader2, ImagePlus, Image, Copy, Download, Hash, Lightbulb,
-  Clock, BookOpen,
+  Clock, BookOpen, Smartphone,
 } from "lucide-react";
 import { BrandAssetsPanel } from "./BrandAssetsPanel";
 
@@ -43,9 +43,8 @@ export function CreatePostTab() {
   const { labels: nichoLabels } = useNichos();
   const [prompt, setPrompt] = useState("");
   const [platform, setPlatform] = useState("Instagram");
-  const [postStyle, setPostStyle] = useState<"dark" | "light" | "auto">("auto");
+  const [postFormat, setPostFormat] = useState<"feed" | "story" | "square">("feed");
   const [nicho, setNicho] = useState<string>("none");
-  const [postCount, setPostCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
@@ -107,8 +106,6 @@ export function CreatePostTab() {
       setGeneratedPost(post);
       toast.success("Post gerado! ✨");
 
-      const resolvedStyle = postStyle === "auto" ? (postCount % 2 === 0 ? "light" : "dark") : postStyle;
-
       const { data: saved, error: saveErr } = await supabase
         .from("vs_marketing_posts" as any)
         .insert({
@@ -131,7 +128,7 @@ export function CreatePostTab() {
           body: {
             prompt,
             platform,
-            style: resolvedStyle,
+            format: postFormat,
             imageHeadline: post.image_headline || "",
           },
         });
@@ -139,7 +136,6 @@ export function CreatePostTab() {
         if (imgData?.error) { toast.error(imgData.error); return; }
         if (imgData?.image_url) {
           setGeneratedImage(imgData.image_url);
-          setPostCount((p) => p + 1);
           if (savedId) {
             await supabase.from("vs_marketing_posts" as any).update({ image_url: imgData.image_url }).eq("id", savedId);
           }
@@ -165,12 +161,11 @@ export function CreatePostTab() {
     if (!generatedPost) return;
     setImageLoading(true);
     try {
-      const resolvedStyle = postStyle === "auto" ? (postCount % 2 === 0 ? "light" : "dark") : postStyle;
       const { data: imgData, error: imgErr } = await supabase.functions.invoke("vs-generate-post-image", {
         body: {
           prompt,
           platform,
-          style: resolvedStyle,
+          format: postFormat,
           imageHeadline: generatedPost.image_headline || "",
         },
       });
@@ -208,16 +203,28 @@ export function CreatePostTab() {
     a.click();
   };
 
+  const FORMAT_ASPECT: Record<string, string> = {
+    feed: "aspect-[4/5]",
+    story: "aspect-[9/16]",
+    square: "aspect-square",
+  };
+
+  const FORMAT_LABEL: Record<string, string> = {
+    feed: "Feed 4:5",
+    story: "Stories 9:16",
+    square: "1:1",
+  };
+
   return (
     <div className="space-y-4">
       <Card className="border-accent/20">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-accent" />
-            Gerador de Posts com IA — Identidade VS
+            Gerador de Posts — Nível Agência
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Descreva sua ideia. A IA cria texto B2B + arte profissional alinhada à marca da VS.
+            Descreva o tema. A IA cria copy B2B brutalista + arte no padrão VS. Instagram Feed: formato 4:5 atualizado.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -248,12 +255,12 @@ export function CreatePostTab() {
               </SelectContent>
             </Select>
 
-            <Select value={postStyle} onValueChange={(v: "dark" | "light" | "auto") => setPostStyle(v)}>
+            <Select value={postFormat} onValueChange={(v: "feed" | "story" | "square") => setPostFormat(v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="auto">🔄 Alternar Light/Dark</SelectItem>
-                <SelectItem value="light">☀️ Light (fundo claro)</SelectItem>
-                <SelectItem value="dark">🌑 Dark (fundo escuro)</SelectItem>
+                <SelectItem value="feed">Feed 4:5 (1080×1350)</SelectItem>
+                <SelectItem value="story">Stories 9:16</SelectItem>
+                <SelectItem value="square">Quadrado 1:1</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -314,6 +321,10 @@ export function CreatePostTab() {
                   <CardTitle className="text-sm flex items-center gap-2">
                     <ImagePlus className="h-4 w-4 text-accent" />
                     Imagem do Post
+                    <Badge variant="secondary" className="text-[9px] gap-1">
+                      <Smartphone className="h-2.5 w-2.5" />
+                      {FORMAT_LABEL[postFormat]}
+                    </Badge>
                   </CardTitle>
                   <div className="flex gap-1.5">
                     {generatedImage && (
@@ -331,18 +342,33 @@ export function CreatePostTab() {
               </CardHeader>
               <CardContent>
                 {imageLoading && !generatedImage ? (
-                  <div className="aspect-square rounded-lg bg-secondary/50 flex flex-col items-center justify-center gap-3">
-                    <Loader2 className="h-8 w-8 animate-spin text-accent" />
-                    <p className="text-xs text-muted-foreground">Gerando imagem com IA...</p>
+                  <div className={`${FORMAT_ASPECT[postFormat]} rounded-lg bg-[#050814] border border-accent/10 flex flex-col items-center justify-center gap-3`}>
+                    <Loader2 className="h-8 w-8 animate-spin text-[#FF5300]" />
+                    <p className="text-xs text-muted-foreground">Gerando arte com IA...</p>
+                    <p className="text-[10px] text-muted-foreground/50">Pode levar 20–40 segundos</p>
                   </div>
                 ) : generatedImage ? (
-                  <img src={generatedImage} alt="Post gerado" className="w-full rounded-lg border border-accent/20" />
+                  <div className="relative group">
+                    <img
+                      src={generatedImage}
+                      alt="Post gerado"
+                      className="w-full rounded-lg border border-accent/20 shadow-lg"
+                    />
+                    <div className="absolute inset-0 rounded-lg bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <Button size="sm" variant="secondary" onClick={downloadImage}>
+                        <Download className="h-3 w-3 mr-1" />Baixar PNG
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={handleRegenerateImage} disabled={imageLoading}>
+                        <Sparkles className="h-3 w-3 mr-1" />Regerar
+                      </Button>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="aspect-square rounded-lg bg-secondary/50 flex flex-col items-center justify-center gap-2">
-                    <Image className="h-8 w-8 text-muted-foreground/40" />
-                    <p className="text-xs text-muted-foreground">Imagem não gerada</p>
+                  <div className={`${FORMAT_ASPECT[postFormat]} rounded-lg bg-[#050814] border border-accent/10 flex flex-col items-center justify-center gap-2`}>
+                    <Image className="h-8 w-8 text-muted-foreground/20" />
+                    <p className="text-xs text-muted-foreground/60">Arte não gerada</p>
                     <Button size="sm" variant="outline" onClick={handleRegenerateImage}>
-                      <Sparkles className="h-3 w-3 mr-1" />Gerar Imagem
+                      <Sparkles className="h-3 w-3 mr-1" />Gerar Arte
                     </Button>
                   </div>
                 )}
