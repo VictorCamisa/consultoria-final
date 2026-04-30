@@ -208,42 +208,40 @@ Retorne APENAS um JSON válido (sem markdown, sem \`\`\`json) com este formato e
             "NO text, NO logos, NO charts, NO icons, NO robots, NO illustrations. ONLY photorealistic photography.",
           ].join(" ");
 
-          const geminiRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=AIzaSyBHqdRkJQYOOaSxqm9dLz0VtjuTAQzk5L8`,
+          const GEMINI_KEY = "AIzaSyBHqdRkJQYOOaSxqm9dLz0VtjuTAQzk5L8";
+          const imagenRes = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${GEMINI_KEY}`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                contents: [{ parts: [{ text: geminiPrompt }] }],
-                generationConfig: { responseModalities: ["IMAGE"], responseMimeType: "image/jpeg" },
+                instances: [{ prompt: geminiPrompt }],
+                parameters: { sampleCount: 1, aspectRatio: "9:16", safetyFilterLevel: "block_some", personGeneration: "allow_adult" },
               }),
             }
           );
 
-          if (geminiRes.ok) {
-            const geminiData = await geminiRes.json();
-            const parts = geminiData?.candidates?.[0]?.content?.parts ?? [];
-            const imgPart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith("image/"));
-            if (imgPart?.inlineData?.data) {
-              // Convert base64 to blob and upload to Supabase storage
-              const b64 = imgPart.inlineData.data;
-              const mimeType = imgPart.inlineData.mimeType;
-              const byteChars = atob(b64);
+          if (imagenRes.ok) {
+            const imagenData = await imagenRes.json();
+            const b64Img = imagenData?.predictions?.[0]?.bytesBase64Encoded;
+            if (b64Img) {
+              const mimeType = "image/png";
+              const byteChars = atob(b64Img);
               const byteArr = new Uint8Array(byteChars.length);
               for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
               const blob = new Blob([byteArr], { type: mimeType });
-              const bgFileName = `posts/${Date.now()}-bg-gemini.jpg`;
+              const bgFileName = `posts/${Date.now()}-bg-imagen4.png`;
               const { error: bgUploadErr } = await supabase.storage
                 .from("vs-marketing")
                 .upload(bgFileName, blob, { contentType: mimeType, upsert: true });
-              if (!bgUploadErr) {
-                const { data: bgPub } = supabase.storage.from("vs-marketing").getPublicUrl(bgFileName);
-                newBgUrl = bgPub.publicUrl;
-              }
+              newBgUrl = bgUploadErr
+                ? `data:${mimeType};base64,${b64Img}`
+                : supabase.storage.from("vs-marketing").getPublicUrl(bgFileName).data.publicUrl;
             }
           } else {
-            console.warn("Gemini image API error:", geminiRes.status, await geminiRes.text().then(t => t.slice(0, 200)));
+            console.warn("Imagen 4 error:", imagenRes.status, await imagenRes.text().then(t => t.slice(0, 300)));
           }
+
         } catch (bgErr) {
           console.warn("Background photo generation failed (non-fatal):", bgErr);
         }
