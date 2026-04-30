@@ -131,7 +131,15 @@ export function CreatePostTab() {
       try {
         const { data: bgData, error: bgError } = await supabase.functions.invoke("vs-generate-post-image", {
           body: {
-            prompt: `Contexto completo do post: ${post.caption}. Sugestão de imagem: ${post.visual_suggestion || prompt}`,
+            prompt: `Contexto do post: ${post.caption}. Sugestão: ${post.visual_suggestion || prompt}
+!!! ATENÇÃO DALL-E - REGRAS CRÍTICAS E ABSOLUTAS !!!
+ESTA IMAGEM DEVE SER OBRIGATORIAMENTE UMA FOTOGRAFIA REALISTA, HIGH-END, CINEMÁTICA.
+VOCÊ ESTÁ ESTRITAMENTE PROIBIDO DE GERAR:
+- NENHUM TIPO DE GRÁFICO DE BARRAS, SETAS, OU ELEMENTOS DE UI.
+- NENHUM ROBÔ, CYBORG OU ELEMENTO SCI-FI.
+- NENHUMA ILUSTRAÇÃO, VETOR OU ARTE 2D/3D.
+- NENHUM TEXTO, LETRA, NÚMERO OU LOGO.
+Gere APENAS fotografia realista de pessoas trabalhando ou ambientes corporativos. FOTOGRAFIA REAL.`,
             platform,
           },
         });
