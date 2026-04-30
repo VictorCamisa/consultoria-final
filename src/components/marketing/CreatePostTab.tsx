@@ -15,6 +15,7 @@ import {
   Clock, BookOpen, Smartphone,
 } from "lucide-react";
 import { BrandAssetsPanel } from "./BrandAssetsPanel";
+import { renderAndUpload } from "@/lib/vsPostRenderer";
 
 type GeneratedPost = {
   image_headline?: string;
@@ -47,6 +48,7 @@ export function CreatePostTab() {
   const [nicho, setNicho] = useState<string>("none");
   const [loading, setLoading] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
+  const [imageVariant, setImageVariant] = useState(0);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [generatedPost, setGeneratedPost] = useState<GeneratedPost | null>(null);
   const [showBrandAssets, setShowBrandAssets] = useState(false);
@@ -124,28 +126,25 @@ export function CreatePostTab() {
 
       setImageLoading(true);
       try {
-        const { data: imgData, error: imgErr } = await supabase.functions.invoke("vs-generate-post-image", {
-          body: {
-            prompt,
-            platform,
-            format: postFormat,
-            imageHeadline: post.image_headline || "",
-          },
-        });
-        if (imgErr) throw imgErr;
-        if (imgData?.error) { toast.error(imgData.error); return; }
-        if (imgData?.image_url) {
-          setGeneratedImage(imgData.image_url);
-          if (savedId) {
-            await supabase.from("vs_marketing_posts" as any).update({ image_url: imgData.image_url }).eq("id", savedId);
-          }
-          qc.invalidateQueries({ queryKey: ["vs-marketing-posts-history"] });
-          qc.invalidateQueries({ queryKey: ["vs-marketing-posts-gallery"] });
-          toast.success("Imagem gerada! 🎨");
+        const currentVariant = 0;
+        setImageVariant(currentVariant);
+        const imageUrl = await renderAndUpload(
+          post.image_headline || post.caption.split("\n")[0].slice(0, 30),
+          postFormat,
+          platform,
+          currentVariant,
+          supabase,
+        );
+        setGeneratedImage(imageUrl);
+        if (savedId) {
+          await supabase.from("vs_marketing_posts" as any).update({ image_url: imageUrl }).eq("id", savedId);
         }
+        qc.invalidateQueries({ queryKey: ["vs-marketing-posts-history"] });
+        qc.invalidateQueries({ queryKey: ["vs-marketing-posts-gallery"] });
+        toast.success("Arte gerada!");
       } catch (e: any) {
         console.error(e);
-        toast.error("Texto gerado, mas houve um erro na imagem. Tente regerar.");
+        toast.error("Texto gerado, mas houve um erro na arte. Tente regerar.");
       } finally {
         setImageLoading(false);
       }
@@ -161,23 +160,20 @@ export function CreatePostTab() {
     if (!generatedPost) return;
     setImageLoading(true);
     try {
-      const { data: imgData, error: imgErr } = await supabase.functions.invoke("vs-generate-post-image", {
-        body: {
-          prompt,
-          platform,
-          format: postFormat,
-          imageHeadline: generatedPost.image_headline || "",
-        },
-      });
-      if (imgErr) throw imgErr;
-      if (imgData?.error) { toast.error(imgData.error); return; }
-      if (imgData?.image_url) {
-        setGeneratedImage(imgData.image_url);
-        toast.success("Nova imagem gerada! 🎨");
-      }
+      const nextVariant = (imageVariant + 1) % 3;
+      setImageVariant(nextVariant);
+      const imageUrl = await renderAndUpload(
+        generatedPost.image_headline || generatedPost.caption.split("\n")[0].slice(0, 30),
+        postFormat,
+        platform,
+        nextVariant,
+        supabase,
+      );
+      setGeneratedImage(imageUrl);
+      toast.success(`Layout ${nextVariant + 1}/3 — regere para alternar`);
     } catch (e) {
       console.error(e);
-      toast.error("Erro ao regerar imagem.");
+      toast.error("Erro ao regerar arte.");
     } finally {
       setImageLoading(false);
     }
@@ -325,6 +321,11 @@ export function CreatePostTab() {
                       <Smartphone className="h-2.5 w-2.5" />
                       {FORMAT_LABEL[postFormat]}
                     </Badge>
+                    {generatedImage && (
+                      <Badge variant="outline" className="text-[9px]">
+                        Layout {imageVariant + 1}/3
+                      </Badge>
+                    )}
                   </CardTitle>
                   <div className="flex gap-1.5">
                     {generatedImage && (
