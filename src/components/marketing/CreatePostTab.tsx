@@ -1,6 +1,13 @@
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { createClient } from "@supabase/supabase-js";
+
+// Secondary client pointing to the VS controlled project where vs-generate-post-image is deployed
+const supabaseVS = createClient(
+  "https://imgoqlawniirfwosbizl.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImltZ29xbGF3bmlpcmZ3b3NiaXpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYzODIzMzIsImV4cCI6MjA4MTk1ODMzMn0.RL0B__gUZhLuArvqjUrO9iDzKN_G9Jet4aM6F-hg6UM"
+);
 import { useNichos } from "@/hooks/useNichos";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,17 +136,12 @@ export function CreatePostTab() {
 
       setImageLoading(true);
       try {
-        const { data: bgData, error: bgError } = await supabase.functions.invoke("vs-generate-post-image", {
+        // Use supabaseVS (VS controlled project) for image generation
+        // Do NOT use visual_suggestion - it contains design instructions that corrupt photo generation
+        const photoTheme = post.caption.split("\n").slice(0, 3).join(" ").slice(0, 300);
+        const { data: bgData, error: bgError } = await supabaseVS.functions.invoke("vs-generate-post-image", {
           body: {
-            prompt: `Contexto do post: ${post.caption}. Sugestão: ${post.visual_suggestion || prompt}
-!!! ATENÇÃO DALL-E - REGRAS CRÍTICAS E ABSOLUTAS !!!
-ESTA IMAGEM DEVE SER OBRIGATORIAMENTE UMA FOTOGRAFIA REALISTA, HIGH-END, CINEMÁTICA.
-VOCÊ ESTÁ ESTRITAMENTE PROIBIDO DE GERAR:
-- NENHUM TIPO DE GRÁFICO DE BARRAS, SETAS, OU ELEMENTOS DE UI.
-- NENHUM ROBÔ, CYBORG OU ELEMENTO SCI-FI.
-- NENHUMA ILUSTRAÇÃO, VETOR OU ARTE 2D/3D.
-- NENHUM TEXTO, LETRA, NÚMERO OU LOGO.
-Gere APENAS fotografia realista de pessoas trabalhando ou ambientes corporativos. FOTOGRAFIA REAL.`,
+            prompt: photoTheme,
             platform,
           },
         });
@@ -152,7 +154,7 @@ Gere APENAS fotografia realista de pessoas trabalhando ou ambientes corporativos
         setImageVariant(currentVariant);
         const imageUrl = await renderAndUpload({
           headline: post.image_headline || post.caption.split("\n")[0].slice(0, 30),
-          tagline: post.visual_suggestion?.slice(0, 80) || "",
+          tagline: "",
           format: postFormat,
           variant: currentVariant,
           logoUrl: vsLogoUrl,
