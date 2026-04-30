@@ -114,7 +114,7 @@ Retorne APENAS um JSON válido (sem markdown, sem \`\`\`json) com este formato e
 }`;
 
       const geminiTextRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAlC4s60GJ3-v7-dLwyNm8lJBCOEoDKKB8`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyBHqdRkJQYOOaSxqm9dLz0VtjuTAQzk5L8`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -192,7 +192,7 @@ Retorne APENAS um JSON válido (sem markdown, sem \`\`\`json) com este formato e
           ].join(" ");
 
           const geminiRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=AIzaSyAlC4s60GJ3-v7-dLwyNm8lJBCOEoDKKB8`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=AIzaSyBHqdRkJQYOOaSxqm9dLz0VtjuTAQzk5L8`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
