@@ -94,45 +94,25 @@ export function CreatePostTab() {
     setGeneratedPost(null);
     setGeneratedImage(null);
     setBgImage(null);
-
     try {
-      // Generate post text directly via Gemini (no edge function, no OpenAI dependency)
+      // ── TEXT via Edge Function (key never exposed in browser) ──────────────
       const systemPrompt = `Você é um especialista em marketing B2B para a empresa VS (Vendas de Soluções), que vende automação comercial, IA e CRM para empresas. Crie posts virais e impactantes para ${platform}.
 
 ${referenceContext ? `CONTEXTO DA MARCA:\n${referenceContext}\n` : ""}${nicho !== "none" ? `NICHO: ${nicho}\n` : ""}
 TEMA DO POST: ${prompt}
 
 IMPORTANTE: Retorne SOMENTE o JSON abaixo, sem nenhum texto antes ou depois, sem markdown, sem \`\`\`json:
-{"image_headline":"2 PALAVRAS IMPACTANTES","caption":"legenda completa engajante com emojis e quebras de linha usando \\n","hashtags":["hashtag1","hashtag2","hashtag3","hashtag4","hashtag5"],"platform_tips":"dica de horário","visual_suggestion":"descrição visual específica para a foto de fundo","best_time":"horário"}`;
+{"image_headline":"2 PALAVRAS IMPACTANTES","caption":"legenda completa engajante com emojis e quebras de linha usando \\n","hashtags":["hashtag1","hashtag2","hashtag3","hashtag4","hashtag5"],"platform_tips":"dica de horário","visual_suggestion":"descrição visual específica e detalhada da foto de fundo ideal para este post","best_time":"horário"}`;
 
+      const { data: textData, error: textErr } = await supabase.functions.invoke("vs-ai-proxy", {
+        body: { action: "text", payload: { systemPrompt } },
+      });
+      if (textErr) throw new Error(textErr.message);
+      if (textData?.error) throw new Error(textData.error);
 
-      const geminiTextRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: systemPrompt }] }],
-            generationConfig: {
-              temperature: 0.85,
-              maxOutputTokens: 1200,
-              thinkingConfig: { thinkingBudget: 0 },
-            },
-          }),
-        }
-      );
+      const rawText = textData?.text ?? "";
 
-      if (!geminiTextRes.ok) {
-        const errText = await geminiTextRes.text();
-        throw new Error(`Gemini text error: ${geminiTextRes.status} ${errText.slice(0, 200)}`);
-      }
-
-      const geminiTextData = await geminiTextRes.json();
-      // With thinkingBudget:0, response is a single part - get its text directly
-      const allParts = geminiTextData?.candidates?.[0]?.content?.parts ?? [];
-      const rawText = allParts.filter((p: any) => !p.thought).map((p: any) => p.text || "").join("").trim();
-
-      // Sanitize JSON: escape literal newlines inside string values so JSON.parse works
+      // Sanitize JSON: escape literal newlines inside string values
       const sanitizeJSON = (s: string) => {
         let out = ""; let inStr = false; let esc = false;
         for (const c of s) {
@@ -161,13 +141,11 @@ IMPORTANTE: Retorne SOMENTE o JSON abaixo, sem nenhum texto antes ou depois, sem
             caption: `${prompt}\n\nTransforme seu processo comercial com automação e IA. Reduza custos, aumente velocidade e escale sem contratar mais.`,
             hashtags: ["#VS", "#AutomacaoComercial", "#IA", "#CRM", "#Vendas"],
             platform_tips: "Poste entre 9h-11h para melhor alcance.",
-            visual_suggestion: "Executivo em ambiente corporativo moderno.",
+            visual_suggestion: "Executivo em ambiente corporativo moderno com iluminação dramática.",
             best_time: "9h-11h",
           };
         }
       }
-
-
 
       setGeneratedPost(post);
       toast.success("Post gerado! ✨");
@@ -190,57 +168,42 @@ IMPORTANTE: Retorne SOMENTE o JSON abaixo, sem nenhum texto antes ou depois, sem
 
       setImageLoading(true);
       try {
-        // Generate photorealistic background directly via Gemini API (client-side, no edge function needed)
+        // ── IMAGE via Edge Function (Imagen 4.0) ────────────────────────────
         let newBgUrl: string | undefined = undefined;
         try {
-          // Build a specific image prompt based on actual post content
-          const topicForPhoto = post.visual_suggestion
-            ? post.visual_suggestion.slice(0, 200)
-            : prompt.slice(0, 150);
-          const geminiPrompt = [
+          const topicForPhoto = post.visual_suggestion?.slice(0, 200) || prompt.slice(0, 150);
+          const imagePrompt = [
             `Cinematic editorial photography for a B2B business post about: ${topicForPhoto}.`,
             "Style: Bloomberg Businessweek cover, HBO Succession, high-end corporate.",
             "Lighting: dramatic, moody, side-lit or rim-lit. Dark background with selective focus.",
             "ONLY photorealistic. NO text, NO logos, NO charts, NO icons, NO robots, NO illustrations, NO cartoons.",
           ].join(" ");
 
-          const GEMINI_KEY = import.meta.env.VITE_GEMINI_KEY as string;
-          const imagenRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${GEMINI_KEY}`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                instances: [{ prompt: geminiPrompt }],
-                parameters: { sampleCount: 1, aspectRatio: "9:16", safetyFilterLevel: "block_some", personGeneration: "allow_adult" },
-              }),
-            }
-          );
+          const { data: imgData, error: imgErr } = await supabase.functions.invoke("vs-ai-proxy", {
+            body: { action: "image", payload: { imagePrompt } },
+          });
 
-          if (imagenRes.ok) {
-            const imagenData = await imagenRes.json();
-            const b64Img = imagenData?.predictions?.[0]?.bytesBase64Encoded;
-            if (b64Img) {
-              const mimeType = "image/png";
-              const byteChars = atob(b64Img);
-              const byteArr = new Uint8Array(byteChars.length);
-              for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
-              const blob = new Blob([byteArr], { type: mimeType });
-              const bgFileName = `posts/${Date.now()}-bg-imagen4.png`;
-              const { error: bgUploadErr } = await supabase.storage
-                .from("vs-marketing")
-                .upload(bgFileName, blob, { contentType: mimeType, upsert: true });
-              newBgUrl = bgUploadErr
-                ? `data:${mimeType};base64,${b64Img}`
-                : supabase.storage.from("vs-marketing").getPublicUrl(bgFileName).data.publicUrl;
-            }
+          if (!imgErr && imgData?.b64) {
+            const b64Img = imgData.b64;
+            const mimeType = "image/png";
+            const byteChars = atob(b64Img);
+            const byteArr = new Uint8Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
+            const blob = new Blob([byteArr], { type: mimeType });
+            const bgFileName = `posts/${Date.now()}-bg-imagen4.png`;
+            const { error: bgUploadErr } = await supabase.storage
+              .from("vs-marketing")
+              .upload(bgFileName, blob, { contentType: mimeType, upsert: true });
+            newBgUrl = bgUploadErr
+              ? `data:${mimeType};base64,${b64Img}`
+              : supabase.storage.from("vs-marketing").getPublicUrl(bgFileName).data.publicUrl;
           } else {
-            console.warn("Imagen 4 error:", imagenRes.status, await imagenRes.text().then(t => t.slice(0, 300)));
+            console.warn("Image generation failed:", imgErr || imgData?.error);
           }
-
         } catch (bgErr) {
           console.warn("Background photo generation failed (non-fatal):", bgErr);
         }
+
 
         setBgImage(newBgUrl || null);
         const currentVariant = 0;
