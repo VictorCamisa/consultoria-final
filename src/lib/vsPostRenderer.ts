@@ -7,6 +7,7 @@ export interface PostRenderOptions {
   variant?: number;
   logoUrl?: string;
   handle?: string;
+  bgImageUrl?: string;
 }
 
 const DIMS: Record<PostFormat, [number, number]> = {
@@ -351,7 +352,8 @@ export async function renderVSPost(options: PostRenderOptions): Promise<Blob> {
     format = "feed",
     variant = 0,
     logoUrl,
-    handle = "@vsgrowthhub",
+    handle = "@vs",
+    bgImageUrl,
   } = options;
 
   const [W, H] = DIMS[format];
@@ -362,9 +364,38 @@ export async function renderVSPost(options: PostRenderOptions): Promise<Blob> {
 
   await ensureFont(Math.round(H * 0.22));
 
-  // Background
+  // Background Base
   ctx.fillStyle = BG;
   ctx.fillRect(0, 0, W, H);
+
+  // Background Image
+  if (bgImageUrl) {
+    try {
+      const bgImage = await loadImage(bgImageUrl);
+      const imgRatio = bgImage.naturalWidth / bgImage.naturalHeight;
+      const canvasRatio = W / H;
+      let sWidth = bgImage.naturalWidth;
+      let sHeight = bgImage.naturalHeight;
+      let sx = 0;
+      let sy = 0;
+
+      if (imgRatio > canvasRatio) {
+        sWidth = bgImage.naturalHeight * canvasRatio;
+        sx = (bgImage.naturalWidth - sWidth) / 2;
+      } else {
+        sHeight = bgImage.naturalWidth / canvasRatio;
+        sy = (bgImage.naturalHeight - sHeight) / 2;
+      }
+      
+      ctx.drawImage(bgImage, sx, sy, sWidth, sHeight, 0, 0, W, H);
+      
+      // Apply dark overlay for text legibility
+      ctx.fillStyle = "rgba(5, 8, 20, 0.65)";
+      ctx.fillRect(0, 0, W, H);
+    } catch (e) {
+      console.warn("Failed to load bgImageUrl", e);
+    }
+  }
 
   // Load logo (non-fatal if missing)
   let logo: HTMLImageElement | null = null;

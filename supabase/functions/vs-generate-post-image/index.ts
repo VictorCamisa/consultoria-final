@@ -60,150 +60,22 @@ serve(async (req) => {
       .map((a) => `[${a.type.toUpperCase()}] ${a.title}: ${a.content}`)
       .join("\n");
 
-    const cleanHeadline = (imageHeadline || "")
-      .replace(/[^\p{L}\p{N}\s]/gu, " ")
-      .trim()
-      .toUpperCase()
-      .split(/\s+/)
-      .slice(0, 3)
-      .join(" ");
-    const hasHeadline = cleanHeadline.length > 0;
-    const headlineWords = cleanHeadline.split(/\s+/);
-    const accentWord = headlineWords.length > 1 ? headlineWords[headlineWords.length - 1] : "";
-
-    const headlineInstruction = hasHeadline
-      ? `
-HEADLINE — THE SINGLE TEXT ELEMENT ON THIS IMAGE:
-The only text allowed is exactly: "${cleanHeadline}"
-
-Typography execution:
-- Font: ultra-heavy condensed sans-serif, weight 900 (Poppins Black / Impact / Haas Grotesk Black style)
-- Style: italic, tracking tight to -0.04em — letters nearly touching for maximum aggression
-- Scale: headline occupies 45–65% of the canvas WIDTH — this is a POSTER-SCALE headline
-- Color: Pure White #FFFFFF for all words${accentWord ? `, EXCEPT the last word "${accentWord}" which must be rendered in Cyber Orange #FF5300` : ""}
-- Placement: flush-left aligned, anchored to the left 8% margin, positioned in the upper 55% of the canvas
-- Text baseline sits at roughly 35–50% from the top of the canvas
-- Lines: if multi-word, each word on its own line stacked tightly (line-height 0.9–1.0)
-- Zero text shadow, zero glow, zero outline, zero stroke — clean flat ink on dark ground
-
-CRITICAL TEXT RENDERING RULE:
-Spell "${cleanHeadline}" character-for-character with perfect Portuguese orthography.
-NEVER alter, abbreviate, merge, or split words.
-NEVER add any other word, number, percentage, tagline, URL, watermark, hashtag, or pseudo-metric.
-If you cannot render this text with perfect spelling, render NO text instead.`
-      : `
-TEXT RULE: ZERO text, ZERO letters, ZERO numbers on this image. Pure abstract geometric composition.`;
-
     const finalPrompt = `
-TASK: Create a single, ultra-professional Instagram feed post graphic that looks like it was art-directed by a senior creative director at a top-tier design agency (Pentagram, Collins, Manual Creative level). The brand is VS — a Brazilian B2B company that replaces entire sales and marketing departments with AI automation.
+TASK: Generate a high-end, cinematic, editorial background photography for a B2B technology and business consulting brand.
 
-AESTHETIC CODENAME: BRUTALIST TECH EDITORIAL
-Reference points for visual feel (do NOT copy, absorb the DNA):
-- Linear.app hero sections: ultra-dark, high-contrast, heavy type, no clutter
-- Vercel marketing: surgical minimalism, type as hero, orange/white on black
-- V4 Company Instagram: confrontational copy, editorial layout, dark backgrounds
-- Stripe brand moments: every pixel intentional, negative space as power
-- Bloomberg Businessweek covers: stark typographic composition
+AESTHETIC & THEME:
+- Theme context: ${prompt}
+- Vibe: Premium, serious, cold, technical, high-stakes business environment.
+- Subject matter: Could be modern office architecture, abstract architectural elements, a blurred professional in thought, data centers, clean minimalist desks, or moody lighting.
+- Palette: Dark, moody, high contrast. Deep blues, blacks, with very subtle warm/orange light accents.
 
-═══════════════════════════════════════════
-CANVAS SPECIFICATION
-═══════════════════════════════════════════
-Format: Portrait 4:5 Instagram Feed
-Background: solid Deep Space Blue #050814 — uniform, no vignette, no gradients
-Safe zone: 8% padding on all edges (no design elements in the outer 8% margin)
+CRITICAL ABSOLUTE RULES:
+1. NO TEXT WHATSOEVER. Do not generate any letters, numbers, symbols, words, UI elements, floating text, or labels anywhere in the image.
+2. NO LOGOS. Do not generate any company logos or recognizable brand marks.
+3. NO CLICHÉS. No futuristic glowing brains, no neon flying charts, no cyborgs, no handshake silhouettes. Keep it grounded, realistic, and highly photographic.
+4. PHOTOGRAPHIC QUALITY. Must look like it was shot on a medium format camera (e.g. Hasselblad) with shallow depth of field, natural or cinematic lighting, and film grain.
 
-═══════════════════════════════════════════
-MANDATORY PALETTE — HARD RULE
-═══════════════════════════════════════════
-ONLY these three values exist in this image:
-  1. Deep Space Blue #050814  → background base (≥70% of all pixels)
-  2. Pure White #FFFFFF        → headline and primary graphic elements
-  3. Cyber Orange #FF5300      → ONE accent, used ONCE with restraint
-
-FORBIDDEN: any other hue, any pastel, any blue variant, any warm yellow, any green.
-FORBIDDEN: gradients, color transitions, blending modes that introduce new hues.
-A single orange line, underline, or orange word is the maximum orange usage.
-
-═══════════════════════════════════════════
-ABSOLUTE PROHIBITION — VS IDENTITY
-═══════════════════════════════════════════
-NEVER render the letters "VS" together in any form — no monogram, no logo, no large display, no stencil, no cracked letterform, no italic VS, no VS with arrows. Brand identity comes from palette + type weight + composition alone.
-
-═══════════════════════════════════════════
-TYPOGRAPHY
-═══════════════════════════════════════════
-${headlineInstruction}
-
-═══════════════════════════════════════════
-ACCENT ELEMENT — ORANGE (choose EXACTLY ONE)
-═══════════════════════════════════════════
-Select one and only one of these orange accent options:
-  Option A: A single horizontal rule — 2px thick, spanning exactly 30–40% of canvas width, placed just below the last line of the headline, flush to left margin
-  Option B: A filled solid orange rectangle behind the last word of the headline only (word highlight block)
-  Option C: A right-pointing arrow (→) rendered as a simple geometric shape, 40–60px equivalent scale, placed to the right of or below the headline
-
-Do NOT combine options. One orange element. Maximum.
-
-═══════════════════════════════════════════
-BACKGROUND TEXTURE (ultra-subtle, optional)
-═══════════════════════════════════════════
-If a background texture is included, it must be ONE of:
-  Texture A: Micro dot grid — dots 1px, spacing 16–24px, color #FFFFFF at 6–10% opacity
-  Texture B: Thin horizontal lines — 1px line, 4px gap, color #0D1528 (slightly lighter than bg), opacity 40%
-  Texture C: Single thin vertical or horizontal rule in #1a1f3a at 20% opacity crossing the canvas
-
-These textures must be INVISIBLE at a glance — only perceptible on close inspection.
-
-═══════════════════════════════════════════
-COMPOSITIONAL LAW (EDITORIAL GRID)
-═══════════════════════════════════════════
-The canvas is divided into a 12-column, 16-row editorial grid.
-Layout template — EXACTLY this hierarchy:
-  1. HEADLINE: spans columns 1–10, rows 4–10 (upper-center mass)
-  2. ORANGE ACCENT: placed in rows 11–12, directly below headline
-  3. NEGATIVE SPACE: rows 13–16 (lower third) — completely empty, #050814 only
-  4. Optional secondary texture: rows 1–3 (very subtle, not distracting)
-
-NEGATIVE SPACE IS THE DESIGN. The bottom 35% of the canvas should be EMPTY dark background. This breathing room is not a failure — it IS the design intention. Magazines do this. Agencies do this. It communicates confidence.
-
-ASYMMETRY RULE: Do not center-align the headline. Flush-left or slight right-offset is correct. Centered layouts feel corporate and weak.
-
-═══════════════════════════════════════════
-FORBIDDEN MOTIFS — ABSOLUTE LIST
-═══════════════════════════════════════════
-- Human figures, faces, hands, silhouettes, avatars, icons of people
-- Stock photography of any kind
-- 3D objects, renders, blobs, spheres, abstract shapes with depth
-- Sparkles, stars, rays, halos, glows, neon effects
-- Gradient meshes or multi-stop gradients
-- Bar charts that look hand-drawn or cartoonish
-- Decorative borders, rounded corners on text elements
-- Fake software screenshots with invented UI copy
-- Emoji, symbols, or special characters not part of the headline
-- Handwriting or script fonts
-- Cracked, distressed, halftone-destroyed typography
-- Drop shadows on text
-- The letters "V" and "S" appearing adjacent to one another in any form
-
-═══════════════════════════════════════════
-CONTEXT (DO NOT RENDER THIS TEXT ON IMAGE)
-═══════════════════════════════════════════
-Post theme: ${prompt}
-Platform: ${platform}
-
-${textRules ? `ADDITIONAL BRAND RULES:\n${textRules}` : ""}
-
-═══════════════════════════════════════════
-FINAL QUALITY BAR
-═══════════════════════════════════════════
-Before finalizing, ask yourself: Would a creative director at a top São Paulo agency approve this?
-- Is the typography crisp, massive, and confident?
-- Is the negative space generous and intentional?
-- Is the orange accent restrained and purposeful?
-- Is the overall feel cold, technical, aggressive, premium?
-- Does it look like a printed poster, not an AI image?
-
-If any answer is no, revise. This must be portfolio-worthy.
+This image will be used as a background layer. Typography will be placed on top of it later.
 `.trim();
 
     const response = await fetch("https://api.openai.com/v1/images/generations", {
@@ -213,10 +85,11 @@ If any answer is no, revise. This must be portfolio-worthy.
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-image-1",
+        model: "dall-e-3",
         prompt: finalPrompt,
-        size: "1024x1536",
-        quality: "high",
+        size: "1024x1792",
+        quality: "hd",
+        response_format: "b64_json",
         n: 1,
       }),
     });
