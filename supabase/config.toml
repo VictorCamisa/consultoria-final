@@ -42,3 +42,9 @@ verify_jwt = false
 [functions.whatsapp-webhook]
 verify_jwt = false
 
+[functions.vs-generate-post]
+verify_jwt = false
+
+[functions.vs-generate-post-image]
+verify_jwt = false
+
