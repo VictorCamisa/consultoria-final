@@ -100,18 +100,11 @@ export function CreatePostTab() {
       const systemPrompt = `Você é um especialista em marketing B2B para a empresa VS (Vendas de Soluções), que vende automação comercial, IA e CRM para empresas. Crie posts virais e impactantes para ${platform}.
 
 ${referenceContext ? `CONTEXTO DA MARCA:\n${referenceContext}\n` : ""}${nicho !== "none" ? `NICHO: ${nicho}\n` : ""}
-
 TEMA DO POST: ${prompt}
 
-Retorne APENAS um JSON válido (sem markdown, sem \`\`\`json) com este formato exato:
-{
-  "image_headline": "HEADLINE CURTA EM CAPS (máx 3 palavras)",
-  "caption": "legenda completa do post com quebras de linha reais",
-  "hashtags": ["hashtag1", "hashtag2", "hashtag3", "hashtag4", "hashtag5"],
-  "platform_tips": "dica rápida de horário/formato",
-  "visual_suggestion": "sugestão visual descritiva",
-  "best_time": "melhor horário para postar"
-}`;
+IMPORTANTE: Retorne SOMENTE o JSON abaixo, sem nenhum texto antes ou depois, sem markdown, sem \`\`\`json:
+{"image_headline":"2 PALAVRAS IMPACTANTES","caption":"legenda completa engajante com emojis e quebras de linha usando \\n","hashtags":["hashtag1","hashtag2","hashtag3","hashtag4","hashtag5"],"platform_tips":"dica de horário","visual_suggestion":"descrição visual específica para a foto de fundo","best_time":"horário"}`;
+
 
       const geminiTextRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyBHqdRkJQYOOaSxqm9dLz0VtjuTAQzk5L8`,
@@ -120,7 +113,11 @@ Retorne APENAS um JSON válido (sem markdown, sem \`\`\`json) com este formato e
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             contents: [{ parts: [{ text: systemPrompt }] }],
-            generationConfig: { temperature: 0.9, maxOutputTokens: 1024 },
+            generationConfig: {
+              temperature: 0.85,
+              maxOutputTokens: 1200,
+              thinkingConfig: { thinkingBudget: 0 },
+            },
           }),
         }
       );
@@ -131,12 +128,9 @@ Retorne APENAS um JSON válido (sem markdown, sem \`\`\`json) com este formato e
       }
 
       const geminiTextData = await geminiTextRes.json();
-      // Gemini 2.5-flash has thinking mode - find actual response (skip thought parts)
-      const parts = geminiTextData?.candidates?.[0]?.content?.parts ?? [];
-      const rawText = parts
-        .filter((p: any) => !p.thought && typeof p.text === "string")
-        .map((p: any) => p.text)
-        .join("") || parts[parts.length - 1]?.text || "";
+      // With thinkingBudget:0, response is a single part - get its text directly
+      const allParts = geminiTextData?.candidates?.[0]?.content?.parts ?? [];
+      const rawText = allParts.filter((p: any) => !p.thought).map((p: any) => p.text || "").join("").trim();
 
       // Sanitize JSON: escape literal newlines inside string values so JSON.parse works
       const sanitizeJSON = (s: string) => {
@@ -199,13 +193,15 @@ Retorne APENAS um JSON válido (sem markdown, sem \`\`\`json) com este formato e
         // Generate photorealistic background directly via Gemini API (client-side, no edge function needed)
         let newBgUrl: string | undefined = undefined;
         try {
-          const photoTheme = post.caption.split("\n").slice(0, 3).join(" ").slice(0, 300);
+          // Build a specific image prompt based on actual post content
+          const topicForPhoto = post.visual_suggestion
+            ? post.visual_suggestion.slice(0, 200)
+            : prompt.slice(0, 150);
           const geminiPrompt = [
-            `Photorealistic editorial photography background for a B2B business post about: ${photoTheme}.`,
-            "Style: cinematic, like Bloomberg Businessweek or HBO Succession.",
-            "Subject: executive under dramatic studio lighting, corporate architecture, premium materials close-up, or boardroom.",
-            "Colors: deep blacks, dark navy, charcoal, subtle accent light.",
-            "NO text, NO logos, NO charts, NO icons, NO robots, NO illustrations. ONLY photorealistic photography.",
+            `Cinematic editorial photography for a B2B business post about: ${topicForPhoto}.`,
+            "Style: Bloomberg Businessweek cover, HBO Succession, high-end corporate.",
+            "Lighting: dramatic, moody, side-lit or rim-lit. Dark background with selective focus.",
+            "ONLY photorealistic. NO text, NO logos, NO charts, NO icons, NO robots, NO illustrations, NO cartoons.",
           ].join(" ");
 
           const GEMINI_KEY = "AIzaSyBHqdRkJQYOOaSxqm9dLz0VtjuTAQzk5L8";
@@ -250,9 +246,11 @@ Retorne APENAS um JSON válido (sem markdown, sem \`\`\`json) com este formato e
         const currentVariant = 0;
         setImageVariant(currentVariant);
 
-        // Always render the post - with or without background photo
+        // Use image_headline from AI (capped at 2 words for canvas readability)
+        const rawHeadline = post.image_headline || prompt.split(" ").slice(0, 2).join(" ");
+        const canvasHeadline = rawHeadline.trim().split(/\s+/).slice(0, 2).join(" ");
         const imageUrl = await renderAndUpload({
-          headline: post.image_headline || post.caption.split("\n")[0].slice(0, 30),
+          headline: canvasHeadline,
           tagline: "",
           format: postFormat,
           variant: currentVariant,
