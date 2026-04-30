@@ -14,6 +14,30 @@ function decodeBase64(base64: string): Uint8Array {
   return arr;
 }
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(bin);
+}
+
+async function fetchAsInlineImage(url: string): Promise<{ mimeType: string; data: string } | null> {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const ct = res.headers.get("content-type") || "image/png";
+    if (!ct.startsWith("image/")) return null; // skip PDFs, docs
+    const buf = new Uint8Array(await res.arrayBuffer());
+    if (buf.byteLength > 4 * 1024 * 1024) return null; // cap at 4MB to be safe
+    return { mimeType: ct.split(";")[0], data: bytesToBase64(buf) };
+  } catch (e) {
+    console.warn("fetchAsInlineImage failed:", url, e);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -26,35 +50,70 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Carrega ativos visuais ativos da marca para enviar como referência multimodal
+    const { data: assets } = await supabase
+      .from("vs_brand_assets")
+      .select("type, title, content, file_url")
+      .eq("is_active", true);
+
+    const visualAssets = (assets || []).filter(
+      (a) => a.file_url && ["logo", "reference", "image", "palette", "typography"].includes(a.type),
+    );
+    const textRules = (assets || [])
+      .filter((a) => a.content && ["rule", "tone", "manual", "palette", "typography"].includes(a.type))
+      .map((a) => `[${a.type.toUpperCase()}] ${a.title}: ${a.content}`)
+      .join("\n");
+
+    const inlineRefs: { mimeType: string; data: string; label: string }[] = [];
+    for (const a of visualAssets.slice(0, 6)) {
+      const img = await fetchAsInlineImage(a.file_url as string);
+      if (img) inlineRefs.push({ ...img, label: `${a.type}: ${a.title}` });
+    }
+    console.log(`[vs-generate-post-image] inline refs: ${inlineRefs.length}/${visualAssets.length}`);
+
     const colorScheme = style === "dark"
       ? "dark navy background (#0B1B36), VS Blue accents (#2E6FCC), Blue Light highlights (#4A8DE0), white typography"
       : "clean white/off-white background (#F7F9FC), VS Blue (#2E6FCC) and Blue Light (#4A8DE0) accents, dark navy details (#0B1B36)";
 
-    const imagePrompt = [
-      `Create a professional 1:1 social media graphic (1024x1024) for "VS Growth Hub" — a Brazilian B2B consultancy that builds digital sales ecosystems for SMBs (medical/dental clinics, law firms, used car dealers).`,
+    const promptSections = [
+      `You are generating a 1:1 (1024x1024) social media graphic for "VS Growth Hub" — Brazilian B2B consultancy for SMBs.`,
       ``,
-      `THEME: ${prompt}`,
+      inlineRefs.length > 0
+        ? `STRICT BRAND REFERENCES: The previous ${inlineRefs.length} image(s) are the OFFICIAL brand assets (logo, palette, typography samples, references). You MUST replicate their exact color palette, typographic feel, geometric language, logo shape, and overall composition style. Do NOT invent a different brand identity.`
+        : `(No reference images provided — strictly follow the textual brand rules below.)`,
+      ``,
+      `MANDATORY PALETTE (use these HEX values literally, no other dominant colors):`,
+      `- VS Blue: #2E6FCC`,
+      `- Blue Light: #4A8DE0`,
+      `- Dark Navy: #0B1B36`,
+      `- Off-white: #F7F9FC`,
+      `STYLE: ${style === "dark" ? "dark navy background with VS Blue/Blue Light accents and white type" : "off-white background with VS Blue / Blue Light accents and dark navy details"}.`,
+      `TYPOGRAPHY (if any text appears): Barlow Condensed for headings, Barlow for body — bold, condensed, modern, NEVER serif, NEVER script, NEVER decorative.`,
+      ``,
+      `THEME OF THIS POST: ${prompt}`,
       `PLATFORM: ${platform}`,
-      `COLOR SCHEME: ${colorScheme}.`,
-      `STYLE: minimalist, corporate, modern editorial — geometric shapes, subtle gradients, clean composition with generous negative space.`,
       ``,
-      `CRITICAL TEXT RULES:`,
-      `- ABSOLUTELY NO captions, slogans, body copy, fake words, or random letters/numbers on the image`,
-      `- The image communicates only through visuals — geometry, color, light, abstract icons`,
-      ``,
-      `DESIGN RULES:`,
-      `- Premium B2B / SaaS aesthetic (think Notion, Linear, Stripe marketing)`,
-      `- Use abstract symbols of growth, automation, data, AI when relevant (charts, nodes, gears, flow lines) — never literal text`,
+      `COMPOSITION RULES:`,
+      `- Minimalist, editorial, premium B2B (Notion / Linear / Stripe level)`,
+      `- Geometric shapes, subtle gradients of VS Blue → Blue Light, generous negative space`,
+      `- Use abstract icons of growth/automation/data/AI when relevant — never literal foreign text`,
       `- Magazine-quality composition, high contrast, professional`,
-      `- Brazilian audience, no English text on screen`,
-    ].join("\n");
+      ``,
+      `TEXT RULES ON THE IMAGE:`,
+      `- DO NOT add captions, slogans or fake words. At most a single short headline in Portuguese (PT-BR), in Barlow Condensed Bold uppercase, fully legible, spelled correctly. If unsure, use NO text at all.`,
+      `- NEVER write English text on screen.`,
+      textRules ? `\nADDITIONAL BRAND RULES FROM DATABASE:\n${textRules}` : ``,
+    ];
+
+    const parts: any[] = inlineRefs.map((r) => ({ inlineData: { mimeType: r.mimeType, data: r.data } }));
+    parts.push({ text: promptSections.filter(Boolean).join("\n") });
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`;
     const response = await fetch(geminiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: imagePrompt }] }],
+        contents: [{ role: "user", parts }],
         generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
       }),
     });
