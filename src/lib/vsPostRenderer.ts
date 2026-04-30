@@ -120,14 +120,16 @@ async function templateA(
 
   // 4. Headline — starts at ~22% from top
   const words = opts.headline.trim().toUpperCase().split(/\s+/).filter(Boolean);
-  const fs = optimalFs(ctx, words, availW * 0.72, H, 0.26);
-  const lh = fs * 0.92;
-  let hy = Math.round(H * 0.22);
+  const fs = optimalFs(ctx, words, availW * 0.78, H, 0.30);
+  const lh = fs * 0.88;
+  let hy = Math.round(H * 0.20);
 
   ctx.textBaseline = "top";
   words.forEach((word, i) => {
     ctx.font = font(fs);
-    ctx.fillStyle = i === words.length - 1 ? ORANGE : WHITE;
+    // Last word gets orange only when there are 2+ words (avoid orphan prepositions)
+    const isLast = i === words.length - 1;
+    ctx.fillStyle = (isLast && words.length >= 2) ? ORANGE : WHITE;
     ctx.fillText(word, MX, hy);
     hy += lh;
   });

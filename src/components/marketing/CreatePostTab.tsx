@@ -246,9 +246,9 @@ IMPORTANTE: Retorne SOMENTE o JSON abaixo, sem nenhum texto antes ou depois, sem
         const currentVariant = 0;
         setImageVariant(currentVariant);
 
-        // Use image_headline from AI (capped at 2 words for canvas readability)
-        const rawHeadline = post.image_headline || prompt.split(" ").slice(0, 2).join(" ");
-        const canvasHeadline = rawHeadline.trim().split(/\s+/).slice(0, 2).join(" ");
+        // Use image_headline from AI (cap at 3 words for canvas balance)
+        const rawHeadline = post.image_headline || prompt.split(" ").slice(0, 3).join(" ");
+        const canvasHeadline = rawHeadline.trim().split(/\s+/).slice(0, 3).join(" ");
         const imageUrl = await renderAndUpload({
           headline: canvasHeadline,
           tagline: "",
