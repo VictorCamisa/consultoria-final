@@ -136,22 +136,27 @@ export function CreatePostTab() {
 
       setImageLoading(true);
       try {
-        // Use supabaseVS (VS controlled project) for image generation
-        // Do NOT use visual_suggestion - it contains design instructions that corrupt photo generation
-        const photoTheme = post.caption.split("\n").slice(0, 3).join(" ").slice(0, 300);
-        const { data: bgData, error: bgError } = await supabaseVS.functions.invoke("vs-generate-post-image", {
-          body: {
-            prompt: photoTheme,
-            platform,
-          },
-        });
-        
-        if (bgError) console.error("Background generation error:", bgError);
-        const newBgUrl = bgData?.image_url;
-        setBgImage(newBgUrl || null);
+        // Try to generate a photorealistic background - gracefully skip if billing/error
+        let newBgUrl: string | undefined = undefined;
+        try {
+          const photoTheme = post.caption.split("\n").slice(0, 3).join(" ").slice(0, 300);
+          const { data: bgData, error: bgError } = await supabaseVS.functions.invoke("vs-generate-post-image", {
+            body: { prompt: photoTheme, platform },
+          });
+          if (bgError || bgData?.error) {
+            console.warn("Background photo skipped:", bgError || bgData?.error);
+          } else {
+            newBgUrl = bgData?.image_url;
+          }
+        } catch (bgErr) {
+          console.warn("Background photo generation failed (non-fatal):", bgErr);
+        }
 
+        setBgImage(newBgUrl || null);
         const currentVariant = 0;
         setImageVariant(currentVariant);
+
+        // Always render the post - with or without background photo
         const imageUrl = await renderAndUpload({
           headline: post.image_headline || post.caption.split("\n")[0].slice(0, 30),
           tagline: "",
@@ -159,7 +164,7 @@ export function CreatePostTab() {
           variant: currentVariant,
           logoUrl: vsLogoUrl,
           platform,
-          bgImageUrl: newBgUrl || undefined,
+          bgImageUrl: newBgUrl,
           supabase,
         });
         setGeneratedImage(imageUrl);
@@ -168,7 +173,11 @@ export function CreatePostTab() {
         }
         qc.invalidateQueries({ queryKey: ["vs-marketing-posts-history"] });
         qc.invalidateQueries({ queryKey: ["vs-marketing-posts-gallery"] });
-        toast.success("Arte gerada!");
+        if (newBgUrl) {
+          toast.success("Arte gerada com foto editorial! ✨");
+        } else {
+          toast.success("Arte gerada! (sem foto de fundo desta vez)");
+        }
       } catch (e: any) {
         console.error(e);
         toast.error("Texto gerado, mas houve um erro na arte. Tente regerar.");
@@ -191,7 +200,7 @@ export function CreatePostTab() {
       setImageVariant(nextVariant);
       const imageUrl = await renderAndUpload({
         headline: generatedPost.image_headline || generatedPost.caption.split("\n")[0].slice(0, 30),
-        tagline: generatedPost.visual_suggestion?.slice(0, 80) || "",
+        tagline: "",
         format: postFormat,
         variant: nextVariant,
         logoUrl: vsLogoUrl,
