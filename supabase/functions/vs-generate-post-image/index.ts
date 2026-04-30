@@ -30,7 +30,7 @@ async function fetchAsInlineImage(url: string): Promise<{ mimeType: string; data
     const ct = res.headers.get("content-type") || "image/png";
     if (!ct.startsWith("image/")) return null; // skip PDFs, docs
     const buf = new Uint8Array(await res.arrayBuffer());
-    if (buf.byteLength > 4 * 1024 * 1024) return null; // cap at 4MB to be safe
+    if (buf.byteLength > 1.5 * 1024 * 1024) return null; // cap at 1.5MB to avoid worker resource limit
     return { mimeType: ct.split(";")[0], data: bytesToBase64(buf) };
   } catch (e) {
     console.warn("fetchAsInlineImage failed:", url, e);
@@ -65,7 +65,7 @@ serve(async (req) => {
       .join("\n");
 
     const inlineRefs: { mimeType: string; data: string; label: string }[] = [];
-    for (const a of visualAssets.slice(0, 6)) {
+    for (const a of visualAssets.slice(0, 3)) {
       const img = await fetchAsInlineImage(a.file_url as string);
       if (img) inlineRefs.push({ ...img, label: `${a.type}: ${a.title}` });
     }
@@ -117,8 +117,8 @@ serve(async (req) => {
     const requestParts: any[] = inlineRefs.map((r) => ({ inlineData: { mimeType: r.mimeType, data: r.data } }));
     requestParts.push({ text: promptSections.filter(Boolean).join("\n") });
 
-    // Nano Banana 2 (Gemini 3.1 Flash Image Preview) — melhor renderização de texto e composição
-    const MODEL = "gemini-3.1-flash-image-preview";
+    // Gemini 2.5 Flash Image (Nano Banana) — modelo estável de imagem via API direta do Google
+    const MODEL = "gemini-2.5-flash-image";
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
     const response = await fetch(geminiUrl, {
       method: "POST",
