@@ -327,7 +327,7 @@ export default function ProspectingWizard({
                 <div className="flex items-start gap-2 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
                   <Target className="h-3.5 w-3.5 text-green-600 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-xs font-medium text-green-600">ICP configurado — VS Growth Hub</p>
+                    <p className="text-xs font-medium text-green-600">ICP configurado — VS OS</p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">Donos de negócios locais, faturamento acima de R$30k/mês</p>
                   </div>
                 </div>

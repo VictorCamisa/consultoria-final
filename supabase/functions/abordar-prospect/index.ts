@@ -152,9 +152,9 @@ serve(async (req) => {
 
     // Fallback genérico quando não há config para o nicho
     const genericScripts: Record<string, string> = {
-      a: `Olá{{decisor_greeting}}! Tudo bem? Sou da VS Growth Hub. Gostaria de entender melhor o seu negócio{{cidade_ref}}. Posso te fazer algumas perguntas rápidas para ver se consigo te ajudar a crescer?`,
-      b: `{{decisor_greeting}}, boa tarde! Aqui é da VS Growth Hub. Estamos ajudando empresas a otimizar marketing e vendas. Você teria 2 minutos para eu entender seus principais desafios hoje?`,
-      c: `Oi{{decisor_greeting}}! Tudo certo? Sou consultor da VS Growth Hub. Queria entender: qual o maior gargalo do seu negócio hoje quando o assunto é atrair e converter clientes?`,
+      a: `Olá{{decisor_greeting}}! Tudo bem? Sou da VS OS. Gostaria de entender melhor o seu negócio{{cidade_ref}}. Posso te fazer algumas perguntas rápidas para ver se consigo te ajudar a crescer?`,
+      b: `{{decisor_greeting}}, boa tarde! Aqui é da VS OS. Estamos ajudando empresas a otimizar marketing e vendas. Você teria 2 minutos para eu entender seus principais desafios hoje?`,
+      c: `Oi{{decisor_greeting}}! Tudo certo? Sou consultor da VS OS. Queria entender: qual o maior gargalo do seu negócio hoje quando o assunto é atrair e converter clientes?`,
     };
 
     let mensagem: string;

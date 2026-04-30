@@ -455,7 +455,7 @@ Responda APENAS em JSON válido com esta estrutura:
   "dica_principal": "Uma dica concreta e acionável para melhorar"
 }
 
-Critérios VS Growth:
+Critérios VS OS:
 - Rapport: Criou conexão genuína? Personalizou a abordagem?
 - Diagnóstico: Fez perguntas que revelam gaps? Usou "como funciona hoje?"
 - Objeções: Respondeu com ROI/dados? Nunca deu desconto?
@@ -658,7 +658,7 @@ Responda APENAS em JSON válido:
               <CardContent className="py-12 text-center text-muted-foreground">
                 <Building2 className="h-12 w-12 mx-auto mb-3 opacity-40" />
                 <p className="font-medium">Configure seu perfil primeiro</p>
-                <p className="text-sm">Vá na aba "Perfil" e preencha os dados da VS Growth.</p>
+                <p className="text-sm">Vá na aba "Perfil" e preencha os dados da VS OS.</p>
               </CardContent>
             </Card>
           ) : (
@@ -1098,7 +1098,7 @@ Responda APENAS em JSON válido:
                 Perfil da Empresa
               </CardTitle>
               <CardDescription>
-                Dados da VS Growth usados pela IA para contextualizar as simulações
+                Dados da VS OS usados pela IA para contextualizar as simulações
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -1110,8 +1110,8 @@ Responda APENAS em JSON válido:
                       id="company_name"
                       name="company_name"
                       required
-                      defaultValue={activeProfile?.company_name ?? "VS Growth"}
-                      placeholder="VS Growth"
+                      defaultValue={activeProfile?.company_name ?? "VS OS"}
+                      placeholder="VS OS"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -1132,7 +1132,7 @@ Responda APENAS em JSON válido:
                     id="description"
                     name="description"
                     defaultValue={activeProfile?.description ?? "Consultoria que une diagnóstico estratégico + ecossistema de IA para resolver gargalos de atendimento, comercial, marketing e operação de negócios locais."}
-                    placeholder="O que a VS Growth faz..."
+                    placeholder="O que a VS OS faz..."
                     rows={3}
                   />
                 </div>
@@ -1176,7 +1176,7 @@ Responda APENAS em JSON válido:
                     id="differentials"
                     name="differentials"
                     defaultValue={activeProfile?.differentials ?? "• Diagnóstico antes de vender solução (não empurramos produto)\n• IA com 98,9% de assertividade (2.500+ leads processados)\n• Ecossistema completo (não é só chatbot)\n• 50% do fee do diagnóstico vira crédito no recorrente\n• ROI mensurável desde o primeiro mês"}
-                    placeholder="O que diferencia a VS Growth..."
+                    placeholder="O que diferencia a VS OS..."
                     rows={4}
                   />
                 </div>

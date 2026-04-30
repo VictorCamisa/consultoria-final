@@ -136,7 +136,7 @@ export function AppSidebar() {
           {!collapsed && (
             <div className="min-w-0">
               <p className="leading-none text-foreground font-display italic font-black tracking-tight" style={{ fontSize: 13 }}>
-                VS Growth Hub
+                VS OS
               </p>
               <p className="mt-0.5 leading-none text-muted-foreground font-sans font-semibold uppercase" style={{ fontSize: 9, letterSpacing: "0.18em" }}>
                 Ecossistemas Digitais
