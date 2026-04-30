@@ -14,32 +14,40 @@ const corsHeaders = {
 // ═════════════════════════════════════════════════════════════════════
 
 const BRAND_BIBLE = `
-VS = VENDAS DE SOLUÇÕES · ECOSSISTEMAS DIGITAIS
+VS = VENDAS DE SOLUÇÕES · VS CORE OS (norte oficial 2026)
 
-POSICIONAMENTO (Brand Bible 2026):
-A VS NÃO vende ferramenta. NÃO vende SaaS. NÃO vende consultoria. A VS constrói e OPERA ecossistemas digitais que SUBSTITUEM departamentos inteiros (comercial, atendimento, follow-up, qualificação). O cliente não compra software — compra uma OPERAÇÃO terceirizada acelerada por IA.
+POSICIONAMENTO (VS Core OS):
+A VS é COMERCIAL-CÊNTRICA, não produto-cêntrica. Não vende ferramenta, SaaS ou consultoria avulsa. A VS opera o COMERCIAL do cliente como serviço, sustentado por uma esteira de produtos modular (VS Tools → VS Departamentos → VS 360 → VS Custom) e uma IA gatekeeper que qualifica, responde em menos de 1 minuto e entrega o lead pronto pra fechar.
 
-Verticais dominadas: Estética, Odontologia, Advocacia, Imob, Revendas de Veículos (VS AUTO).
+Verticais dominadas: Estética, Odontologia, Advocacia, Imobiliário, Revendas de Veículos (VS AUTO).
+
+ESTEIRA DE PRODUTOS (use os tiers corretos, sem inventar):
+- VS Tools — entrada (R$ 89 a R$ 397). Microferramentas pontuais (qualificador, follow-up, calculadora).
+- VS Departamentos — recorrência até R$ 3k/mês. Substitui um departamento (comercial, atendimento, pré-venda).
+- VS 360 — operação completa, até R$ 12k/mês. Comercial inteiro terceirizado + dashboards + IA.
+- VS Custom — high-ticket, setup sob medida para empresa que quer dominar o nicho.
 
 NÚMEROS REAIS DA OPERAÇÃO (use só estes, JAMAIS invente outros):
-- 2.500+ leads processados pelos ecossistemas VS
-- 180k+ mensagens disparadas via IA em produção
-- 98,9% de assertividade de vendas vs tráfego puro
-- Caso real recorrente: clínica de estética em Taubaté — antes 2 atendentes / 180 leads/mês / 8% conversão. Depois de 45 dias com VS: 98% atendidos em <1min, 14% conversão, R$187k de receita no mês.
-- Lead respondido em mais de 30 minutos = 21x menos conversão (dado do mercado)
-- 80% das vendas exigem 5+ contatos de follow-up
+- Tempo de resposta < 1 minuto — fator nº1 de conversão.
+- 98,9% de assertividade da IA em qualificação/atendimento.
+- 2.500+ leads processados pelos ecossistemas VS.
+- 180k+ mensagens disparadas via IA em produção.
+- Caso Taubaté (clínica de estética): antes 2 atendentes / 180 leads/mês / 8% conversão. Depois 98% atendidos em <1min, 14% conversão, R$ 187k de receita no mês.
+- Lead respondido após 30min = 21x menos conversão (dado de mercado).
+- 80% das vendas exigem 5+ contatos de follow-up.
+- Meta interna: R$ 50k MRR líquido.
 
 QUATRO PILARES ESTRATÉGICOS:
-1. Dominação de nicho, não generalismo. Falamos para auto, estética, imob, odonto, advocacia — NUNCA "para empresas".
-2. Inteligência de dados como diferencial. Toda decisão é instrumentada. Cliente vê ROI em tempo real.
-3. Velocidade como cultura. Lançamos produto em dias, não meses.
-4. Empresa familiar (Victor + Danilo, sócios cunhados, bootstrapped, sem investidor) com mentalidade de império.
+1. Comercial como produto. O coração da VS é o módulo de vendas — todo o resto orbita ele.
+2. Dominação de nicho, não generalismo. Auto, estética, imob, odonto, advocacia. Nunca "empresas em geral".
+3. Velocidade absoluta. Tempo de resposta < 1min, deploy em dias, decisão instrumentada por dados.
+4. Bootstrapped, familiar (Victor técnico + Danilo comercial), mentalidade de império.
 
 TOM DE VOZ (4 vetores oficiais):
 - DIRETA: zero floreio, zero jargão vazio, zero infantilização do cliente.
-- AGRESSIVA mas profissional: confronta o problema do ICP sem suavizar — ele PRECISA sentir a dor.
-- HUMANA, não robótica: usa "nós", "a gente", "você". NUNCA "a empresa entende", "a plataforma sugere", "nossa solução".
-- COM RESULTADO no centro: número, ROI, receita, conversão — sempre concretos, nunca genéricos.
+- AGRESSIVA mas profissional: confronta o problema do ICP sem suavizar.
+- HUMANA, não robótica: "nós", "a gente", "você". NUNCA "a empresa entende", "a plataforma sugere", "nossa solução".
+- RESULTADO no centro: número, ROI, receita, tempo de resposta — sempre concretos.
 `;
 
 const SOCIAL_PLAYBOOK = `
