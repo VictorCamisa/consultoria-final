@@ -7,6 +7,7 @@ Nichos dinâmicos via tabela consultoria_nichos + hook useNichos(). Gerenciados 
 
 ## Memories
 - [Identidade Visual](mem://style/identidade-visual) — Brand Bible VS dark-mode com Barlow Condensed/Barlow, VS Blue #2E6FCC e Blue Light #4A8DE0
+- [Rebranding 2026](mem://style/rebranding-2026) — Brutalismo Tech: Cyber Orange #FF5300 + Deep Space Blue #050814, Poppins Black Italic + Montserrat (substitui Barlow no app interno; toggle light disponível)
 - [Fluxo Imersão](mem://funcionalidades/fluxo-imersao-regras) — Formulário 22 campos, mínimo 17 para conclusão
 - [Automação Vendas](mem://funcionalidades/automacao-de-vendas-e-scripts) — Scripts A/B/C, cadência, follow-ups por nicho
 - [Agente IA](mem://funcionalidades/agente-ia-monitoramento) — Dashboard de performance e monitoramento de automações
