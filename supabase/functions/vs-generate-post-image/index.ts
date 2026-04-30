@@ -61,21 +61,25 @@ serve(async (req) => {
       .join("\n");
 
     const finalPrompt = `
-TASK: Generate a high-end, cinematic, editorial background photography for a B2B technology and business consulting brand.
+I need a strictly photorealistic, cinematic background image for a premium business Instagram post. 
 
-AESTHETIC & THEME:
-- Theme context: ${prompt}
-- Vibe: Premium, serious, cold, technical, high-stakes business environment.
-- Subject matter: Could be modern office architecture, abstract architectural elements, a blurred professional in thought, data centers, clean minimalist desks, or moody lighting.
-- Palette: Dark, moody, high contrast. Deep blues, blacks, with very subtle warm/orange light accents.
+THEME CONTEXT:
+${prompt}
 
-CRITICAL ABSOLUTE RULES:
-1. NO TEXT WHATSOEVER. Do not generate any letters, numbers, symbols, words, UI elements, floating text, or labels anywhere in the image.
-2. NO LOGOS. Do not generate any company logos or recognizable brand marks.
-3. NO CLICHÉS. No futuristic glowing brains, no neon flying charts, no cyborgs, no handshake silhouettes. Keep it grounded, realistic, and highly photographic.
-4. PHOTOGRAPHIC QUALITY. Must look like it was shot on a medium format camera (e.g. Hasselblad) with shallow depth of field, natural or cinematic lighting, and film grain.
+MANDATORY STYLE (PHOTOREALISM ONLY):
+- This MUST be a REAL PHOTOGRAPH. 
+- Style: High-end editorial photography, cinematic lighting, shot on 35mm lens, f/1.8 (like HBO Succession, Bloomberg Magazine, or premium corporate shoots).
+- Subject: Focus on REAL humans (e.g., intense executives, people in meetings, realistic professional environments, serious faces) or highly realistic cinematic office environments. 
+- Lighting: Moody, dark, dramatic shadows, professional studio or high-end office lighting.
+- Color Palette: Deep dark tones, blacks, dark blues, with extremely subtle cinematic color grading.
 
-This image will be used as a background layer. Typography will be placed on top of it later.
+ABSOLUTE BANS (IF YOU INCLUDE ANY OF THESE, THE IMAGE IS RUINED):
+- NO ILLUSTRATIONS, NO VECTORS, NO 2D ART, NO CARTOONS, NO FLAT GRAPHICS, NO 3D RENDERS.
+- NO ROBOTS, NO CYBORGS, NO GLOWING BRAINS, NO HOLOGRAMS.
+- NO GRAPHS, NO BAR CHARTS, NO ICONS, NO UI ELEMENTS.
+- NO TEXT, NO LETTERS, NO NUMBERS, NO WORDS, NO LOGOS, NO WATERMARKS.
+
+The final image MUST look exactly like a real photo taken by a professional photographer of a real-life situation.
 `.trim();
 
     const response = await fetch("https://api.openai.com/v1/images/generations", {
