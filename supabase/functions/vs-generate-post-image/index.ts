@@ -42,7 +42,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { prompt, style = "light", platform = "Instagram" } = await req.json();
+    const { prompt, style = "dark", platform = "Instagram", imageHeadline = "" } = await req.json();
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
@@ -71,50 +71,55 @@ serve(async (req) => {
     }
     console.log(`[vs-generate-post-image] inline refs: ${inlineRefs.length}/${visualAssets.length}`);
 
+    // Sanitiza headline para garantir 1-3 palavras ALL CAPS sem caracteres estranhos
+    const cleanHeadline = (imageHeadline || "")
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .trim()
+      .toUpperCase()
+      .split(/\s+/)
+      .slice(0, 3)
+      .join(" ");
+    const hasHeadline = cleanHeadline.length > 0;
+
     // Rebranding 2026 (PRD): Brutalismo Tech.
-    // Paleta "Tech Fusion": Deep Space Blue #050814 (base), Cyber Orange #FF5300 (ação), Branco #FFFFFF.
     const promptSections = [
-      `You are generating a 1:1 (1024x1024) Instagram graphic for "VS" — Brazilian company that builds DIGITAL ECOSYSTEMS replacing entire sales/marketing departments via AI + automation. Aesthetic: BRUTALIST TECH (inspired by V4 Company, Linear, Vercel, Nubank product UI).`,
+      `Generate a single 1:1 Instagram feed graphic for "VS" — a Brazilian B2B company that REPLACES entire sales & marketing departments with AI + automation. Aesthetic: BRUTALIST TECH (V4 Company / Linear / Vercel / Nubank product UI level — editorial, premium, minimal, high-impact).`,
       ``,
       inlineRefs.length > 0
-        ? `BRAND REFERENCES: The previous ${inlineRefs.length} image(s) are official VS brand assets (logo, references). Replicate their exact logo shape and visual language. They override generic assumptions.`
-        : `(No reference images — follow textual rules strictly.)`,
+        ? `BRAND REFERENCES: The ${inlineRefs.length} image(s) above are official VS brand assets. Replicate the exact logo shape and visual language. Do not invent a different identity.`
+        : ``,
       ``,
-      `MANDATORY "TECH FUSION" PALETTE — use ONLY these colors, no others:`,
-      `- Deep Space Blue #050814 (dominant background, ~70% of canvas)`,
-      `- Cyber Orange #FF5300 (action color — CTAs, key numbers, single highlighted word)`,
-      `- Pure White #FFFFFF (main typography and contrast)`,
-      `Absolutely NO other colors. NO blues, NO purples, NO gradients of other hues. Subtle dark-on-dark grid texture / digital noise on the background is allowed and encouraged.`,
+      `═══ TEXT ON THE IMAGE — STRICTEST RULE ═══`,
+      hasHeadline
+        ? `The image MUST contain EXACTLY ONE text element with these EXACT characters and nothing else:\n\n"${cleanHeadline}"\n\nRules:\n- Spell it character-for-character. Do NOT alter, translate, abbreviate, or invent variations.\n- Do NOT add any other word, slogan, tagline, percentage, fake metric, version number, file name, hashtag, URL, watermark, or fake logo (no "BRUTAL.AI", no "REBRAND_V2", no "ONLINE", no "ECOSSISTEMAS DIGITAIS").\n- Do NOT add the VS logo unless an official reference logo was provided above — never draw a fake VS lockup.\n- Render in Poppins Black Italic style (ultra-bold, condensed, oblique). All caps. White (#FFFFFF) — optionally a SINGLE word in Cyber Orange (#FF5300) if there are 2-3 words. Massive scale, occupying 35-55% of canvas height.`
+        : `The image MUST contain ZERO text. No words, no letters, no numbers, no fake logos, no watermarks. Pure visual composition only.`,
+      `If you cannot render the text correctly in Portuguese with perfect spelling, render NO text at all instead of inventing.`,
       ``,
-      `TYPOGRAPHY (if any text appears on the image):`,
-      `- Headings: Poppins Black Italic, ULTRA BOLD, condensed, GIANT scale (occupy 40-70% of the canvas height for the hero word/number).`,
-      `- Body: Montserrat regular/medium.`,
-      `- NEVER serif, NEVER script, NEVER decorative, NEVER handwriting.`,
-      `- All text in Portuguese (PT-BR), correctly spelled, ALL CAPS for the hero line.`,
+      `═══ MANDATORY PALETTE — USE ONLY THESE COLORS ═══`,
+      `- Deep Space Blue #050814  → dominant background (≈75% of canvas)`,
+      `- Pure White #FFFFFF        → main typography and high-contrast strokes`,
+      `- Cyber Orange #FF5300      → ONE accent only (a single highlighted word, an underline, a small geometric shape, an arrow)`,
+      `Forbidden: any other color, any pastel, any gradient using non-palette hues, any 3D rendering, any photographic stock imagery.`,
       ``,
-      `BRUTAL VISUAL HIERARCHY:`,
-      `- One single hero element (a number, a verb, a confrontational word) takes massive disproportionate space.`,
-      `- Everything else is small, secondary, almost annotation-like.`,
-      `- High contrast, alta densidade de impacto, zero ornamento.`,
-      `- Allowed motifs: software UI mockups, dashboards, AI chat bubbles, ROI charts, grid lines, terminal-like blocks, monospace data — all in the Tech Fusion palette.`,
+      `═══ COMPOSITION (editorial, brutalist) ═══`,
+      `- Massive negative space. ${hasHeadline ? "Headline anchored to one side or centered with bold off-balance composition." : "Pure abstract geometric composition."}`,
+      `- Allowed motifs (subtle, monochromatic, palette-only): faint dotted grid background, single thin orange line/arrow, abstract bar-chart silhouette, terminal-style data block, geometric primitive (square/triangle), monospace tickers in tiny size.`,
+      `- Forbidden motifs: cartoon people, smiling avatars, 3D blobs, sparkles, ribbons, handshake clichés, generic stock photography, decorative icons, gradients of other hues, fake software screenshots with invented UI text.`,
+      `- Inspiration to MATCH in feel: V4 Company Instagram feed, Linear marketing site, Vercel hero pages, Nubank product shots.`,
       ``,
-      `STRICTLY FORBIDDEN (PRD):`,
-      `- Generic stock illustrations, 3D blobs, cartoon people, smiling avatars.`,
-      `- Soft pastel palettes, pink, purple, teal, green.`,
-      `- Decorative icons, sparkles, ribbons, "corporate handshake" imagery.`,
-      `- Empty corporate buzzwords on screen.`,
-      `- Anything that does NOT reinforce "we replace entire departments" + "brutal results".`,
+      `═══ THEME OF THIS POST (context only — DO NOT render this text on the image) ═══`,
+      prompt,
       ``,
-      `THEME / IDEA FOR THIS POST: ${prompt}`,
-      `PLATFORM: ${platform} (Instagram feed, 1:1).`,
-      `STYLE TOKEN: ${style}.`,
+      `Platform: ${platform}. Format: square 1:1.`,
       textRules ? `\nADDITIONAL BRAND RULES FROM DATABASE:\n${textRules}` : ``,
     ];
 
     const requestParts: any[] = inlineRefs.map((r) => ({ inlineData: { mimeType: r.mimeType, data: r.data } }));
     requestParts.push({ text: promptSections.filter(Boolean).join("\n") });
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`;
+    // Nano Banana 2 (Gemini 3.1 Flash Image Preview) — melhor renderização de texto e composição
+    const MODEL = "gemini-3.1-flash-image-preview";
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
     const response = await fetch(geminiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
