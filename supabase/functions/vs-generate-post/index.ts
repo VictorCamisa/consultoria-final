@@ -160,6 +160,7 @@ serve(async (req) => {
       referenceContext,
       recentCaptions = [],
       recentArquetipos = [],
+      recentFormatos = [],
     } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -178,12 +179,16 @@ serve(async (req) => {
       .map((a) => `[${a.type.toUpperCase()}] ${a.title}: ${a.content}`)
       .join("\n");
 
-    const arquetipo = pickArquetipo(recentArquetipos);
+    // IA escolhe pilar/formato automaticamente baseado em rotação anti-repetição.
+    // Aceita tanto recentFormatos (novo) quanto recentArquetipos (legado) para retro-compat.
+    const recentIds = [...(recentFormatos || []), ...(recentArquetipos || [])];
+    const formato = pickFormato(recentIds);
 
     const sections: string[] = [
-      `PEDIDO: "${prompt}"`,
+      `TEMA DO POST: "${prompt}"`,
       `PLATAFORMA: ${platform}`,
-      `ARQUÉTIPO DESTE POST: ${arquetipo.nome}\n${arquetipo.instrucao}`,
+      `PILAR DE CONTEÚDO ESCOLHIDO: ${formato.pilar}`,
+      `FORMATO DESTE POST: ${formato.nome}\nINSTRUÇÃO DE ESTRUTURA:\n${formato.instrucao}`,
     ];
     if (nicho) sections.push(`NICHO ALVO: ${nicho}`);
     if (Array.isArray(recentCaptions) && recentCaptions.length) {
@@ -196,7 +201,10 @@ serve(async (req) => {
     if (brandContext) sections.push(`DIRETRIZES EXTRAS:\n${brandContext}`);
     if (dbBrandContext) sections.push(`DIRETRIZES SALVAS DA MARCA VS:\n${dbBrandContext}`);
     sections.push(
-      `Escreva o post seguindo o ARQUÉTIPO acima. Tamanho: 90 a 180 palavras. Sem emoji. Sem clichê. Sem estrutura visível. Tem que parecer texto humano, não template. Retorne pelo tool call.`
+      `Escreva o post EXATAMENTE seguindo o FORMATO acima e respeitando o BRAND BIBLE + SOCIAL PLAYBOOK do system prompt.\n` +
+      `Tamanho da legenda: 90 a 180 palavras. Sem emoji. Sem clichê. Sem bullets/subtítulos. Prosa fluida.\n` +
+      `Use OBRIGATORIAMENTE pelo menos um número real do bloco "NÚMEROS REAIS DA OPERAÇÃO" se o formato pedir (autoridade_dado, case_numeros, carrossel_educativo).\n` +
+      `Retorne pela tool call generate_vs_post.`
     );
 
     const userMessage = sections.join("\n\n");
@@ -283,7 +291,7 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ post, arquetipo: arquetipo.id }), {
+    return new Response(JSON.stringify({ post, formato: formato.id, pilar: formato.pilar }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
