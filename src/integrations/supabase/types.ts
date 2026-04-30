@@ -1323,6 +1323,150 @@ export type Database = {
           },
         ]
       }
+      vs_brand_assets: {
+        Row: {
+          content: string | null
+          created_at: string
+          file_url: string | null
+          id: string
+          is_active: boolean
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          is_active?: boolean
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          is_active?: boolean
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vs_email_campaigns: {
+        Row: {
+          channel: string
+          clicked_count: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          message_template: string | null
+          name: string
+          opened_count: number
+          scheduled_for: string | null
+          segment_audience: string
+          segment_nichos: string[] | null
+          segment_status: string[] | null
+          sent_count: number
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          channel?: string
+          clicked_count?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          message_template?: string | null
+          name: string
+          opened_count?: number
+          scheduled_for?: string | null
+          segment_audience?: string
+          segment_nichos?: string[] | null
+          segment_status?: string[] | null
+          sent_count?: number
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          clicked_count?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          message_template?: string | null
+          name?: string
+          opened_count?: number
+          scheduled_for?: string | null
+          segment_audience?: string
+          segment_nichos?: string[] | null
+          segment_status?: string[] | null
+          sent_count?: number
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vs_marketing_posts: {
+        Row: {
+          best_time: string | null
+          caption: string
+          created_at: string
+          created_by: string | null
+          hashtags: Json
+          id: string
+          image_prompt: string | null
+          image_url: string | null
+          nicho: string | null
+          platform: string
+          prompt: string | null
+          scheduled_for: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          best_time?: string | null
+          caption?: string
+          created_at?: string
+          created_by?: string | null
+          hashtags?: Json
+          id?: string
+          image_prompt?: string | null
+          image_url?: string | null
+          nicho?: string | null
+          platform?: string
+          prompt?: string | null
+          scheduled_for?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          best_time?: string | null
+          caption?: string
+          created_at?: string
+          created_by?: string | null
+          hashtags?: Json
+          id?: string
+          image_prompt?: string | null
+          image_url?: string | null
+          nicho?: string | null
+          platform?: string
+          prompt?: string | null
+          scheduled_for?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       vs_produtos: {
         Row: {
           ativo: boolean
