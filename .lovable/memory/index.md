@@ -1,11 +1,18 @@
 # Project Memory
 
 ## Core
-Dark mode only, Barlow Condensed headings, Barlow body. VS Blue #2E6FCC.
-Desktop-only (1280px+). Supabase backend. Dois sócios: Victor (técnico) e Danilo (comercial).
-Nichos dinâmicos via tabela consultoria_nichos + hook useNichos(). Gerenciados em Configurações > Nichos.
+VS é COMERCIAL-CÊNTRICA (VS Core OS). Esteira: VS Tools / Departamentos / VS 360 / VS Custom.
+Métricas de ouro: <1min resposta, 98,9% assertividade, R$ 50k MRR meta. Caso âncora: Taubaté.
+Dark default, Deep Space Blue #050814 + Cyber Orange #FF5300. Poppins Black Italic + Montserrat + JetBrains Mono.
+Desktop-only (1280px+). Supabase + Evolution API. Claude Haiku 4.5 (cliente) / Sonnet (interno).
+Victor (técnico) + Danilo (comercial). Nichos dinâmicos via consultoria_nichos + useNichos().
+Sem emoji, bullets em legenda ou jargão ("jornada", "mindset", "alavancar", "destravar").
 
 ## Memories
+- [VS Core OS](mem://negocio/vs-core-os) — Norte estratégico 2026, métricas de ouro e proibições de discurso
+- [Esteira de Tiers](mem://produto/esteira-tiers) — VS Tools / Departamentos / VS 360 / VS Custom com faixas de preço
+- [Módulos Core OS](mem://produto/modulos-core-os) — 6 módulos (Comercial, Gatekeeper, Onboarding, Telemetria, Financeiro, Governança) e maturidade
+- [Stack Core OS](mem://tecnologia/stack-core-os) — Stack oficial: React/Tailwind dark, Claude Haiku/Sonnet, JetBrains Mono para dados
 - [Identidade Visual](mem://style/identidade-visual) — Brand Bible VS dark-mode com Barlow Condensed/Barlow, VS Blue #2E6FCC e Blue Light #4A8DE0
 - [Rebranding 2026](mem://style/rebranding-2026) — Brutalismo Tech: Cyber Orange #FF5300 + Deep Space Blue #050814, Poppins Black Italic + Montserrat (substitui Barlow no app interno; toggle light disponível)
 - [Fluxo Imersão](mem://funcionalidades/fluxo-imersao-regras) — Formulário 22 campos, mínimo 17 para conclusão
