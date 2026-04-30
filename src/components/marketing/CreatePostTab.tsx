@@ -132,9 +132,32 @@ Retorne APENAS um JSON válido (sem markdown, sem \`\`\`json) com este formato e
 
       const geminiTextData = await geminiTextRes.json();
       const rawText = geminiTextData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-      // Strip markdown code fences if present
-      const cleanJson = rawText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      const post: GeneratedPost = JSON.parse(cleanJson);
+
+      // Robustly extract JSON - try multiple strategies
+      let post: GeneratedPost;
+      try {
+        // Strategy 1: find the {...} JSON block via regex
+        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error("No JSON object found in response");
+        post = JSON.parse(jsonMatch[0]);
+      } catch {
+        // Strategy 2: clean fences and try again
+        try {
+          const cleaned = rawText.replace(/```[\w]*\n?/g, "").replace(/```/g, "").trim();
+          post = JSON.parse(cleaned);
+        } catch {
+          // Strategy 3: build a fallback post from the raw text
+          post = {
+            image_headline: prompt.split(" ").slice(0, 3).join(" ").toUpperCase(),
+            caption: rawText.slice(0, 800) || `Post sobre: ${prompt}`,
+            hashtags: ["#VS", "#AutomacaoComercial", "#IA", "#CRM", "#Vendas"],
+            platform_tips: "Poste entre 9h-11h para melhor alcance.",
+            visual_suggestion: "Executivo em ambiente corporativo moderno.",
+            best_time: "9h-11h",
+          };
+        }
+      }
+
       setGeneratedPost(post);
       toast.success("Post gerado! ✨");
 
