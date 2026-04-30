@@ -8,9 +8,7 @@ export default function Marketing() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
-          Marketing
-        </h1>
+        <h1 className="vs-h1">Marketing</h1>
         <p className="text-sm text-muted-foreground">
           Geração de posts com IA, galeria de conteúdo e ativos de marca da VS.
         </p>
