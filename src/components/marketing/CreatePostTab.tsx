@@ -96,18 +96,45 @@ export function CreatePostTab() {
     setBgImage(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke("vs-generate-post", {
-        body: {
-          prompt,
-          platform,
-          nicho: nicho !== "none" ? nicho : undefined,
-          referenceContext,
-        },
-      });
-      if (error) throw error;
-      if (data?.error) { toast.error(data.error); return; }
+      // Generate post text directly via Gemini (no edge function, no OpenAI dependency)
+      const systemPrompt = `Você é um especialista em marketing B2B para a empresa VS (Vendas de Soluções), que vende automação comercial, IA e CRM para empresas. Crie posts virais e impactantes para ${platform}.
 
-      const post: GeneratedPost = data.post;
+${referenceContext ? `CONTEXTO DA MARCA:\n${referenceContext}\n` : ""}${nicho !== "none" ? `NICHO: ${nicho}\n` : ""}
+
+TEMA DO POST: ${prompt}
+
+Retorne APENAS um JSON válido (sem markdown, sem \`\`\`json) com este formato exato:
+{
+  "image_headline": "HEADLINE CURTA EM CAPS (máx 3 palavras)",
+  "caption": "legenda completa do post com quebras de linha reais",
+  "hashtags": ["hashtag1", "hashtag2", "hashtag3", "hashtag4", "hashtag5"],
+  "platform_tips": "dica rápida de horário/formato",
+  "visual_suggestion": "sugestão visual descritiva",
+  "best_time": "melhor horário para postar"
+}`;
+
+      const geminiTextRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyAlC4s60GJ3-v7-dLwyNm8lJBCOEoDKKB8`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: systemPrompt }] }],
+            generationConfig: { temperature: 0.9, maxOutputTokens: 1024 },
+          }),
+        }
+      );
+
+      if (!geminiTextRes.ok) {
+        const errText = await geminiTextRes.text();
+        throw new Error(`Gemini text error: ${geminiTextRes.status} ${errText.slice(0, 200)}`);
+      }
+
+      const geminiTextData = await geminiTextRes.json();
+      const rawText = geminiTextData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      // Strip markdown code fences if present
+      const cleanJson = rawText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+      const post: GeneratedPost = JSON.parse(cleanJson);
       setGeneratedPost(post);
       toast.success("Post gerado! ✨");
 
