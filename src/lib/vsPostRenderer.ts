@@ -412,6 +412,7 @@ export async function renderVSPost(options: PostRenderOptions): Promise<Blob> {
     variant,
     logoUrl: logoUrl ?? "",
     handle,
+    bgImageUrl: bgImageUrl ?? "",
     logo,
   };
 

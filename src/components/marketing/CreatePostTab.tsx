@@ -95,57 +95,32 @@ export function CreatePostTab() {
     setGeneratedImage(null);
     setBgImage(null);
     try {
-      // ── TEXT via Edge Function (key never exposed in browser) ──────────────
-      const systemPrompt = `Você é um especialista em marketing B2B para a empresa VS (Vendas de Soluções), que vende automação comercial, IA e CRM para empresas. Crie posts virais e impactantes para ${platform}.
+      // ── TEXT via Edge Function vs-generate-post (Gemini 2.5 Pro + arquétipos) ──
+      const recentCaptions = ((history as any[]) || [])
+        .slice(0, 5)
+        .map((h) => h.caption)
+        .filter(Boolean);
 
-${referenceContext ? `CONTEXTO DA MARCA:\n${referenceContext}\n` : ""}${nicho !== "none" ? `NICHO: ${nicho}\n` : ""}
-TEMA DO POST: ${prompt}
-
-IMPORTANTE: Retorne SOMENTE o JSON abaixo, sem nenhum texto antes ou depois, sem markdown, sem \`\`\`json:
-{"image_headline":"2 PALAVRAS IMPACTANTES","caption":"legenda completa engajante com emojis e quebras de linha usando \\n","hashtags":["hashtag1","hashtag2","hashtag3","hashtag4","hashtag5"],"platform_tips":"dica de horário","visual_suggestion":"descrição visual específica e detalhada da foto de fundo ideal para este post","best_time":"horário"}`;
-
-      const { data: textData, error: textErr } = await supabase.functions.invoke("vs-ai-proxy", {
-        body: { action: "text", payload: { systemPrompt } },
+      const { data: textData, error: textErr } = await supabase.functions.invoke("vs-generate-post", {
+        body: {
+          prompt,
+          platform,
+          nicho: nicho !== "none" ? nicho : undefined,
+          referenceContext: referenceContext || undefined,
+          recentCaptions,
+        },
       });
       if (textErr) throw new Error(textErr.message);
       if (textData?.error) throw new Error(textData.error);
 
-      const rawText = textData?.text ?? "";
-
-      // Sanitize JSON: escape literal newlines inside string values
-      const sanitizeJSON = (s: string) => {
-        let out = ""; let inStr = false; let esc = false;
-        for (const c of s) {
-          if (esc) { out += c; esc = false; continue; }
-          if (c === "\\" && inStr) { out += c; esc = true; continue; }
-          if (c === '"') { out += c; inStr = !inStr; continue; }
-          if (inStr && (c === "\n" || c === "\r")) { out += "\\n"; continue; }
-          out += c;
-        }
-        return out;
+      const post: GeneratedPost = textData?.post ?? {
+        image_headline: prompt.split(" ").slice(0, 3).join(" ").toUpperCase(),
+        caption: prompt,
+        hashtags: ["VS", "VSOS", "EcossistemasDigitais"],
+        platform_tips: "",
+        visual_suggestion: "",
+        best_time: "",
       };
-
-      let post: GeneratedPost;
-      try {
-        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error("No JSON found");
-        post = JSON.parse(sanitizeJSON(jsonMatch[0]));
-        if (!post.caption) throw new Error("Missing caption");
-      } catch {
-        try {
-          const cleaned = rawText.replace(/```[\w]*\n?/g, "").replace(/```/g, "").trim();
-          post = JSON.parse(sanitizeJSON(cleaned));
-        } catch {
-          post = {
-            image_headline: prompt.split(" ").slice(0, 3).join(" ").toUpperCase(),
-            caption: `${prompt}\n\nTransforme seu processo comercial com automação e IA. Reduza custos, aumente velocidade e escale sem contratar mais.`,
-            hashtags: ["#VS", "#AutomacaoComercial", "#IA", "#CRM", "#Vendas"],
-            platform_tips: "Poste entre 9h-11h para melhor alcance.",
-            visual_suggestion: "Executivo em ambiente corporativo moderno com iluminação dramática.",
-            best_time: "9h-11h",
-          };
-        }
-      }
 
       setGeneratedPost(post);
       toast.success("Post gerado! ✨");
@@ -168,35 +143,19 @@ IMPORTANTE: Retorne SOMENTE o JSON abaixo, sem nenhum texto antes ou depois, sem
 
       setImageLoading(true);
       try {
-        // ── IMAGE via Edge Function (Imagen 4.0) ────────────────────────────
+        // ── IMAGE via Edge Function vs-generate-post-image (Nano Banana 2) ──
         let newBgUrl: string | undefined = undefined;
         try {
-          const topicForPhoto = post.visual_suggestion?.slice(0, 200) || prompt.slice(0, 150);
-          const imagePrompt = [
-            `Cinematic editorial photography for a B2B business post about: ${topicForPhoto}.`,
-            "Style: Bloomberg Businessweek cover, HBO Succession, high-end corporate.",
-            "Lighting: dramatic, moody, side-lit or rim-lit. Dark background with selective focus.",
-            "ONLY photorealistic. NO text, NO logos, NO charts, NO icons, NO robots, NO illustrations, NO cartoons.",
-          ].join(" ");
-
-          const { data: imgData, error: imgErr } = await supabase.functions.invoke("vs-ai-proxy", {
-            body: { action: "image", payload: { imagePrompt } },
+          const { data: imgData, error: imgErr } = await supabase.functions.invoke("vs-generate-post-image", {
+            body: {
+              prompt,
+              platform,
+              visual_suggestion: post.visual_suggestion,
+            },
           });
 
-          if (!imgErr && imgData?.b64) {
-            const b64Img = imgData.b64;
-            const mimeType = "image/png";
-            const byteChars = atob(b64Img);
-            const byteArr = new Uint8Array(byteChars.length);
-            for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i);
-            const blob = new Blob([byteArr], { type: mimeType });
-            const bgFileName = `posts/${Date.now()}-bg-imagen4.png`;
-            const { error: bgUploadErr } = await supabase.storage
-              .from("vs-marketing")
-              .upload(bgFileName, blob, { contentType: mimeType, upsert: true });
-            newBgUrl = bgUploadErr
-              ? `data:${mimeType};base64,${b64Img}`
-              : supabase.storage.from("vs-marketing").getPublicUrl(bgFileName).data.publicUrl;
+          if (!imgErr && imgData?.image_url) {
+            newBgUrl = imgData.image_url as string;
           } else {
             console.warn("Image generation failed:", imgErr || imgData?.error);
           }
