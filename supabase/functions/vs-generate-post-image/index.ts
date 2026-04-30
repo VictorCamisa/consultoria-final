@@ -71,49 +71,55 @@ serve(async (req) => {
     }
     console.log(`[vs-generate-post-image] inline refs: ${inlineRefs.length}/${visualAssets.length}`);
 
-    const colorScheme = style === "dark"
-      ? "dark navy background (#0B1B36), VS Blue accents (#2E6FCC), Blue Light highlights (#4A8DE0), white typography"
-      : "clean white/off-white background (#F7F9FC), VS Blue (#2E6FCC) and Blue Light (#4A8DE0) accents, dark navy details (#0B1B36)";
-
+    // Rebranding 2026 (PRD): Brutalismo Tech.
+    // Paleta "Tech Fusion": Deep Space Blue #050814 (base), Cyber Orange #FF5300 (ação), Branco #FFFFFF.
     const promptSections = [
-      `You are generating a 1:1 (1024x1024) social media graphic for "VS Growth Hub" — Brazilian B2B consultancy for SMBs.`,
+      `You are generating a 1:1 (1024x1024) Instagram graphic for "VS" — Brazilian company that builds DIGITAL ECOSYSTEMS replacing entire sales/marketing departments via AI + automation. Aesthetic: BRUTALIST TECH (inspired by V4 Company, Linear, Vercel, Nubank product UI).`,
       ``,
       inlineRefs.length > 0
-        ? `STRICT BRAND REFERENCES: The previous ${inlineRefs.length} image(s) are the OFFICIAL brand assets (logo, palette, typography samples, references). You MUST replicate their exact color palette, typographic feel, geometric language, logo shape, and overall composition style. Do NOT invent a different brand identity.`
-        : `(No reference images provided — strictly follow the textual brand rules below.)`,
+        ? `BRAND REFERENCES: The previous ${inlineRefs.length} image(s) are official VS brand assets (logo, references). Replicate their exact logo shape and visual language. They override generic assumptions.`
+        : `(No reference images — follow textual rules strictly.)`,
       ``,
-      `MANDATORY PALETTE (use these HEX values literally, no other dominant colors):`,
-      `- VS Blue: #2E6FCC`,
-      `- Blue Light: #4A8DE0`,
-      `- Dark Navy: #0B1B36`,
-      `- Off-white: #F7F9FC`,
-      `STYLE: ${style === "dark" ? "dark navy background with VS Blue/Blue Light accents and white type" : "off-white background with VS Blue / Blue Light accents and dark navy details"}.`,
-      `TYPOGRAPHY (if any text appears): Barlow Condensed for headings, Barlow for body — bold, condensed, modern, NEVER serif, NEVER script, NEVER decorative.`,
+      `MANDATORY "TECH FUSION" PALETTE — use ONLY these colors, no others:`,
+      `- Deep Space Blue #050814 (dominant background, ~70% of canvas)`,
+      `- Cyber Orange #FF5300 (action color — CTAs, key numbers, single highlighted word)`,
+      `- Pure White #FFFFFF (main typography and contrast)`,
+      `Absolutely NO other colors. NO blues, NO purples, NO gradients of other hues. Subtle dark-on-dark grid texture / digital noise on the background is allowed and encouraged.`,
       ``,
-      `THEME OF THIS POST: ${prompt}`,
-      `PLATFORM: ${platform}`,
+      `TYPOGRAPHY (if any text appears on the image):`,
+      `- Headings: Poppins Black Italic, ULTRA BOLD, condensed, GIANT scale (occupy 40-70% of the canvas height for the hero word/number).`,
+      `- Body: Montserrat regular/medium.`,
+      `- NEVER serif, NEVER script, NEVER decorative, NEVER handwriting.`,
+      `- All text in Portuguese (PT-BR), correctly spelled, ALL CAPS for the hero line.`,
       ``,
-      `COMPOSITION RULES:`,
-      `- Minimalist, editorial, premium B2B (Notion / Linear / Stripe level)`,
-      `- Geometric shapes, subtle gradients of VS Blue → Blue Light, generous negative space`,
-      `- Use abstract icons of growth/automation/data/AI when relevant — never literal foreign text`,
-      `- Magazine-quality composition, high contrast, professional`,
+      `BRUTAL VISUAL HIERARCHY:`,
+      `- One single hero element (a number, a verb, a confrontational word) takes massive disproportionate space.`,
+      `- Everything else is small, secondary, almost annotation-like.`,
+      `- High contrast, alta densidade de impacto, zero ornamento.`,
+      `- Allowed motifs: software UI mockups, dashboards, AI chat bubbles, ROI charts, grid lines, terminal-like blocks, monospace data — all in the Tech Fusion palette.`,
       ``,
-      `TEXT RULES ON THE IMAGE:`,
-      `- DO NOT add captions, slogans or fake words. At most a single short headline in Portuguese (PT-BR), in Barlow Condensed Bold uppercase, fully legible, spelled correctly. If unsure, use NO text at all.`,
-      `- NEVER write English text on screen.`,
+      `STRICTLY FORBIDDEN (PRD):`,
+      `- Generic stock illustrations, 3D blobs, cartoon people, smiling avatars.`,
+      `- Soft pastel palettes, pink, purple, teal, green.`,
+      `- Decorative icons, sparkles, ribbons, "corporate handshake" imagery.`,
+      `- Empty corporate buzzwords on screen.`,
+      `- Anything that does NOT reinforce "we replace entire departments" + "brutal results".`,
+      ``,
+      `THEME / IDEA FOR THIS POST: ${prompt}`,
+      `PLATFORM: ${platform} (Instagram feed, 1:1).`,
+      `STYLE TOKEN: ${style}.`,
       textRules ? `\nADDITIONAL BRAND RULES FROM DATABASE:\n${textRules}` : ``,
     ];
 
-    const parts: any[] = inlineRefs.map((r) => ({ inlineData: { mimeType: r.mimeType, data: r.data } }));
-    parts.push({ text: promptSections.filter(Boolean).join("\n") });
+    const requestParts: any[] = inlineRefs.map((r) => ({ inlineData: { mimeType: r.mimeType, data: r.data } }));
+    requestParts.push({ text: promptSections.filter(Boolean).join("\n") });
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_API_KEY}`;
     const response = await fetch(geminiUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ role: "user", parts }],
+        contents: [{ role: "user", parts: requestParts }],
         generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
       }),
     });
@@ -137,8 +143,8 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const parts = data?.candidates?.[0]?.content?.parts || [];
-    const inlineImage = parts.find((p: any) => p?.inlineData?.data || p?.inline_data?.data);
+    const respParts = data?.candidates?.[0]?.content?.parts || [];
+    const inlineImage = respParts.find((p: any) => p?.inlineData?.data || p?.inline_data?.data);
     const base64 = inlineImage?.inlineData?.data || inlineImage?.inline_data?.data;
     const mimeType = inlineImage?.inlineData?.mimeType || inlineImage?.inline_data?.mime_type || "image/png";
     if (!base64) {
