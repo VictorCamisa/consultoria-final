@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNichos } from "@/hooks/useNichos";
-import { motion } from "framer-motion";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -295,7 +295,7 @@ export function CreatePostTab() {
       )}
 
       {generatedPost && !loading && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+        <div className="space-y-3 animate-in fade-in duration-300">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             <Card className="border-accent/30">
               <CardHeader className="pb-2">
@@ -417,7 +417,7 @@ export function CreatePostTab() {
               </CardContent>
             </Card>
           </div>
-        </motion.div>
+        </div>
       )}
 
       {((history as any[])?.length ?? 0) > 0 && (
