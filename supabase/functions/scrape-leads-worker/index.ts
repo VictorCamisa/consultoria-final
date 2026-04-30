@@ -35,7 +35,7 @@ async function firecrawlSearch(apiKey: string, query: string, limit: number): Pr
 }
 
 const CONSULTORIA_VS_CONTEXT = `
-EMPRESA: VS Growth Hub — Consultoria de Crescimento para negócios locais.
+EMPRESA: VS OS — Consultoria de Crescimento para negócios locais.
 ICP: Donos de negócios locais, faturamento >R$30k/mês, equipe >=3, investem em marketing.
 Score ICP 80-100=perfeito, 60-79=bom, 40-59=médio, 20-39=fraco, 0-19=ruim.
 `.trim();

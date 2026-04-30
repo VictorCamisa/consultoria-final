@@ -61,7 +61,7 @@ REGRA 6 — NÚMEROS:
 Só usar se o usuário trouxer dados reais no pedido. Jamais invente percentuais, ROI, ou métricas fictícias.
 
 REGRA 7 — HASHTAGS (5 a 7):
-Ortografia 100% correta. Sempre incluir: #VS, #VSGrowthHub, #EcossistemasDigitais. Adicionar hashtags específicas do tema e nicho (ex: #AutomacaoDeVendas, #IAparaVendas, #FollowUp, #Estetica, #Odontologia, #Imobiliario, #Advocacia). Zero hashtag genérica tipo #Marketing #Negócios.
+Ortografia 100% correta. Sempre incluir: #VS, #VSOS, #EcossistemasDigitais. Adicionar hashtags específicas do tema e nicho (ex: #AutomacaoDeVendas, #IAparaVendas, #FollowUp, #Estetica, #Odontologia, #Imobiliario, #Advocacia). Zero hashtag genérica tipo #Marketing #Negócios.
 
 REGRA 8 — IMAGE_HEADLINE (CAMPO CRÍTICO):
 Este é o texto que vai aparecer impresso na arte em letras gigantes. É uma manchete de outdoor, não um título de artigo.
@@ -83,7 +83,7 @@ FORMATO DE SAÍDA (JSON via tool call)
 {
   "image_headline": "MANCHETE 1-3 PALAVRAS ALL CAPS",
   "caption": "legenda 5 blocos separados por \\n\\n",
-  "hashtags": ["VS","VSGrowthHub","EcossistemasDigitais","..."],
+  "hashtags": ["VS","VSOS","EcossistemasDigitais","..."],
   "platform_tips": "1 dica objetiva específica para a plataforma",
   "visual_suggestion": "instrução de composição para o designer",
   "best_time": "melhor horário/dia para publicar"
@@ -197,7 +197,7 @@ serve(async (req) => {
         post = {
           image_headline: "VS",
           caption: content || "",
-          hashtags: ["VS", "VSGrowthHub", "EcossistemasDigitais"],
+          hashtags: ["VS", "VSOS", "EcossistemasDigitais"],
           platform_tips: "",
           visual_suggestion: "",
           best_time: "",

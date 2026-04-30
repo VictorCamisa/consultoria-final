@@ -24,10 +24,10 @@ export default function AppLayout() {
   const isMobile = useIsMobile();
 
   const base = "/" + location.pathname.split("/").filter(Boolean).slice(0, 1).join("/");
-  const pageTitle = routeTitles[base] ?? "VS Growth Hub";
+  const pageTitle = routeTitles[base] ?? "VS OS";
 
   useEffect(() => {
-    document.title = `${pageTitle} — VS Growth Hub`;
+    document.title = `${pageTitle} — VS OS`;
   }, [pageTitle]);
 
   // Mobile layout

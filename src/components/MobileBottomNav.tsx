@@ -47,7 +47,7 @@ export function MobileBottomNav() {
           <div className="flex items-center justify-between px-5 py-4 border-b border-border">
             <div>
               <p className="text-base font-semibold text-foreground">{userName ?? "Menu"}</p>
-              <p className="text-xs text-muted-foreground">VS Growth Hub</p>
+              <p className="text-xs text-muted-foreground">VS OS</p>
             </div>
             <button onClick={() => setMoreOpen(false)} className="p-2 rounded-lg hover:bg-muted">
               <X className="h-5 w-5" />

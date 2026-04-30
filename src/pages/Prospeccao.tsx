@@ -1156,7 +1156,7 @@ export default function Prospeccao() {
               <div className="flex items-start gap-2.5 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
                 <Target className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-green-600">ICP configurado — VS Growth Hub</p>
+                  <p className="text-xs font-medium text-green-600">ICP configurado — VS OS</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
                     Qualificação baseada no perfil da consultoria (donos de negócios locais, faturamento acima de R$30k/mês)
                   </p>
