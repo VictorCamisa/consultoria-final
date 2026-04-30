@@ -48,7 +48,7 @@ export default function Login() {
         <div className="rounded-2xl border border-border bg-background p-8 shadow-xl">
           {/* Brand */}
           <div className="flex flex-col items-center gap-3 mb-8">
-            <VSLogo size="md" />
+            <VSLogo size="md" theme="dark" />
             <div className="text-center">
               <h1 className="text-sm font-semibold text-foreground tracking-tight">VS Growth Hub</h1>
               <p className="text-xs text-muted-foreground mt-0.5">Acesse seu painel de crescimento</p>
