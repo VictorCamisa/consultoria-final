@@ -56,7 +56,8 @@ function buildPrompt(theme: string, visualSuggestion?: string): string {
 async function generateWithNanoBanana(
   prompt: string,
   apiKey: string,
-): Promise<string | null> {
+  model: string,
+): Promise<{ base64: string | null; status: number }> {
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -64,7 +65,7 @@ async function generateWithNanoBanana(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-3.1-flash-image-preview",
+      model,
       messages: [{ role: "user", content: prompt }],
       modalities: ["image", "text"],
     }),
@@ -72,16 +73,15 @@ async function generateWithNanoBanana(
 
   if (!res.ok) {
     const text = await res.text();
-    console.error("Nano Banana 2 error:", res.status, text.slice(0, 600));
-    return null;
+    console.error(`Image model ${model} error:`, res.status, text.slice(0, 600));
+    return { base64: null, status: res.status };
   }
 
   const json = await res.json();
   const url = json?.choices?.[0]?.message?.images?.[0]?.image_url?.url as string | undefined;
-  if (!url) return null;
-  // url é "data:image/png;base64,XXX"
+  if (!url) return { base64: null, status: 200 };
   const base64 = url.includes(",") ? url.split(",", 2)[1] : url;
-  return base64;
+  return { base64, status: 200 };
 }
 
 serve(async (req) => {
@@ -100,11 +100,39 @@ serve(async (req) => {
     const finalPrompt = buildPrompt(prompt, visual_suggestion);
     console.log("Image prompt:", finalPrompt.slice(0, 300));
 
-    const base64 = await generateWithNanoBanana(finalPrompt, LOVABLE_API_KEY);
+    // Tenta Nano Banana 2 (preview, melhor qualidade) — se falhar com 429/5xx, cai para Nano Banana 1 (estável)
+    let { base64, status } = await generateWithNanoBanana(
+      finalPrompt,
+      LOVABLE_API_KEY,
+      "google/gemini-3.1-flash-image-preview",
+    );
+
+    if (!base64 && (status === 429 || status >= 500)) {
+      console.warn(`Nano Banana 2 indisponível (${status}). Caindo para Nano Banana 1.`);
+      const fb = await generateWithNanoBanana(
+        finalPrompt,
+        LOVABLE_API_KEY,
+        "google/gemini-2.5-flash-image",
+      );
+      base64 = fb.base64;
+      status = fb.status;
+    }
 
     if (!base64) {
+      if (status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Limite de geração de imagem atingido. Tente em alguns minutos." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (status === 402) {
+        return new Response(
+          JSON.stringify({ error: "Créditos do Lovable AI esgotados." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       return new Response(
-        JSON.stringify({ error: "Falha ao gerar imagem (Nano Banana 2)." }),
+        JSON.stringify({ error: "Falha ao gerar imagem." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
