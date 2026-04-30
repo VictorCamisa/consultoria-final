@@ -53,6 +53,7 @@ export function CreatePostTab() {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [bgImage, setBgImage] = useState<string | null>(null);
   const [generatedPost, setGeneratedPost] = useState<GeneratedPost | null>(null);
+  const [generatedMeta, setGeneratedMeta] = useState<{ pilar?: string; formato?: string } | null>(null);
   const [showBrandAssets, setShowBrandAssets] = useState(false);
 
   const { data: brandAssets } = useQuery({
@@ -100,6 +101,10 @@ export function CreatePostTab() {
         .slice(0, 5)
         .map((h) => h.caption)
         .filter(Boolean);
+      const recentFormatos = ((history as any[]) || [])
+        .slice(0, 5)
+        .map((h) => h.formato || h.arquetipo)
+        .filter(Boolean);
 
       const { data: textData, error: textErr } = await supabase.functions.invoke("vs-generate-post", {
         body: {
@@ -108,6 +113,7 @@ export function CreatePostTab() {
           nicho: nicho !== "none" ? nicho : undefined,
           referenceContext: referenceContext || undefined,
           recentCaptions,
+          recentFormatos,
         },
       });
       if (textErr) throw new Error(textErr.message);
@@ -123,6 +129,7 @@ export function CreatePostTab() {
       };
 
       setGeneratedPost(post);
+      setGeneratedMeta({ pilar: textData?.pilar, formato: textData?.formato });
       toast.success("Post gerado! ✨");
 
       const { data: saved, error: saveErr } = await supabase
@@ -435,6 +442,16 @@ export function CreatePostTab() {
                   <CardTitle className="text-sm flex items-center gap-2">
                     <span>{PLATFORM_EMOJI[platform]}</span>
                     Post para {platform}
+                    {generatedMeta?.pilar && (
+                      <Badge variant="secondary" className="text-[9px] uppercase tracking-wider">
+                        {generatedMeta.pilar}
+                      </Badge>
+                    )}
+                    {generatedMeta?.formato && (
+                      <Badge variant="outline" className="text-[9px]">
+                        {generatedMeta.formato.replace(/_/g, " ")}
+                      </Badge>
+                    )}
                   </CardTitle>
                   <Button size="sm" variant="outline" onClick={copyFull}>
                     <Copy className="h-3 w-3 mr-1" />Copiar Tudo
