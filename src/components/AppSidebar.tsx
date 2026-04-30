@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Megaphone, Users, CalendarCheck, Settings,
   LogOut, BrainCircuit, Search, UserRoundCog, FolderKanban, Users2,
-  DollarSign, Package,
+  DollarSign, Package, Sparkles,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -55,6 +55,12 @@ const navSections: NavSection[] = [
       { title: "Operacional", url: "/operacional", icon: FolderKanban },
       { title: "Financeiro",  url: "/financeiro",  icon: DollarSign },
       { title: "Produtos",    url: "/produtos",    icon: Package },
+    ],
+  },
+  {
+    label: "Marketing",
+    items: [
+      { title: "Marketing", url: "/marketing", icon: Sparkles },
     ],
   },
   {
