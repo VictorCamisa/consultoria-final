@@ -43,8 +43,8 @@ serve(async (req) => {
 
   try {
     const { prompt, style = "dark", platform = "Instagram", imageHeadline = "" } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY is not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -56,20 +56,10 @@ serve(async (req) => {
       .select("type, title, content, file_url")
       .eq("is_active", true);
 
-    const visualAssets = (assets || []).filter(
-      (a) => a.file_url && ["logo", "reference", "image", "palette", "typography"].includes(a.type),
-    );
     const textRules = (assets || [])
       .filter((a) => a.content && ["rule", "tone", "manual", "palette", "typography"].includes(a.type))
       .map((a) => `[${a.type.toUpperCase()}] ${a.title}: ${a.content}`)
       .join("\n");
-
-    const inlineRefs: { mimeType: string; data: string; label: string }[] = [];
-    for (const a of visualAssets.slice(0, 3)) {
-      const img = await fetchAsInlineImage(a.file_url as string);
-      if (img) inlineRefs.push({ ...img, label: `${a.type}: ${a.title}` });
-    }
-    console.log(`[vs-generate-post-image] inline refs: ${inlineRefs.length}/${visualAssets.length}`);
 
     // Sanitiza headline para garantir 1-3 palavras ALL CAPS sem caracteres estranhos
     const cleanHeadline = (imageHeadline || "")
@@ -84,10 +74,6 @@ serve(async (req) => {
     // Rebranding 2026 (PRD): Brutalismo Tech.
     const promptSections = [
       `Generate a single 1:1 Instagram feed graphic for "VS" — a Brazilian B2B company that REPLACES entire sales & marketing departments with AI + automation. Aesthetic: BRUTALIST TECH (V4 Company / Linear / Vercel / Nubank product UI level — editorial, premium, minimal, high-impact).`,
-      ``,
-      inlineRefs.length > 0
-        ? `BRAND REFERENCES: The ${inlineRefs.length} image(s) above are official VS brand assets. Replicate the exact logo shape and visual language. Do not invent a different identity.`
-        : ``,
       ``,
       `═══ ABSOLUTE PROHIBITION — VS LOGO ═══`,
       `NEVER draw the letters "VS" together as a logo, monogram, lockup, or large display element. NEVER render the "VS" wordmark in any form (no cracked VS, no italic VS, no stencil VS, no VS with arrows). The brand identity must come ONLY from typography, color and composition — not from drawing letters that spell "VS".`,
@@ -117,64 +103,51 @@ serve(async (req) => {
       textRules ? `\nADDITIONAL BRAND RULES FROM DATABASE:\n${textRules}` : ``,
     ];
 
-    // Constrói mensagem multimodal no formato OpenAI-compatible (Lovable AI Gateway)
-    const userContent: any[] = [
-      { type: "text", text: promptSections.filter(Boolean).join("\n") },
-      ...inlineRefs.map((r) => ({
-        type: "image_url",
-        image_url: { url: `data:${r.mimeType};base64,${r.data}` },
-      })),
-    ];
+    const finalPrompt = promptSections.filter(Boolean).join("\n");
 
-    // Nano Banana 2 (Gemini 3.1 Flash Image Preview) via Lovable AI Gateway
-    const MODEL = "google/gemini-3.1-flash-image-preview";
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // OpenAI gpt-image-1 — melhor modelo de geração de imagem da OpenAI (texto legível, alta fidelidade)
+    const response = await fetch("https://api.openai.com/v1/images/generations", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: MODEL,
-        messages: [{ role: "user", content: userContent }],
-        modalities: ["image", "text"],
+        model: "gpt-image-1",
+        prompt: finalPrompt,
+        size: "1024x1024",
+        quality: "high",
+        n: 1,
       }),
     });
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições atingido. Tente novamente em alguns segundos." }), {
+        return new Response(JSON.stringify({ error: "Limite de requisições da OpenAI atingido. Tente novamente em alguns segundos." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos da Lovable AI esgotados. Adicione créditos em Settings → Workspace → Usage." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      if (response.status === 401 || response.status === 403) {
+        return new Response(JSON.stringify({ error: "OPENAI_API_KEY inválida ou sem acesso ao modelo gpt-image-1 (requer organização verificada)." }), {
+          status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
-      console.error("Lovable AI image error:", response.status, t);
-      return new Response(JSON.stringify({ error: "Erro ao gerar imagem" }), {
+      console.error("OpenAI image error:", response.status, t);
+      return new Response(JSON.stringify({ error: `Erro ao gerar imagem: ${t.slice(0, 200)}` }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const data = await response.json();
-    const imageDataUrl: string | undefined = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (!imageDataUrl || !imageDataUrl.startsWith("data:")) {
-      console.error("No image in Lovable AI response:", JSON.stringify(data).slice(0, 500));
+    const base64: string | undefined = data?.data?.[0]?.b64_json;
+    if (!base64) {
+      console.error("No image in OpenAI response:", JSON.stringify(data).slice(0, 500));
       return new Response(JSON.stringify({ error: "Nenhuma imagem retornada pela IA" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
-    if (!match) {
-      return new Response(JSON.stringify({ error: "Formato de imagem inválido" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const mimeType = match[1];
-    const base64 = match[2];
+    const mimeType = "image/png";
 
     const bytes = decodeBase64(base64);
     const ext = mimeType.includes("jpeg") ? "jpg" : "png";
