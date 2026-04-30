@@ -65,7 +65,7 @@ serve(async (req) => {
       .join("\n");
 
     const inlineRefs: { mimeType: string; data: string; label: string }[] = [];
-    for (const a of visualAssets.slice(0, 6)) {
+    for (const a of visualAssets.slice(0, 3)) {
       const img = await fetchAsInlineImage(a.file_url as string);
       if (img) inlineRefs.push({ ...img, label: `${a.type}: ${a.title}` });
     }
@@ -117,8 +117,8 @@ serve(async (req) => {
     const requestParts: any[] = inlineRefs.map((r) => ({ inlineData: { mimeType: r.mimeType, data: r.data } }));
     requestParts.push({ text: promptSections.filter(Boolean).join("\n") });
 
-    // Nano Banana 2 (Gemini 3.1 Flash Image Preview) — melhor renderização de texto e composição
-    const MODEL = "gemini-3.1-flash-image-preview";
+    // Gemini 2.5 Flash Image (Nano Banana) — modelo estável de imagem via API direta do Google
+    const MODEL = "gemini-2.5-flash-image";
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
     const response = await fetch(geminiUrl, {
       method: "POST",
