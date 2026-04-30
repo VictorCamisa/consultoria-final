@@ -107,7 +107,7 @@ IMPORTANTE: Retorne SOMENTE o JSON abaixo, sem nenhum texto antes ou depois, sem
 
 
       const geminiTextRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyBHqdRkJQYOOaSxqm9dLz0VtjuTAQzk5L8`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${import.meta.env.VITE_GEMINI_KEY}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -204,7 +204,7 @@ IMPORTANTE: Retorne SOMENTE o JSON abaixo, sem nenhum texto antes ou depois, sem
             "ONLY photorealistic. NO text, NO logos, NO charts, NO icons, NO robots, NO illustrations, NO cartoons.",
           ].join(" ");
 
-          const GEMINI_KEY = "AIzaSyBHqdRkJQYOOaSxqm9dLz0VtjuTAQzk5L8";
+          const GEMINI_KEY = import.meta.env.VITE_GEMINI_KEY as string;
           const imagenRes = await fetch(
             `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${GEMINI_KEY}`,
             {
