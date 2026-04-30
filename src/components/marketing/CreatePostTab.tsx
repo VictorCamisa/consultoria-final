@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { BrandAssetsPanel } from "./BrandAssetsPanel";
 import { renderAndUpload } from "@/lib/vsPostRenderer";
+import vsLogoUrl from "@/assets/vs-logo-light.png";
 
 type GeneratedPost = {
   image_headline?: string;
@@ -128,13 +129,15 @@ export function CreatePostTab() {
       try {
         const currentVariant = 0;
         setImageVariant(currentVariant);
-        const imageUrl = await renderAndUpload(
-          post.image_headline || post.caption.split("\n")[0].slice(0, 30),
-          postFormat,
+        const imageUrl = await renderAndUpload({
+          headline: post.image_headline || post.caption.split("\n")[0].slice(0, 30),
+          tagline: post.visual_suggestion?.slice(0, 80) || "",
+          format: postFormat,
+          variant: currentVariant,
+          logoUrl: vsLogoUrl,
           platform,
-          currentVariant,
           supabase,
-        );
+        });
         setGeneratedImage(imageUrl);
         if (savedId) {
           await supabase.from("vs_marketing_posts" as any).update({ image_url: imageUrl }).eq("id", savedId);
@@ -162,13 +165,15 @@ export function CreatePostTab() {
     try {
       const nextVariant = (imageVariant + 1) % 3;
       setImageVariant(nextVariant);
-      const imageUrl = await renderAndUpload(
-        generatedPost.image_headline || generatedPost.caption.split("\n")[0].slice(0, 30),
-        postFormat,
+      const imageUrl = await renderAndUpload({
+        headline: generatedPost.image_headline || generatedPost.caption.split("\n")[0].slice(0, 30),
+        tagline: generatedPost.visual_suggestion?.slice(0, 80) || "",
+        format: postFormat,
+        variant: nextVariant,
+        logoUrl: vsLogoUrl,
         platform,
-        nextVariant,
         supabase,
-      );
+      });
       setGeneratedImage(imageUrl);
       toast.success(`Layout ${nextVariant + 1}/3 — regere para alternar`);
     } catch (e) {
