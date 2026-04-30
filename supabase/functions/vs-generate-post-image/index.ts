@@ -19,8 +19,8 @@ serve(async (req) => {
 
   try {
     const { prompt, style = "light", platform = "Instagram" } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY is not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -49,56 +49,57 @@ serve(async (req) => {
       `- Brazilian audience, no English text on screen`,
     ].join("\n");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${GEMINI_API_KEY}`;
+    const response = await fetch(geminiUrl, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: imagePrompt }],
-        modalities: ["image", "text"],
+        contents: [{ role: "user", parts: [{ text: imagePrompt }] }],
+        generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
       }),
     });
 
     if (!response.ok) {
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de requisições atingido." }), {
+        return new Response(JSON.stringify({ error: "Limite de requisições do Gemini atingido." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos do Lovable AI esgotados." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      if (response.status === 401 || response.status === 403) {
+        return new Response(JSON.stringify({ error: "GEMINI_API_KEY inválida ou sem permissão." }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
-      console.error("AI image gateway error:", response.status, t);
+      console.error("Gemini image error:", response.status, t);
       return new Response(JSON.stringify({ error: "Erro ao gerar imagem" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const data = await response.json();
-    const dataUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (!dataUrl || !dataUrl.startsWith("data:image")) {
-      console.error("No image in response:", JSON.stringify(data).slice(0, 500));
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    const inlineImage = parts.find((p: any) => p?.inlineData?.data || p?.inline_data?.data);
+    const base64 = inlineImage?.inlineData?.data || inlineImage?.inline_data?.data;
+    const mimeType = inlineImage?.inlineData?.mimeType || inlineImage?.inline_data?.mime_type || "image/png";
+    if (!base64) {
+      console.error("No image in Gemini response:", JSON.stringify(data).slice(0, 500));
       return new Response(JSON.stringify({ error: "Nenhuma imagem retornada pela IA" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const base64 = dataUrl.split(",")[1];
     const bytes = decodeBase64(base64);
-    const fileName = `posts/${Date.now()}-${platform.toLowerCase()}-${style}.png`;
+    const ext = mimeType.includes("jpeg") ? "jpg" : "png";
+    const fileName = `posts/${Date.now()}-${platform.toLowerCase()}-${style}.${ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from("vs-marketing")
-      .upload(fileName, bytes, { contentType: "image/png", upsert: true });
+      .upload(fileName, bytes, { contentType: mimeType, upsert: true });
 
     if (uploadError) {
       console.error("Upload error:", uploadError);
+      const dataUrl = `data:${mimeType};base64,${base64}`;
       return new Response(JSON.stringify({ image_url: dataUrl, style }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
