@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Megaphone, Users, CalendarCheck, Settings,
   LogOut, BrainCircuit, Search, UserRoundCog, FolderKanban, Users2,
-  DollarSign, Package, Sparkles,
+  DollarSign, Package, Sparkles, Activity, ShieldCheck,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,40 +33,46 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    label: "Vendas",
+    label: "Comercial",
     items: [
-      { title: "Comercial",  url: "/comercial",  icon: Megaphone, badgeKey: "unread" },
-      { title: "Agente IA",  url: "/agente-ia",  icon: BrainCircuit },
+      { title: "Pipeline",   url: "/comercial",  icon: Megaphone, badgeKey: "unread" },
       { title: "Prospecção", url: "/prospeccao", icon: Search },
-      { title: "Leads",      url: "/leads",       icon: Users2 },
+      { title: "Leads",      url: "/leads",      icon: Users2 },
+      { title: "Marketing",  url: "/marketing",  icon: Sparkles },
     ],
   },
   {
-    label: "Clientes",
+    label: "Gatekeeper",
+    items: [
+      { title: "Agente IA",    url: "/agente-ia",    icon: BrainCircuit },
+      { title: "Meu Vendedor",   url: "/meu-vendedor",   icon: UserRoundCog },
+    ],
+  },
+  {
+    label: "Onboarding",
     items: [
       { title: "Clientes",       url: "/clientes",       icon: Users },
-      { title: "Meu Vendedor",   url: "/meu-vendedor",   icon: UserRoundCog },
       { title: "Acompanhamento", url: "/acompanhamento", icon: CalendarCheck, badgeKey: "pendentes" },
+      { title: "Operacional",    url: "/operacional",    icon: FolderKanban },
     ],
   },
   {
-    label: "Operacional",
+    label: "Telemetria",
     items: [
-      { title: "Operacional", url: "/operacional", icon: FolderKanban },
-      { title: "Financeiro",  url: "/financeiro",  icon: DollarSign },
-      { title: "Produtos",    url: "/produtos",    icon: Package },
+      { title: "Health Score", url: "/dashboard", icon: Activity },
     ],
   },
   {
-    label: "Marketing",
+    label: "Financeiro",
     items: [
-      { title: "Marketing", url: "/marketing", icon: Sparkles },
+      { title: "Billing",  url: "/financeiro", icon: DollarSign },
+      { title: "Produtos", url: "/produtos",   icon: Package },
     ],
   },
   {
-    label: "Sistema",
+    label: "Governança",
     items: [
-      { title: "Configurações", url: "/configuracoes", icon: Settings },
+      { title: "Configurações", url: "/configuracoes", icon: ShieldCheck },
     ],
   },
 ];
