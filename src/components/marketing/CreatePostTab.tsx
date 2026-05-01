@@ -186,6 +186,7 @@ export function CreatePostTab() {
           logoUrl: vsLogoUrl,
           platform,
           bgImageUrl: newBgUrl,
+          handle: "@vssolucoes_",
           supabase,
         });
         setGeneratedImage(imageUrl);
@@ -227,6 +228,7 @@ export function CreatePostTab() {
         logoUrl: vsLogoUrl,
         platform,
         bgImageUrl: bgImage || undefined,
+        handle: "@vssolucoes_",
         supabase,
       });
       setGeneratedImage(imageUrl);
