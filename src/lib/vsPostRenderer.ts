@@ -106,8 +106,8 @@ async function templateA(
   const MY = Math.round(H * 0.07);
   const availW = W - MX * 2;
 
-  // 1. Dot grid
-  drawDots(ctx, W, H, 0.04);
+  // 1. Dot grid only when there is no background photo (otherwise it pollutes the image).
+  if (!opts.bgImageUrl) drawDots(ctx, W, H, 0.04);
 
   // 2. Logo — top-left
   const logoH = Math.round(H * 0.055);
@@ -118,11 +118,15 @@ async function templateA(
   ctx.fillStyle = ORANGE;
   ctx.fillRect(W - MX - sqSize, MY + Math.round(logoH * 0.1), sqSize, sqSize);
 
-  // 4. Headline — starts at ~22% from top
-  const words = opts.headline.trim().toUpperCase().split(/\s+/).filter(Boolean);
-  const fs = optimalFs(ctx, words, availW * 0.78, H, 0.30);
-  const lh = fs * 0.88;
-  let hy = Math.round(H * 0.20);
+  // 4. Headline — anchored to the lower third (over the dark gradient zone).
+  //    Cap to 4 words max for visual balance; keep type tight but never gigantic.
+  const allWords = opts.headline.trim().toUpperCase().split(/\s+/).filter(Boolean);
+  const words = allWords.slice(0, 4);
+  const fs = optimalFs(ctx, words, availW * 0.85, H, 0.13);
+  const lh = fs * 0.95;
+  const totalH = lh * words.length;
+  // Bottom-aligned: leave space for the bottom bar (~12% of H).
+  let hy = H - Math.round(H * 0.18) - totalH;
 
   ctx.textBaseline = "top";
   words.forEach((word, i) => {
@@ -204,23 +208,23 @@ async function templateB(
   const MY = Math.round(H * 0.07);
   const availW = W - MX * 2;
 
-  // Dots — lighter
-  drawDots(ctx, W, H, 0.035);
+  // Dots only over solid bg.
+  if (!opts.bgImageUrl) drawDots(ctx, W, H, 0.035);
 
-  // Vertical orange accent bar — left side
+  // Headline anchored to bottom-left (over the dark gradient).
+  const allWords = opts.headline.trim().toUpperCase().split(/\s+/).filter(Boolean);
+  const words = allWords.slice(0, 4);
   const barW = Math.round(W * 0.012);
-  const barTop = Math.round(H * 0.20);
-  const barBot = Math.round(H * 0.72);
-  ctx.fillStyle = ORANGE;
-  ctx.fillRect(MX, barTop, barW, barBot - barTop);
-
-  // Headline — right of bar, stacked
-  const words = opts.headline.trim().toUpperCase().split(/\s+/).filter(Boolean);
   const headMX = MX + barW + Math.round(W * 0.04);
   const headAvailW = W - headMX - Math.round(W * 0.06);
-  const fs = optimalFs(ctx, words, headAvailW * 0.82, H, 0.28);
-  const lh = fs * 0.92;
-  let hy = Math.round(H * 0.22);
+  const fs = optimalFs(ctx, words, headAvailW * 0.88, H, 0.13);
+  const lh = fs * 0.95;
+  const totalH = lh * words.length;
+  let hy = H - Math.round(H * 0.18) - totalH;
+
+  // Vertical orange accent bar — left side, sized to the headline block.
+  ctx.fillStyle = ORANGE;
+  ctx.fillRect(MX, hy - Math.round(H * 0.015), barW, totalH + Math.round(H * 0.03));
 
   ctx.textBaseline = "top";
   words.forEach((word, i) => {
@@ -274,8 +278,8 @@ async function templateC(
   const STROKE = Math.max(3, Math.round(W * 0.004));
   const ARM = Math.round(W * 0.12); // length of L-arm
 
-  // Dots
-  drawDots(ctx, W, H, 0.04);
+  // Dots only over solid bg.
+  if (!opts.bgImageUrl) drawDots(ctx, W, H, 0.04);
 
   // L-shaped corner accents in orange
   const cx = [FRAME_IN, W - FRAME_IN]; // left, right
@@ -301,12 +305,13 @@ async function templateC(
     drawLogo(ctx, opts.logo, (W - logoW) / 2, MY + FRAME_IN * 0.5, logoH);
   }
 
-  // Headline — center-aligned, stacked
-  const words = opts.headline.trim().toUpperCase().split(/\s+/).filter(Boolean);
-  const fs = optimalFs(ctx, words, availW * 0.68, H, 0.26);
-  const lh = fs * 0.93;
+  // Headline — center-aligned, anchored to lower-center over dark gradient.
+  const allWords = opts.headline.trim().toUpperCase().split(/\s+/).filter(Boolean);
+  const words = allWords.slice(0, 4);
+  const fs = optimalFs(ctx, words, availW * 0.78, H, 0.12);
+  const lh = fs * 0.95;
   const totalH = lh * words.length;
-  let hy = (H - totalH) / 2 - Math.round(H * 0.04);
+  let hy = H - Math.round(H * 0.22) - totalH;
 
   ctx.textBaseline = "top";
   words.forEach((word, i) => {
