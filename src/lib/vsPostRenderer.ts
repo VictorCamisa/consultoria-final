@@ -48,13 +48,13 @@ function optimalFs(
   words: string[],
   targetW: number,
   H: number,
-  maxRatio = 0.28,
+  maxRatio = 0.18,
 ): number {
-  const probe = Math.round(H * 0.22);
+  const probe = Math.round(H * 0.18);
   ctx.font = font(probe);
   const maxWord = Math.max(...words.map((w) => ctx.measureText(w).width), 1);
   let fs = Math.round(probe * (targetW / maxWord));
-  return Math.max(Math.round(H * 0.09), Math.min(Math.round(H * maxRatio), fs));
+  return Math.max(Math.round(H * 0.06), Math.min(Math.round(H * maxRatio), fs));
 }
 
 // Subtle dot-grid background (full canvas)
