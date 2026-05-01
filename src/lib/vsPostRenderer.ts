@@ -354,7 +354,7 @@ export async function renderVSPost(options: PostRenderOptions): Promise<Blob> {
     format = "feed",
     variant = 0,
     logoUrl,
-    handle = "@vs",
+    handle = "@vssolucoes_",
     bgImageUrl,
   } = options;
 
@@ -391,8 +391,13 @@ export async function renderVSPost(options: PostRenderOptions): Promise<Blob> {
       
       ctx.drawImage(bgImage, sx, sy, sWidth, sHeight, 0, 0, W, H);
       
-      // Apply dark overlay for text legibility
-      ctx.fillStyle = "rgba(5, 8, 20, 0.65)";
+      // Vertical gradient: lighter on the photo area, darker on the bottom-third where the headline sits.
+      // Keeps the editorial photo visible while guaranteeing text contrast.
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, "rgba(5, 8, 20, 0.20)");
+      grad.addColorStop(0.45, "rgba(5, 8, 20, 0.45)");
+      grad.addColorStop(1, "rgba(5, 8, 20, 0.85)");
+      ctx.fillStyle = grad;
       ctx.fillRect(0, 0, W, H);
     } catch (e) {
       console.warn("Failed to load bgImageUrl", e);
