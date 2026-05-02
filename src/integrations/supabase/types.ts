@@ -993,6 +993,185 @@ export type Database = {
         }
         Relationships: []
       }
+      imagery_logs: {
+        Row: {
+          created_at: string
+          custo_usd: number | null
+          duracao_ms: number | null
+          error_message: string | null
+          id: string
+          model: string | null
+          post_id: string | null
+          prompt_excerpt: string | null
+          provider: string
+          response_summary: Json | null
+          slide_id: string | null
+          step: string
+          success: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          custo_usd?: number | null
+          duracao_ms?: number | null
+          error_message?: string | null
+          id?: string
+          model?: string | null
+          post_id?: string | null
+          prompt_excerpt?: string | null
+          provider: string
+          response_summary?: Json | null
+          slide_id?: string | null
+          step: string
+          success?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          custo_usd?: number | null
+          duracao_ms?: number | null
+          error_message?: string | null
+          id?: string
+          model?: string | null
+          post_id?: string | null
+          prompt_excerpt?: string | null
+          provider?: string
+          response_summary?: Json | null
+          slide_id?: string | null
+          step?: string
+          success?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imagery_logs_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "imagery_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imagery_logs_slide_id_fkey"
+            columns: ["slide_id"]
+            isOneToOne: false
+            referencedRelation: "imagery_slides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      imagery_posts: {
+        Row: {
+          copy_data: Json | null
+          created_at: string
+          custo_total_usd: number | null
+          error_message: string | null
+          id: string
+          n_slides: number
+          nicho: string
+          objetivo: string
+          status: string
+          tema: string
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          copy_data?: Json | null
+          created_at?: string
+          custo_total_usd?: number | null
+          error_message?: string | null
+          id?: string
+          n_slides?: number
+          nicho: string
+          objetivo: string
+          status?: string
+          tema: string
+          tipo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          copy_data?: Json | null
+          created_at?: string
+          custo_total_usd?: number | null
+          error_message?: string | null
+          id?: string
+          n_slides?: number
+          nicho?: string
+          objetivo?: string
+          status?: string
+          tema?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      imagery_slides: {
+        Row: {
+          copy_data: Json | null
+          created_at: string
+          error_message: string | null
+          final_png_url: string | null
+          id: string
+          image_brief: string | null
+          image_type: string | null
+          needs_image: boolean
+          post_id: string
+          raw_image_url: string | null
+          retry_count: number | null
+          slide_n: number
+          status: string
+          template_id: string
+          treated_image_url: string | null
+          updated_at: string
+          validation_score: Json | null
+        }
+        Insert: {
+          copy_data?: Json | null
+          created_at?: string
+          error_message?: string | null
+          final_png_url?: string | null
+          id?: string
+          image_brief?: string | null
+          image_type?: string | null
+          needs_image?: boolean
+          post_id: string
+          raw_image_url?: string | null
+          retry_count?: number | null
+          slide_n: number
+          status?: string
+          template_id: string
+          treated_image_url?: string | null
+          updated_at?: string
+          validation_score?: Json | null
+        }
+        Update: {
+          copy_data?: Json | null
+          created_at?: string
+          error_message?: string | null
+          final_png_url?: string | null
+          id?: string
+          image_brief?: string | null
+          image_type?: string | null
+          needs_image?: boolean
+          post_id?: string
+          raw_image_url?: string | null
+          retry_count?: number | null
+          slide_n?: number
+          status?: string
+          template_id?: string
+          treated_image_url?: string | null
+          updated_at?: string
+          validation_score?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "imagery_slides_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "imagery_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leads_raw: {
         Row: {
           created_at: string | null
