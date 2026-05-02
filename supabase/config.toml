@@ -48,3 +48,12 @@ verify_jwt = false
 [functions.vs-generate-post-image]
 verify_jwt = false
 
+
+[functions.imagery-plan-post]
+verify_jwt = false
+
+[functions.imagery-generate-image]
+verify_jwt = false
+
+[functions.imagery-orchestrate]
+verify_jwt = false
