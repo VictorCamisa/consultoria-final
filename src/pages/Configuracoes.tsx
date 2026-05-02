@@ -23,6 +23,19 @@ type Produto = {
   tipo: string;
   ativo: boolean;
   nichos: string[];
+  tier: string | null;
+  ordem?: number | null;
+};
+
+// Tiers oficiais da esteira VS Core OS — fonte da verdade para Scripts/Cadência.
+// Order matters: Tools → Departamentos → 360 → Custom.
+const TIER_ORDER = ["VS Tools", "VS Departamentos", "VS 360", "VS Custom"] as const;
+
+const TIER_DESCRIPTIONS: Record<string, string> = {
+  "VS Tools": "Micro-tools R$ 89–397 · entrega em 7 dias",
+  "VS Departamentos": "Automação de 1 departamento · até R$ 3 mil/mês · 21 dias",
+  "VS 360": "Operação comercial completa · até R$ 12 mil/mês · 45 dias",
+  "VS Custom": "Projeto sob medida · setup + fee sob consulta",
 };
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -52,14 +65,27 @@ export default function Configuracoes() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vs_produtos" as any)
-        .select("id, nome, categoria, tipo, ativo, nichos")
+        .select("id, nome, categoria, tipo, ativo, nichos, tier, ordem")
         .order("ordem", { ascending: true });
       if (error) throw error;
       return ((data ?? []) as unknown) as Produto[];
     },
   });
 
-  // Nichos únicos derivados de TODOS os produtos (todas as categorias)
+  // Tiers da esteira VS Core OS (nomes que viram a chave em consultoria_config.nicho).
+  // Derivados dos produtos cadastrados; cai no fallback fixo se a tabela estiver vazia.
+  const tiers = useMemo(() => {
+    const fromDb = (produtos ?? [])
+      .filter((p) => p.ativo)
+      .map((p) => p.nome)
+      .filter((n) => TIER_ORDER.includes(n as typeof TIER_ORDER[number]));
+    const list = fromDb.length ? fromDb : [...TIER_ORDER];
+    return [...new Set(list)].sort(
+      (a, b) => TIER_ORDER.indexOf(a as any) - TIER_ORDER.indexOf(b as any),
+    );
+  }, [produtos]);
+
+  // Nichos (segmentos de cliente) únicos para a aba Nichos
   const nichosDosProdutos = useMemo(() => {
     if (!produtos) return [];
     const all = produtos.flatMap((p) => p.nichos ?? []);
@@ -208,47 +234,45 @@ export default function Configuracoes() {
 
       <Tabs defaultValue="scripts">
         <TabsList className="w-full flex overflow-x-auto hide-scrollbar">
-          <TabsTrigger value="scripts" className="flex-1 min-w-0 text-xs sm:text-sm">Scripts por Vertical</TabsTrigger>
+          <TabsTrigger value="scripts" className="flex-1 min-w-0 text-xs sm:text-sm">Scripts por Tier</TabsTrigger>
           <TabsTrigger value="whatsapp" className="flex-1 min-w-0 text-xs sm:text-sm">WhatsApp</TabsTrigger>
           <TabsTrigger value="cadencia" className="flex-1 min-w-0 text-xs sm:text-sm">Cadência</TabsTrigger>
           <TabsTrigger value="nichos" className="flex-1 min-w-0 text-xs sm:text-sm">Nichos</TabsTrigger>
         </TabsList>
 
-        {/* ── Scripts por Vertical ── */}
+        {/* ── Scripts por Tier (esteira VS Core OS) ── */}
         <TabsContent value="scripts" className="mt-4 space-y-6">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="py-3 text-xs text-muted-foreground">
+              Scripts e prompt do agente IA são organizados pelos <strong>4 tiers</strong> da esteira
+              VS Core OS (Tools → Departamentos → 360 → Custom). Cada tier tem sua própria abordagem,
+              tom e métricas. Edite por tier — não por nicho de cliente.
+            </CardContent>
+          </Card>
           {loadingProdutos ? (
             <div className="flex justify-center py-12">
               <Loader2 className="animate-spin h-6 w-6 text-muted-foreground" />
             </div>
-          ) : nichosDosProdutos.length === 0 ? (
-            <Card>
-              <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                Nenhum nicho encontrado nos produtos. Cadastre produtos com nichos em{" "}
-                <strong>Produtos &amp; Serviços</strong>.
-              </CardContent>
-            </Card>
           ) : (
-            nichosDosProdutos.map((nicho) => {
-              const existing = configs?.find((c) => c.nicho === nicho);
-              // Produtos vinculados a este nicho
-              const produtosDoNicho = produtos?.filter((p) => p.nichos?.includes(nicho)) ?? [];
+            tiers.map((tier) => {
+              const existing = configs?.find((c) => c.nicho === tier);
+              const produtoDoTier = produtos?.find((p) => p.nome === tier);
 
               return (
-                <Card key={nicho}>
+                <Card key={tier}>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div>
-                        <CardTitle className="text-lg">{nicho}</CardTitle>
-                        {produtosDoNicho.length > 0 && (
-                          <div className="flex gap-1 flex-wrap mt-1.5">
-                            {produtosDoNicho.map((p) => (
-                              <Badge key={p.id} variant="outline" className="text-[10px] gap-1">
-                                <Package className="h-2.5 w-2.5" />
-                                {p.nome}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Package className="h-4 w-4 text-primary" />
+                          {tier}
+                        </CardTitle>
+                        <CardDescription className="text-xs mt-1">
+                          {TIER_DESCRIPTIONS[tier] ?? "Tier da esteira VS Core OS"}
+                          {produtoDoTier && !produtoDoTier.ativo && (
+                            <Badge variant="outline" className="ml-2 text-[10px]">Inativo</Badge>
+                          )}
+                        </CardDescription>
                       </div>
                       {existing ? (
                         <Badge variant="secondary" className="text-xs">Configurado</Badge>
@@ -259,7 +283,7 @@ export default function Configuracoes() {
                   </CardHeader>
                   <CardContent>
                     <form
-                      onSubmit={(e) => handleSaveScript(e, nicho, existing as Record<string, unknown> | undefined)}
+                      onSubmit={(e) => handleSaveScript(e, tier, existing as Record<string, unknown> | undefined)}
                       className="space-y-4"
                     >
                       <div>
@@ -314,20 +338,20 @@ export default function Configuracoes() {
 
                       <div className="flex gap-2">
                         <Button type="submit" disabled={updateConfig.isPending}>
-                          <Save className="h-4 w-4 mr-2" />Salvar {nicho}
+                          <Save className="h-4 w-4 mr-2" />Salvar {tier}
                         </Button>
                         {existing?.instancia_evolution && (
                           <Button
                             type="button"
                             variant="outline"
-                            disabled={testingEvolution === nicho}
-                            onClick={() => handleTestEvolution(nicho, existing.instancia_evolution as string)}
+                            disabled={testingEvolution === tier}
+                            onClick={() => handleTestEvolution(tier, existing.instancia_evolution as string)}
                           >
-                            {testingEvolution === nicho ? (
+                            {testingEvolution === tier ? (
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : testResults[nicho] === "ok" ? (
+                            ) : testResults[tier] === "ok" ? (
                               <CheckCircle className="h-4 w-4 mr-2 text-green-400" />
-                            ) : testResults[nicho] === "erro" ? (
+                            ) : testResults[tier] === "erro" ? (
                               <XCircle className="h-4 w-4 mr-2 text-destructive" />
                             ) : (
                               <Wifi className="h-4 w-4 mr-2" />
@@ -472,7 +496,7 @@ export default function Configuracoes() {
             <CardHeader>
               <CardTitle className="text-lg">Sequência de Cadência</CardTitle>
               <CardDescription>
-                Configure as mensagens de follow-up automático por vertical. Os textos são enviados nos dias D1, D3, D7, D14 e D30 após a abordagem inicial.
+                Configure as mensagens de follow-up automático por <strong>tier</strong> da esteira VS Core OS. Os textos são enviados nos dias D1, D3, D7, D14 e D30 após a abordagem inicial. 80% das vendas exigem 5+ follow-ups.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -487,7 +511,7 @@ export default function Configuracoes() {
                 <Badge variant="outline" className="text-xs">Frio</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                Respeita o horário configurado por vertical. Prospect que responde sai automaticamente da cadência.
+                Respeita o horário configurado por tier. Prospect que responde sai automaticamente da cadência.
               </p>
 
               {/* Webhook URL */}
@@ -512,26 +536,23 @@ export default function Configuracoes() {
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : nichosDosProdutos.length === 0 ? (
-            <Card>
-              <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                Nenhuma vertical encontrada. Cadastre produtos com nichos em <strong>Produtos &amp; Serviços</strong>.
-              </CardContent>
-            </Card>
           ) : (
-            nichosDosProdutos.map((nicho) => {
-              const existing = configs?.find((c) => c.nicho === nicho);
+            tiers.map((tier) => {
+              const existing = configs?.find((c) => c.nicho === tier);
               return (
-                <Card key={nicho}>
+                <Card key={tier}>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">{nicho}</CardTitle>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Package className="h-4 w-4 text-primary" />
+                      {tier}
+                    </CardTitle>
                     <CardDescription className="text-xs">
-                      Mensagens de follow-up automático para a vertical <strong>{nicho}</strong>
+                      {TIER_DESCRIPTIONS[tier] ?? "Tier da esteira VS Core OS"}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <form
-                      onSubmit={(e) => handleSaveCadencia(e, nicho, existing as Record<string, unknown> | undefined)}
+                      onSubmit={(e) => handleSaveCadencia(e, tier, existing as Record<string, unknown> | undefined)}
                       className="space-y-4"
                     >
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -588,7 +609,7 @@ export default function Configuracoes() {
                       </div>
 
                       <Button type="submit" disabled={updateConfig.isPending} size="sm">
-                        <Save className="h-4 w-4 mr-2" />Salvar cadência — {nicho}
+                        <Save className="h-4 w-4 mr-2" />Salvar cadência — {tier}
                       </Button>
                     </form>
                   </CardContent>
