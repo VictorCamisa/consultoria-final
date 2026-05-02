@@ -4,25 +4,11 @@
 // Logo VS aplicada em TODOS os slides.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import satori from "https://esm.sh/satori@0.10.13";
-import { Resvg } from "https://esm.sh/@resvg/resvg-wasm@2.6.2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { VS_LOGO_DATA_URL } from "./logo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-// Init Resvg WASM (one-time, módulo-level)
-let resvgReady: Promise<void> | null = null;
-async function initResvg() {
-  if (!resvgReady) {
-    resvgReady = (async () => {
-      const wasm = await fetch("https://esm.sh/@resvg/resvg-wasm@2.6.2/index_bg.wasm").then(r => r.arrayBuffer());
-      const { initWasm } = await import("https://esm.sh/@resvg/resvg-wasm@2.6.2");
-      await initWasm(wasm);
-    })();
-  }
-  return resvgReady;
-}
 
 // Carrega Archivo Black (display) + Barlow Regular (corpo) — fontes leves pra evitar CPU timeout
 type FontEntry = { name: string; data: ArrayBuffer; weight: number; style: "normal" | "italic" };
@@ -113,35 +99,30 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
     // sub do T04 usa "||" e "|" como separadores — não sanitizar aqui
     const sub = ((slide.copy_data?.sub_text as string) ?? "").trim();
 
-    // Paraleliza I/O pesado: imagem + fontes + WASM
+    // Paraleliza I/O pesado: imagem + fontes. O render SVG é rápido; conversão PNG fica no navegador.
     const [bgUrl, fonts] = await Promise.all([
       rawBg ? urlToDataUrl(rawBg) : Promise.resolve(undefined),
       loadFonts(),
-      initResvg(),
     ]);
 
     const element = buildElement(slide.template_id, headline, sub, bgUrl);
     const svg = await satori(element, { width: 1080, height: 1080, fonts });
 
-    const { Resvg: ResvgClass } = await import("https://esm.sh/@resvg/resvg-wasm@2.6.2");
-    const resvg = new ResvgClass(svg, { fitTo: { mode: "width", value: 1080 } });
-    const png = resvg.render().asPng();
-
-    const path = `${slide.post_id}/${slide.id}_final_${Date.now()}.png`;
-    const { error: upErr } = await admin.storage.from("imagery").upload(path, png, {
-      contentType: "image/png", upsert: true,
+    const path = `${slide.post_id}/${slide.id}_final_${Date.now()}.svg`;
+    const { error: upErr } = await admin.storage.from("imagery").upload(path, new Blob([svg], { type: "image/svg+xml" }), {
+      contentType: "image/svg+xml; charset=utf-8", upsert: true,
     });
     if (upErr) throw upErr;
     const { data: urlData } = admin.storage.from("imagery").getPublicUrl(path);
     const finalUrl = urlData.publicUrl;
 
     await admin.from("imagery_slides").update({
-      final_png_url: finalUrl, status: "ready",
+      final_png_url: finalUrl, status: "ready", error_message: null,
     }).eq("id", slide_id);
 
     await admin.from("imagery_logs").insert({
       slide_id, post_id: slide.post_id, step: "compose",
-      provider: "satori", model: "resvg-wasm",
+      provider: "satori", model: "svg-output",
       response_summary: { final_url: finalUrl, template: slide.template_id },
       duracao_ms: Date.now() - t0, success: true,
     });
@@ -152,7 +133,7 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
       status: "failed", error_message: String(e?.message ?? e).slice(0, 500),
     }).eq("id", slide_id);
     await admin.from("imagery_logs").insert({
-      slide_id, step: "compose", provider: "satori", model: "resvg-wasm",
+      slide_id, step: "compose", provider: "satori", model: "svg-output",
       success: false, error_message: String(e?.message ?? e).slice(0, 500),
       duracao_ms: Date.now() - t0,
     });
