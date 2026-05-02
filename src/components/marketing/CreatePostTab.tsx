@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import {
   Sparkles, Loader2, Download, Wand2, ImageIcon, CheckCircle2, AlertTriangle, Layers,
-  Eye, Brain, Palette,
+  Brain, Palette,
 } from "lucide-react";
 import { treatImage, dataUrlToBlob } from "@/lib/imageryTreatment";
 
