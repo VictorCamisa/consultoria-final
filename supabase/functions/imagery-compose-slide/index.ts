@@ -211,7 +211,9 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
   };
 
   // Display heading helper — Poppins Black Italic
-  const display = (text: string, opts: { size?: number; color?: string; lineHeight?: number; letterSpacing?: number; maxWidth?: number; align?: "left" | "center" | "right" } = {}) => ({
+  // CRÍTICO Satori: para text-wrap funcionar, o elemento precisa ter `width` fixo
+  // (maxWidth NÃO quebra texto longo no Satori). Por isso usamos width obrigatório.
+  const display = (text: string, opts: { size?: number; color?: string; lineHeight?: number; letterSpacing?: number; width?: number; align?: "left" | "center" | "right" } = {}) => ({
     type: "div", props: {
       style: {
         fontFamily: "Display", fontWeight: 900, fontStyle: "italic",
@@ -220,9 +222,12 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
         letterSpacing: opts.letterSpacing ?? -2,
         color: opts.color ?? WHITE,
         textTransform: "uppercase",
-        ...(opts.maxWidth ? { maxWidth: opts.maxWidth } : {}),
+        ...(opts.width ? { width: opts.width } : {}),
         ...(opts.align ? { textAlign: opts.align } : {}),
         display: "flex",
+        flexWrap: "wrap" as const,
+        wordBreak: "break-word" as const,
+        overflowWrap: "break-word" as const,
       },
       children: text,
     },
