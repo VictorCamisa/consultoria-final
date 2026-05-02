@@ -234,47 +234,45 @@ export default function Configuracoes() {
 
       <Tabs defaultValue="scripts">
         <TabsList className="w-full flex overflow-x-auto hide-scrollbar">
-          <TabsTrigger value="scripts" className="flex-1 min-w-0 text-xs sm:text-sm">Scripts por Vertical</TabsTrigger>
+          <TabsTrigger value="scripts" className="flex-1 min-w-0 text-xs sm:text-sm">Scripts por Tier</TabsTrigger>
           <TabsTrigger value="whatsapp" className="flex-1 min-w-0 text-xs sm:text-sm">WhatsApp</TabsTrigger>
           <TabsTrigger value="cadencia" className="flex-1 min-w-0 text-xs sm:text-sm">Cadência</TabsTrigger>
           <TabsTrigger value="nichos" className="flex-1 min-w-0 text-xs sm:text-sm">Nichos</TabsTrigger>
         </TabsList>
 
-        {/* ── Scripts por Vertical ── */}
+        {/* ── Scripts por Tier (esteira VS Core OS) ── */}
         <TabsContent value="scripts" className="mt-4 space-y-6">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="py-3 text-xs text-muted-foreground">
+              Scripts e prompt do agente IA são organizados pelos <strong>4 tiers</strong> da esteira
+              VS Core OS (Tools → Departamentos → 360 → Custom). Cada tier tem sua própria abordagem,
+              tom e métricas. Edite por tier — não por nicho de cliente.
+            </CardContent>
+          </Card>
           {loadingProdutos ? (
             <div className="flex justify-center py-12">
               <Loader2 className="animate-spin h-6 w-6 text-muted-foreground" />
             </div>
-          ) : nichosDosProdutos.length === 0 ? (
-            <Card>
-              <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                Nenhum nicho encontrado nos produtos. Cadastre produtos com nichos em{" "}
-                <strong>Produtos &amp; Serviços</strong>.
-              </CardContent>
-            </Card>
           ) : (
-            nichosDosProdutos.map((nicho) => {
-              const existing = configs?.find((c) => c.nicho === nicho);
-              // Produtos vinculados a este nicho
-              const produtosDoNicho = produtos?.filter((p) => p.nichos?.includes(nicho)) ?? [];
+            tiers.map((tier) => {
+              const existing = configs?.find((c) => c.nicho === tier);
+              const produtoDoTier = produtos?.find((p) => p.nome === tier);
 
               return (
-                <Card key={nicho}>
+                <Card key={tier}>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div>
-                        <CardTitle className="text-lg">{nicho}</CardTitle>
-                        {produtosDoNicho.length > 0 && (
-                          <div className="flex gap-1 flex-wrap mt-1.5">
-                            {produtosDoNicho.map((p) => (
-                              <Badge key={p.id} variant="outline" className="text-[10px] gap-1">
-                                <Package className="h-2.5 w-2.5" />
-                                {p.nome}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
+                        <CardTitle className="text-lg flex items-center gap-2">
+                          <Package className="h-4 w-4 text-primary" />
+                          {tier}
+                        </CardTitle>
+                        <CardDescription className="text-xs mt-1">
+                          {TIER_DESCRIPTIONS[tier] ?? "Tier da esteira VS Core OS"}
+                          {produtoDoTier && !produtoDoTier.ativo && (
+                            <Badge variant="outline" className="ml-2 text-[10px]">Inativo</Badge>
+                          )}
+                        </CardDescription>
                       </div>
                       {existing ? (
                         <Badge variant="secondary" className="text-xs">Configurado</Badge>
@@ -285,7 +283,7 @@ export default function Configuracoes() {
                   </CardHeader>
                   <CardContent>
                     <form
-                      onSubmit={(e) => handleSaveScript(e, nicho, existing as Record<string, unknown> | undefined)}
+                      onSubmit={(e) => handleSaveScript(e, tier, existing as Record<string, unknown> | undefined)}
                       className="space-y-4"
                     >
                       <div>
@@ -340,20 +338,20 @@ export default function Configuracoes() {
 
                       <div className="flex gap-2">
                         <Button type="submit" disabled={updateConfig.isPending}>
-                          <Save className="h-4 w-4 mr-2" />Salvar {nicho}
+                          <Save className="h-4 w-4 mr-2" />Salvar {tier}
                         </Button>
                         {existing?.instancia_evolution && (
                           <Button
                             type="button"
                             variant="outline"
-                            disabled={testingEvolution === nicho}
-                            onClick={() => handleTestEvolution(nicho, existing.instancia_evolution as string)}
+                            disabled={testingEvolution === tier}
+                            onClick={() => handleTestEvolution(tier, existing.instancia_evolution as string)}
                           >
-                            {testingEvolution === nicho ? (
+                            {testingEvolution === tier ? (
                               <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            ) : testResults[nicho] === "ok" ? (
+                            ) : testResults[tier] === "ok" ? (
                               <CheckCircle className="h-4 w-4 mr-2 text-green-400" />
-                            ) : testResults[nicho] === "erro" ? (
+                            ) : testResults[tier] === "erro" ? (
                               <XCircle className="h-4 w-4 mr-2 text-destructive" />
                             ) : (
                               <Wifi className="h-4 w-4 mr-2" />
