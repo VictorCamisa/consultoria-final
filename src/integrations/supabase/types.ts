@@ -1473,11 +1473,17 @@ export type Database = {
           categoria: string
           created_at: string | null
           descricao: string | null
+          destaque: boolean
           id: string
           nichos: string[] | null
           nome: string
+          obs: string | null
           ordem: number | null
           preco: number | null
+          preco_fixo: number | null
+          preco_max: number | null
+          preco_min: number | null
+          tier: string | null
           tipo: string
           updated_at: string | null
         }
@@ -1486,11 +1492,17 @@ export type Database = {
           categoria?: string
           created_at?: string | null
           descricao?: string | null
+          destaque?: boolean
           id?: string
           nichos?: string[] | null
           nome: string
+          obs?: string | null
           ordem?: number | null
           preco?: number | null
+          preco_fixo?: number | null
+          preco_max?: number | null
+          preco_min?: number | null
+          tier?: string | null
           tipo?: string
           updated_at?: string | null
         }
@@ -1499,11 +1511,17 @@ export type Database = {
           categoria?: string
           created_at?: string | null
           descricao?: string | null
+          destaque?: boolean
           id?: string
           nichos?: string[] | null
           nome?: string
+          obs?: string | null
           ordem?: number | null
           preco?: number | null
+          preco_fixo?: number | null
+          preco_max?: number | null
+          preco_min?: number | null
+          tier?: string | null
           tipo?: string
           updated_at?: string | null
         }
