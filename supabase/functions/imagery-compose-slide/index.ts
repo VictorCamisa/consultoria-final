@@ -47,6 +47,71 @@ async function loadFonts() {
 const VS_BLUE = "#2E6FCC";
 const VS_BLUE_LIGHT = "#4A8DE0";
 
+async function urlToDataUrl(url: string): Promise<string | undefined> {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return undefined;
+    const ct = r.headers.get("content-type") ?? "image/jpeg";
+    const buf = new Uint8Array(await r.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    return `data:${ct};base64,${btoa(bin)}`;
+  } catch { return undefined; }
+}
+
+async function processSlide(slide_id: string, treated_image_url: string | undefined, t0: number) {
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+  try {
+    const { data: slide } = await admin.from("imagery_slides").select("*").eq("id", slide_id).single();
+    if (!slide) throw new Error("slide não encontrado");
+    await admin.from("imagery_slides").update({ status: "composing" }).eq("id", slide_id);
+
+    const rawBg = treated_image_url ?? slide.treated_image_url ?? slide.raw_image_url ?? undefined;
+    const bgUrl = rawBg ? await urlToDataUrl(rawBg) : undefined;
+    const headline = (slide.copy_data?.headline as string) ?? "";
+    const sub = (slide.copy_data?.sub_text as string) ?? "";
+
+    const fonts = await loadFonts();
+    await initResvg();
+
+    const element = buildElement(slide.template_id, headline, sub, bgUrl);
+    const svg = await satori(element, { width: 1080, height: 1080, fonts });
+
+    const { Resvg: ResvgClass } = await import("https://esm.sh/@resvg/resvg-wasm@2.6.2");
+    const resvg = new ResvgClass(svg, { fitTo: { mode: "width", value: 1080 } });
+    const png = resvg.render().asPng();
+
+    const path = `${slide.post_id}/${slide.id}_final_${Date.now()}.png`;
+    const { error: upErr } = await admin.storage.from("imagery").upload(path, png, {
+      contentType: "image/png", upsert: true,
+    });
+    if (upErr) throw upErr;
+    const { data: urlData } = admin.storage.from("imagery").getPublicUrl(path);
+    const finalUrl = urlData.publicUrl;
+
+    await admin.from("imagery_slides").update({
+      final_png_url: finalUrl, status: "ready",
+    }).eq("id", slide_id);
+
+    await admin.from("imagery_logs").insert({
+      slide_id, post_id: slide.post_id, step: "compose",
+      provider: "satori", model: "resvg-wasm",
+      response_summary: { final_url: finalUrl, template: slide.template_id },
+      duracao_ms: Date.now() - t0, success: true,
+    });
+  } catch (e: any) {
+    console.error("processSlide error:", e);
+    await admin.from("imagery_slides").update({
+      status: "failed", error_message: String(e?.message ?? e).slice(0, 500),
+    }).eq("id", slide_id);
+    await admin.from("imagery_logs").insert({
+      slide_id, step: "compose", provider: "satori", model: "resvg-wasm",
+      success: false, error_message: String(e?.message ?? e).slice(0, 500),
+      duracao_ms: Date.now() - t0,
+    });
+  }
+}
+
 function buildElement(template: string, headline: string, sub: string, bgUrl?: string): any {
   const headlineUpper = headline.toUpperCase();
   const baseStyle = {
@@ -179,47 +244,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
-    const { data: slide } = await admin.from("imagery_slides").select("*").eq("id", slide_id).single();
-    if (!slide) throw new Error("slide não encontrado");
+    // @ts-ignore EdgeRuntime is provided at runtime
+    EdgeRuntime.waitUntil(processSlide(slide_id, treated_image_url, t0));
 
-    await admin.from("imagery_slides").update({ status: "composing" }).eq("id", slide_id);
-
-    const bgUrl = treated_image_url ?? slide.treated_image_url ?? slide.raw_image_url ?? undefined;
-    const headline = (slide.copy_data?.headline as string) ?? "";
-    const sub = (slide.copy_data?.sub_text as string) ?? "";
-
-    const fonts = await loadFonts();
-    await initResvg();
-
-    const element = buildElement(slide.template_id, headline, sub, bgUrl);
-    const svg = await satori(element, { width: 1080, height: 1080, fonts });
-
-    const { Resvg: ResvgClass } = await import("https://esm.sh/@resvg/resvg-wasm@2.6.2");
-    const resvg = new ResvgClass(svg, { fitTo: { mode: "width", value: 1080 } });
-    const png = resvg.render().asPng();
-
-    const path = `${slide.post_id}/${slide.id}_final_${Date.now()}.png`;
-    const { error: upErr } = await admin.storage.from("imagery").upload(path, png, {
-      contentType: "image/png", upsert: true,
-    });
-    if (upErr) throw upErr;
-    const { data: urlData } = admin.storage.from("imagery").getPublicUrl(path);
-    const finalUrl = urlData.publicUrl;
-
-    await admin.from("imagery_slides").update({
-      final_png_url: finalUrl, status: "ready",
-    }).eq("id", slide_id);
-
-    await admin.from("imagery_logs").insert({
-      slide_id, post_id: slide.post_id, step: "compose",
-      provider: "satori", model: "resvg-wasm",
-      response_summary: { final_url: finalUrl, template: slide.template_id },
-      duracao_ms: Date.now() - t0, success: true,
-    });
-
-    return new Response(JSON.stringify({ url: finalUrl }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ accepted: true, slide_id }), {
+      status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
     console.error("imagery-compose-slide error:", e);
