@@ -48,8 +48,8 @@ TEMPLATES DISPONÍVEIS (apenas estes 5 — escolha 1 por slide):
    Use no ÚLTIMO slide SEMPRE. needs_image = true.
 
 DISTRIBUIÇÃO OBRIGATÓRIA:
-- Slide 1: SEMPRE T01_HOOK_BIG_TEXT
-- Último slide: SEMPRE T08_CTA_FINAL
+- Se QUANTIDADE DE SLIDES = 1: gere EXATAMENTE 1 slide, somente T01_HOOK_BIG_TEXT. Não crie CTA separado.
+- Se QUANTIDADE DE SLIDES > 1: Slide 1 SEMPRE T01_HOOK_BIG_TEXT e último slide SEMPRE T08_CTA_FINAL.
 - Slides do meio: misture T02_PROBLEM_STATEMENT, T03_DATA_POINT, T04_LIST conforme o conteúdo
 - Pelo menos 1 T03_DATA_POINT no meio se houver dado quantitativo
 
@@ -92,6 +92,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { tema, nicho, objetivo, tipo = "carrossel", n_slides = 5 } = body;
+    const requestedSlides = Math.max(1, Math.min(8, Number(n_slides) || 1));
     if (!tema || !nicho || !objetivo) {
       return new Response(JSON.stringify({ error: "Faltam campos: tema, nicho, objetivo" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -101,7 +102,7 @@ Deno.serve(async (req) => {
     // Cria post draft
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
     const { data: post, error: postErr } = await admin.from("imagery_posts").insert({
-      user_id: user.id, tipo, tema, nicho, objetivo, n_slides, status: "planning",
+      user_id: user.id, tipo, tema, nicho, objetivo, n_slides: requestedSlides, status: "planning",
     }).select().single();
     if (postErr) throw postErr;
 
@@ -109,7 +110,7 @@ Deno.serve(async (req) => {
 NICHO: ${nicho}
 OBJETIVO: ${objetivo}
 TIPO: ${tipo}
-QUANTIDADE DE SLIDES: ${n_slides}
+QUANTIDADE DE SLIDES: ${requestedSlides}
 
 Gere a estrutura completa.`;
 
