@@ -56,6 +56,24 @@ async function processSlide(slideId: string, needsImage: boolean, authHeader: st
   return { slideId, ok: true, step: "compose", accepted: true };
 }
 
+async function finalizePostIfSettled(admin: any, postId: string) {
+  const { data: slides } = await admin.from("imagery_slides")
+    .select("status").eq("post_id", postId);
+  const total = slides?.length ?? 0;
+  if (!total || !slides!.every((s: any) => ["ready", "failed"].includes(s.status))) return;
+
+  const failed = slides!.filter((s: any) => s.status === "failed").length;
+  const { data: logs } = await admin.from("imagery_logs")
+    .select("custo_usd").eq("post_id", postId);
+  const custoTotal = (logs ?? []).reduce((acc: number, l: any) => acc + Number(l.custo_usd ?? 0), 0);
+
+  await admin.from("imagery_posts").update({
+    status: failed === total ? "failed" : "ready",
+    error_message: failed > 0 ? `${failed}/${total} slides com problema` : null,
+    custo_total_usd: custoTotal,
+  }).eq("id", postId);
+}
+
 async function processPost(postId: string, authHeader: string) {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
   try {
@@ -73,6 +91,8 @@ async function processPost(postId: string, authHeader: string) {
     for (const slide of slides ?? []) {
       await processSlide(slide.id, slide.needs_image, authHeader, admin);
     }
+
+    await finalizePostIfSettled(admin, postId);
 
     await admin.from("imagery_logs").insert({
       post_id: postId,
