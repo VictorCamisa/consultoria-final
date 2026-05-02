@@ -7,6 +7,7 @@ Dark default, Deep Space Blue #050814 + Cyber Orange #FF5300. Poppins Black Ital
 Desktop-only (1280px+). Supabase + Evolution API. Claude Haiku 4.5 (cliente) / Sonnet (interno).
 Victor (técnico) + Danilo (comercial). Nichos dinâmicos via consultoria_nichos + useNichos().
 Sem emoji, bullets em legenda ou jargão ("jornada", "mindset", "alavancar", "destravar").
+Em /configuracoes: Scripts e Cadência são por TIER (Tools/Departamentos/360/Custom), NÃO por nicho de cliente. Nichos = segmento (Estética/Odonto/Advoc/VS AUTO).
 
 ## Memories
 - [VS Core OS](mem://negocio/vs-core-os) — Norte estratégico 2026, métricas de ouro e proibições de discurso
@@ -17,6 +18,7 @@ Sem emoji, bullets em legenda ou jargão ("jornada", "mindset", "alavancar", "de
 - [Rebranding 2026](mem://style/rebranding-2026) — Brutalismo Tech: Cyber Orange #FF5300 + Deep Space Blue #050814, Poppins Black Italic + Montserrat (substitui Barlow no app interno; toggle light disponível)
 - [Fluxo Imersão](mem://funcionalidades/fluxo-imersao-regras) — Formulário 22 campos, mínimo 17 para conclusão
 - [Automação Vendas](mem://funcionalidades/automacao-de-vendas-e-scripts) — Scripts A/B/C, cadência, follow-ups por nicho
+- [Scripts por Tier](mem://funcionalidades/scripts-por-tier) — Configurações organiza scripts/cadência pelos 4 tiers da esteira (não por nicho de cliente)
 - [Agente IA](mem://funcionalidades/agente-ia-monitoramento) — Dashboard de performance e monitoramento de automações
 - [Pipeline Comercial](mem://funcionalidades/pipeline-comercial) — Kanban 11 estágios com filtros avançados
 - [WhatsApp](mem://tecnologia/gestao-de-instancias-whatsapp) — Evolution API internalizada em Configurações
