@@ -212,6 +212,43 @@ export function CreatePostTab() {
     }
   };
 
+  const readyToPublish =
+    post?.status === "ready" &&
+    !!slides?.length &&
+    slides.every((s) => s.final_png_url && s.status === "ready");
+
+  // Inicializa caption quando o post ficar pronto
+  if (post?.copy_data && igCaption === "" && (post as any).ig_status !== "published") {
+    const cd: any = post.copy_data;
+    const base = cd.caption ?? "";
+    const tags = (cd.hashtags ?? []).map((h: string) => `#${h.replace(/^#/, "")}`).join(" ");
+    const initial = `${base}${tags ? "\n\n" + tags : ""}`;
+    if (initial) queueMicrotask(() => setIgCaption(initial));
+  }
+
+  const handlePublishInstagram = async () => {
+    if (!postId) return;
+    if (!igCaption.trim()) return toast.error("Escreva uma legenda");
+    if (!readyToPublish) return toast.error("Aguarde todas as slides ficarem prontas");
+    if (!confirm("Publicar agora no Instagram @vssolucoes_?")) return;
+    setIgPublishing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("imagery-publish-instagram", {
+        body: { post_id: postId, caption: igCaption },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast.success("Post publicado no Instagram!");
+      qc.invalidateQueries({ queryKey: ["imagery-post", postId] });
+      qc.invalidateQueries({ queryKey: ["imagery-history"] });
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message ?? "Erro ao publicar");
+    } finally {
+      setIgPublishing(false);
+    }
+  };
+
   const planReady = post?.status === "draft" || post?.status === "ready" || post?.status === "generating";
   const totalUsd = Number(post?.custo_total_usd ?? 0);
   const isPipelineRunning = post?.status === "generating";
