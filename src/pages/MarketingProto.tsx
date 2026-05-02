@@ -5,6 +5,7 @@ import bgAction from "@/assets/proto/bg-action.jpg";
 import bgPhone from "@/assets/proto/bg-phone.jpg";
 import bgDecision from "@/assets/proto/bg-decision.jpg";
 import bgClock from "@/assets/proto/bg-clock.jpg";
+import vsLogo from "@/assets/vs-logo-light.png";
 
 // Protótipo estático — carrossel V4/G4 brutalista
 // Renderiza 5 slides 1080x1080 (escalados pra caber na tela) lado a lado
@@ -12,6 +13,33 @@ import bgClock from "@/assets/proto/bg-clock.jpg";
 // Sem IA, sem fetch, sem nada dinâmico. Só HTML/CSS pra você julgar.
 
 const SLIDE_SIZE = 540; // 1080 / 2 — preview
+
+// Logo VS marca d'água — usada em todos os slides
+function BrandMark({
+  position = "bottom-right",
+  size = 36,
+  opacity = 0.85,
+}: {
+  position?: "bottom-right" | "bottom-left" | "top-right";
+  size?: number;
+  opacity?: number;
+}) {
+  const pos =
+    position === "bottom-right"
+      ? "bottom-5 right-5"
+      : position === "bottom-left"
+      ? "bottom-5 left-5"
+      : "top-5 right-5";
+  return (
+    <img
+      src={vsLogo}
+      alt="VS"
+      className={`absolute ${pos} z-20 pointer-events-none select-none`}
+      style={{ height: size, width: "auto", opacity }}
+      draggable={false}
+    />
+  );
+}
 
 function SlideShell({
   children,
@@ -78,10 +106,10 @@ function Slide1() {
         </h1>
       </div>
 
-      <div className="absolute bottom-5 left-8 right-8 flex items-center justify-between z-10">
-        <span className="font-mono text-[10px] tracking-[0.3em] text-white/50">@VSSOLUCOES</span>
+      <div className="absolute bottom-5 left-8 z-10">
         <span className="font-mono text-[10px] tracking-[0.3em] text-white/60">ARRASTE →</span>
       </div>
+      <BrandMark position="bottom-right" size={32} opacity={0.9} />
     </SlideShell>
   );
 }
@@ -128,8 +156,9 @@ function Slide2() {
           </p>
         </div>
 
-        <div className="font-mono text-[9px] tracking-[0.3em] text-white/30">@VSSOLUCOES</div>
+        <div className="h-8" />
       </div>
+      <BrandMark position="bottom-right" size={32} opacity={0.9} />
     </SlideShell>
   );
 }
@@ -152,6 +181,9 @@ function Slide3() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/70" />
         <div className="absolute bottom-5 left-5 font-mono text-[9px] tracking-[0.3em] text-white/70 uppercase">
           // tempo perdido
+        </div>
+        <div className="absolute bottom-12 left-5 font-mono text-[8px] tracking-[0.3em] text-white/40">
+          VS · 2025 · n=312
         </div>
       </div>
 
@@ -180,10 +212,10 @@ function Slide3() {
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="font-mono text-[9px] tracking-[0.3em] text-white/30">@VSSOLUCOES</span>
-          <span className="font-mono text-[8px] tracking-[0.3em] text-white/30">VS · 2025 · n=312</span>
+          <div className="h-8" />
         </div>
       </div>
+      <BrandMark position="bottom-right" size={32} opacity={0.9} />
     </SlideShell>
   );
 }
@@ -247,9 +279,7 @@ function Slide4() {
         ))}
       </div>
 
-      <div className="absolute bottom-4 left-8 font-mono text-[9px] tracking-[0.3em] text-white/30 z-10">
-        @VSSOLUCOES
-      </div>
+      <BrandMark position="bottom-right" size={32} opacity={0.85} />
     </SlideShell>
   );
 }
@@ -295,9 +325,13 @@ function Slide5() {
         >
           → vendasdesolucoes.com
         </span>
-        <span className="font-mono text-[10px] tracking-[0.3em] text-black font-bold">
-          @VSSOLUCOES
-        </span>
+        <img
+          src={vsLogo}
+          alt="VS"
+          className="h-7 w-auto select-none pointer-events-none"
+          style={{ filter: "brightness(0)" }}
+          draggable={false}
+        />
       </div>
     </SlideShell>
   );
