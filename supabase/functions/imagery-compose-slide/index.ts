@@ -60,11 +60,31 @@ async function urlToDataUrl(url: string): Promise<string | undefined> {
   } catch { return undefined; }
 }
 
+async function finalizePostIfDone(admin: any, postId: string) {
+  const { data: slides } = await admin.from("imagery_slides")
+    .select("status").eq("post_id", postId);
+  const total = slides?.length ?? 0;
+  if (!total || !slides!.every((s: any) => ["ready", "failed"].includes(s.status))) return;
+
+  const failed = slides!.filter((s: any) => s.status === "failed").length;
+  const { data: logs } = await admin.from("imagery_logs")
+    .select("custo_usd").eq("post_id", postId);
+  const custoTotal = (logs ?? []).reduce((acc: number, l: any) => acc + Number(l.custo_usd ?? 0), 0);
+
+  await admin.from("imagery_posts").update({
+    status: failed === total ? "failed" : "ready",
+    error_message: failed > 0 ? `${failed}/${total} slides com problema` : null,
+    custo_total_usd: custoTotal,
+  }).eq("id", postId);
+}
+
 async function processSlide(slide_id: string, treated_image_url: string | undefined, t0: number) {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+  let postId: string | undefined;
   try {
     const { data: slide } = await admin.from("imagery_slides").select("*").eq("id", slide_id).single();
     if (!slide) throw new Error("slide não encontrado");
+    postId = slide.post_id;
     await admin.from("imagery_slides").update({ status: "composing" }).eq("id", slide_id);
 
     const rawBg = treated_image_url ?? slide.treated_image_url ?? slide.raw_image_url ?? undefined;
@@ -100,6 +120,7 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
       response_summary: { final_url: finalUrl, template: slide.template_id },
       duracao_ms: Date.now() - t0, success: true,
     });
+    await finalizePostIfDone(admin, slide.post_id);
   } catch (e: any) {
     console.error("processSlide error:", e);
     await admin.from("imagery_slides").update({
@@ -110,6 +131,7 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
       success: false, error_message: String(e?.message ?? e).slice(0, 500),
       duracao_ms: Date.now() - t0,
     });
+    if (postId) await finalizePostIfDone(admin, postId);
   }
 }
 
