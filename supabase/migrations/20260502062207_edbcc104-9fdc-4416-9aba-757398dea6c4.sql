@@ -1,0 +1,2 @@
+UPDATE imagery_slides SET status='failed', error_message='Reset: CPU timeout no compose anterior' WHERE status IN ('composing','queued','generating','pending');
+UPDATE imagery_posts SET status='failed', error_message='Reset por CPU timeout. Crie um post novo.' WHERE status IN ('generating','planning','draft');
