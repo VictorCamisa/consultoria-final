@@ -279,9 +279,7 @@ function Slide4() {
         ))}
       </div>
 
-      <div className="absolute bottom-4 left-8 font-mono text-[9px] tracking-[0.3em] text-white/30 z-10">
-        @VSSOLUCOES
-      </div>
+      <BrandMark position="bottom-right" size={32} opacity={0.85} />
     </SlideShell>
   );
 }
@@ -327,9 +325,13 @@ function Slide5() {
         >
           → vendasdesolucoes.com
         </span>
-        <span className="font-mono text-[10px] tracking-[0.3em] text-black font-bold">
-          @VSSOLUCOES
-        </span>
+        <img
+          src={vsLogo}
+          alt="VS"
+          className="h-7 w-auto select-none pointer-events-none"
+          style={{ filter: "brightness(0)" }}
+          draggable={false}
+        />
       </div>
     </SlideShell>
   );
