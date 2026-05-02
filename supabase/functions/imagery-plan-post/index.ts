@@ -175,8 +175,23 @@ Gere a estrutura completa.`;
     if (!toolCall) throw new Error("AI não retornou tool_call");
     const plan = JSON.parse(toolCall.function.arguments);
 
+    let normalizedSlides = Array.isArray(plan.slides) ? plan.slides.slice(0, requestedSlides) : [];
+    if (normalizedSlides.length === 0) throw new Error("Planner não retornou slides");
+    normalizedSlides = normalizedSlides.map((s: any, idx: number) => ({
+      ...s,
+      slide_n: idx + 1,
+      template_id: requestedSlides === 1
+        ? "T01_HOOK_BIG_TEXT"
+        : idx === 0
+          ? "T01_HOOK_BIG_TEXT"
+          : idx === requestedSlides - 1
+            ? "T08_CTA_FINAL"
+            : s.template_id,
+      needs_image: true,
+    }));
+
     // Salva slides
-    const slidesRows = plan.slides.map((s: any) => ({
+    const slidesRows = normalizedSlides.map((s: any) => ({
       post_id: post.id,
       slide_n: s.slide_n,
       template_id: s.template_id,
@@ -196,11 +211,11 @@ Gere a estrutura completa.`;
 
     await admin.from("imagery_logs").insert({
       post_id: post.id, step: "plan", provider: "lovable", model: "google/gemini-2.5-pro",
-      prompt_excerpt: userPrompt.slice(0, 500), response_summary: { n_slides: plan.slides.length },
+      prompt_excerpt: userPrompt.slice(0, 500), response_summary: { n_slides: normalizedSlides.length, requested_slides: requestedSlides },
       duracao_ms: Date.now() - t0, success: true,
     });
 
-    return new Response(JSON.stringify({ post_id: post.id, plan }), {
+    return new Response(JSON.stringify({ post_id: post.id, plan: { ...plan, slides: normalizedSlides } }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
