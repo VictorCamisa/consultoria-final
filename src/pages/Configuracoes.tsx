@@ -496,7 +496,7 @@ export default function Configuracoes() {
             <CardHeader>
               <CardTitle className="text-lg">Sequência de Cadência</CardTitle>
               <CardDescription>
-                Configure as mensagens de follow-up automático por vertical. Os textos são enviados nos dias D1, D3, D7, D14 e D30 após a abordagem inicial.
+                Configure as mensagens de follow-up automático por <strong>tier</strong> da esteira VS Core OS. Os textos são enviados nos dias D1, D3, D7, D14 e D30 após a abordagem inicial. 80% das vendas exigem 5+ follow-ups.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -511,7 +511,7 @@ export default function Configuracoes() {
                 <Badge variant="outline" className="text-xs">Frio</Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                Respeita o horário configurado por vertical. Prospect que responde sai automaticamente da cadência.
+                Respeita o horário configurado por tier. Prospect que responde sai automaticamente da cadência.
               </p>
 
               {/* Webhook URL */}
@@ -536,26 +536,23 @@ export default function Configuracoes() {
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
-          ) : nichosDosProdutos.length === 0 ? (
-            <Card>
-              <CardContent className="py-10 text-center text-sm text-muted-foreground">
-                Nenhuma vertical encontrada. Cadastre produtos com nichos em <strong>Produtos &amp; Serviços</strong>.
-              </CardContent>
-            </Card>
           ) : (
-            nichosDosProdutos.map((nicho) => {
-              const existing = configs?.find((c) => c.nicho === nicho);
+            tiers.map((tier) => {
+              const existing = configs?.find((c) => c.nicho === tier);
               return (
-                <Card key={nicho}>
+                <Card key={tier}>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">{nicho}</CardTitle>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Package className="h-4 w-4 text-primary" />
+                      {tier}
+                    </CardTitle>
                     <CardDescription className="text-xs">
-                      Mensagens de follow-up automático para a vertical <strong>{nicho}</strong>
+                      {TIER_DESCRIPTIONS[tier] ?? "Tier da esteira VS Core OS"}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <form
-                      onSubmit={(e) => handleSaveCadencia(e, nicho, existing as Record<string, unknown> | undefined)}
+                      onSubmit={(e) => handleSaveCadencia(e, tier, existing as Record<string, unknown> | undefined)}
                       className="space-y-4"
                     >
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -612,7 +609,7 @@ export default function Configuracoes() {
                       </div>
 
                       <Button type="submit" disabled={updateConfig.isPending} size="sm">
-                        <Save className="h-4 w-4 mr-2" />Salvar cadência — {nicho}
+                        <Save className="h-4 w-4 mr-2" />Salvar cadência — {tier}
                       </Button>
                     </form>
                   </CardContent>
