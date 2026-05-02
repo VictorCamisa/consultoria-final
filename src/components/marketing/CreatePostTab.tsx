@@ -49,6 +49,19 @@ const QUICK_THEMES = [
   "O CRM morreu. O que vem depois.",
 ];
 
+const VS_PRODUCTS = [
+  "VS Sales",
+  "VS Marketing",
+  "VS Atendimento",
+  "VS Financeiro",
+  "VS RH",
+  "VS Operações",
+  "VS Departamentos",
+  "VS 360",
+  "VS Custom",
+  "VS AUTO",
+];
+
 export function CreatePostTab() {
   const qc = useQueryClient();
   const [tema, setTema] = useState("");
