@@ -26,9 +26,16 @@ async function initResvg() {
 let fontsCache: { name: string; data: ArrayBuffer; weight: number; style: "normal" }[] | null = null;
 async function loadFonts() {
   if (fontsCache) return fontsCache;
+  async function fetchFont(url: string): Promise<ArrayBuffer> {
+    const r = await fetch(url, { redirect: "follow" });
+    if (!r.ok) throw new Error(`font fetch ${url} -> ${r.status}`);
+    const ct = r.headers.get("content-type") ?? "";
+    if (ct.includes("html")) throw new Error(`font fetch returned HTML: ${url}`);
+    return await r.arrayBuffer();
+  }
   const [bold, regular] = await Promise.all([
-    fetch("https://fonts.gstatic.com/s/barlowcondensed/v12/HTxwL3I-JCGChYJ8VI-L6OO_au7B6xPTxg.ttf").then(r => r.arrayBuffer()),
-    fetch("https://fonts.gstatic.com/s/barlow/v12/7cHpv4kjgoGqM7E_DMs5.ttf").then(r => r.arrayBuffer()),
+    fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/barlowcondensed/BarlowCondensed-Bold.ttf"),
+    fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/barlow/Barlow-Regular.ttf"),
   ]);
   fontsCache = [
     { name: "Barlow Condensed", data: bold, weight: 700, style: "normal" },
