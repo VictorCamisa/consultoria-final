@@ -214,7 +214,7 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
   const display = (text: string, opts: { size?: number; color?: string; lineHeight?: number; letterSpacing?: number; maxWidth?: number; align?: "left" | "center" | "right" } = {}) => ({
     type: "div", props: {
       style: {
-        fontFamily: "Poppins", fontWeight: 900, fontStyle: "italic",
+        fontFamily: "Display", fontWeight: 900, fontStyle: "italic",
         fontSize: opts.size ?? 110,
         lineHeight: opts.lineHeight ?? 0.88,
         letterSpacing: opts.letterSpacing ?? -2,
@@ -413,7 +413,7 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
                 key: idx,
                 style: { display: "flex", flexDirection: "row", alignItems: "flex-start", gap: 36, paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.12)" },
                 children: [
-                  { type: "div", props: { style: { fontFamily: "Poppins", fontWeight: 900, fontStyle: "italic", fontSize: 92, color: ORANGE, lineHeight: 0.85, display: "flex", minWidth: 140 }, children: it.n } },
+                  { type: "div", props: { style: { fontFamily: "Display", fontWeight: 900, fontStyle: "italic", fontSize: 92, color: ORANGE, lineHeight: 0.85, display: "flex", minWidth: 140 }, children: it.n } },
                   { type: "div", props: {
                     style: { display: "flex", flexDirection: "column", gap: 6, flex: 1 },
                     children: [
@@ -462,7 +462,7 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
           { type: "div", props: {
             style: { position: "absolute", bottom: 0, left: 0, width: 1080, height: 100, background: ORANGE, display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: "0 64px" },
             children: [
-              { type: "div", props: { style: { fontFamily: "Poppins", fontWeight: 900, fontStyle: "italic", fontSize: 32, color: BLACK, textTransform: "uppercase", letterSpacing: -1, display: "flex" }, children: "→ VENDASDESOLUCOES.COM" } },
+              { type: "div", props: { style: { fontFamily: "Display", fontWeight: 900, fontStyle: "italic", fontSize: 32, color: BLACK, textTransform: "uppercase", letterSpacing: -1, display: "flex" }, children: "→ VENDASDESOLUCOES.COM" } },
               { type: "img", props: { src: VS_LOGO_DATA_URL, style: { height: 56, width: "auto", filter: "brightness(0)" } } },
             ],
           } },
