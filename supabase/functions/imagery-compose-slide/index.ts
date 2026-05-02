@@ -1,6 +1,7 @@
-// Imagery Engine — Compose
-// Recebe { slide_id, treated_image_url? } → renderiza template via Satori → SVG → PNG via Resvg.
-// Salva como final_png_url.
+// Imagery Engine — Compose (v2 · padrão V4/G4 brutalista aprovado)
+// 5 templates: HOOK, SPLIT, DATA_SPLIT, LIST, CTA_HOOK
+// Tipografia: Poppins Black Italic (display) + Barlow Regular (corpo/markers)
+// Logo VS aplicada em TODOS os slides.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import satori from "https://esm.sh/satori@0.10.13";
 import { Resvg } from "https://esm.sh/@resvg/resvg-wasm@2.6.2";
@@ -23,8 +24,9 @@ async function initResvg() {
   return resvgReady;
 }
 
-// Carrega Barlow Condensed Bold + Barlow Regular
-let fontsCache: { name: string; data: ArrayBuffer; weight: number; style: "normal" }[] | null = null;
+// Carrega Poppins Black Italic (display) + Barlow Regular (corpo)
+type FontEntry = { name: string; data: ArrayBuffer; weight: number; style: "normal" | "italic" };
+let fontsCache: FontEntry[] | null = null;
 async function loadFonts() {
   if (fontsCache) return fontsCache;
   async function fetchFont(url: string): Promise<ArrayBuffer> {
@@ -34,22 +36,29 @@ async function loadFonts() {
     if (ct.includes("html")) throw new Error(`font fetch returned HTML: ${url}`);
     return await r.arrayBuffer();
   }
-  const [bold, regular] = await Promise.all([
-    fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/barlowcondensed/BarlowCondensed-Bold.ttf"),
+  const [poppinsBlackItalic, poppinsBlack, barlowRegular, barlowBold] = await Promise.all([
+    fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/poppins/Poppins-BlackItalic.ttf"),
+    fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/poppins/Poppins-Black.ttf"),
     fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/barlow/Barlow-Regular.ttf"),
+    fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/barlow/Barlow-Bold.ttf"),
   ]);
   fontsCache = [
-    { name: "Barlow Condensed", data: bold, weight: 700, style: "normal" },
-    { name: "Barlow", data: regular, weight: 400, style: "normal" },
+    { name: "Poppins", data: poppinsBlackItalic, weight: 900, style: "italic" },
+    { name: "Poppins", data: poppinsBlack, weight: 900, style: "normal" },
+    { name: "Barlow", data: barlowRegular, weight: 400, style: "normal" },
+    { name: "Barlow", data: barlowBold, weight: 700, style: "normal" },
   ];
   return fontsCache;
 }
 
-const VS_BLUE = "#2E6FCC";
-const VS_BLUE_LIGHT = "#4A8DE0";
-const BLACK = "#0A0A0A";
-const WHITE = "#FAFAFA";
-const RED_PROBLEM = "#7A1F1F";
+// Paleta Tech Fusion 2026
+const ORANGE = "#FF5300";
+const BLACK = "#050814";   // Deep Space Blue
+const NEAR_BLACK = "#0A0A0A";
+const WHITE = "#FFFFFF";
+const WHITE_60 = "rgba(255,255,255,0.6)";
+const WHITE_40 = "rgba(255,255,255,0.4)";
+const WHITE_30 = "rgba(255,255,255,0.3)";
 
 async function urlToDataUrl(url: string): Promise<string | undefined> {
   try {
@@ -143,245 +152,316 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
   const baseStyle = {
     width: 1080, height: 1080,
     display: "flex", flexDirection: "column" as const,
-    fontFamily: "Barlow Condensed",
+    fontFamily: "Barlow",
     color: WHITE, position: "relative" as const,
   };
 
-  // Helpers
-  const handleEl = (color = "rgba(255,255,255,0.55)") => ({
+  // ─── Helpers visuais ───
+  // Marker editorial estilo "// texto" (substitui font-mono que Satori não tem)
+  const marker = (text: string, opts: { color?: string; size?: number; top?: number; left?: number; right?: number; bottom?: number } = {}) => {
+    const pos: any = { position: "absolute" };
+    if (opts.top !== undefined) pos.top = opts.top;
+    if (opts.left !== undefined) pos.left = opts.left;
+    if (opts.right !== undefined) pos.right = opts.right;
+    if (opts.bottom !== undefined) pos.bottom = opts.bottom;
+    return {
+      type: "div", props: {
+        style: {
+          ...pos, fontFamily: "Barlow", fontWeight: 700,
+          fontSize: opts.size ?? 18, color: opts.color ?? WHITE_60,
+          letterSpacing: 4, textTransform: "uppercase", display: "flex",
+        },
+        children: text,
+      },
+    };
+  };
+
+  // Logo VS — canto inferior direito por padrão
+  const brandLogo = (opts: { size?: number; bottom?: number; right?: number; top?: number; left?: number; opacity?: number; tint?: "white" | "black" } = {}) => {
+    const pos: any = { position: "absolute" };
+    pos.bottom = opts.bottom ?? 50;
+    if (opts.right !== undefined) pos.right = opts.right;
+    else if (opts.left !== undefined) pos.left = opts.left;
+    else pos.right = 50;
+    if (opts.top !== undefined) { pos.top = opts.top; delete pos.bottom; }
+    return {
+      type: "img", props: {
+        src: VS_LOGO_DATA_URL,
+        style: {
+          ...pos,
+          height: opts.size ?? 56, width: "auto",
+          opacity: opts.opacity ?? 0.9,
+          ...(opts.tint === "black" ? { filter: "brightness(0)" } : {}),
+        },
+      },
+    };
+  };
+
+  // Display heading helper — Poppins Black Italic
+  const display = (text: string, opts: { size?: number; color?: string; lineHeight?: number; letterSpacing?: number; maxWidth?: number; align?: "left" | "center" | "right" } = {}) => ({
     type: "div", props: {
       style: {
-        position: "absolute", bottom: 56, right: 64,
-        fontFamily: "Barlow", fontSize: 20, color, letterSpacing: 1, display: "flex",
+        fontFamily: "Poppins", fontWeight: 900, fontStyle: "italic",
+        fontSize: opts.size ?? 110,
+        lineHeight: opts.lineHeight ?? 0.88,
+        letterSpacing: opts.letterSpacing ?? -2,
+        color: opts.color ?? WHITE,
+        textTransform: "uppercase",
+        ...(opts.maxWidth ? { maxWidth: opts.maxWidth } : {}),
+        ...(opts.align ? { textAlign: opts.align } : {}),
+        display: "flex",
       },
-      children: "@VSSOLUCOES_",
+      children: text,
     },
   });
 
-  const logoEl = (top = 56, left = 64, height = 44) => ({
+  // Image with B&W treatment
+  const bwImage = (src: string, style: any = {}) => ({
     type: "img", props: {
-      src: VS_LOGO_DATA_URL,
-      style: { position: "absolute", top, left, height, width: "auto" },
+      src,
+      style: {
+        objectFit: "cover",
+        filter: "grayscale(100%) contrast(125%)",
+        ...style,
+      },
     },
   });
 
-  // ===== T01 — CAPA HOOK GIGANTE =====
+  // ============================================================
+  // T01_HOOK — Foto P&B fullbleed + headline gigante embaixo
+  // ============================================================
   if (template === "T01_HOOK_BIG_TEXT") {
     const hasBg = !!bgUrl;
     return {
       type: "div", props: {
         style: { ...baseStyle, background: BLACK },
         children: [
-          hasBg ? { type: "img", props: { src: bgUrl!, style: { position: "absolute", inset: 0, width: 1080, height: 1080, objectFit: "cover", filter: "grayscale(100%) contrast(140%) brightness(70%)" } } } : null,
-          hasBg ? { type: "div", props: { style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex" } } } : null,
-          // Barra azul VS no topo
-          { type: "div", props: { style: { position: "absolute", top: 0, left: 0, width: 1080, height: 12, background: VS_BLUE, display: "flex" } } },
-          logoEl(56, 64, 40),
-          // Headline gigante centro-esquerda
+          hasBg ? bwImage(bgUrl!, {
+            position: "absolute", inset: 0, width: 1080, height: 1080,
+            filter: "grayscale(100%) contrast(125%) brightness(75%)",
+          }) : null,
+          // Gradient overlay escurecendo embaixo (legibilidade)
+          { type: "div", props: { style: { position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.25) 100%)", display: "flex" } } },
+          // Barra superior laranja
+          { type: "div", props: { style: { position: "absolute", top: 0, left: 0, width: 1080, height: 14, background: ORANGE, display: "flex" } } },
+          // Markers topo
+          marker("01", { top: 56, left: 64, color: WHITE_60 }),
+          marker("VS · MANIFESTO", { top: 56, right: 64, color: ORANGE }),
+          // Bloco headline embaixo
           { type: "div", props: {
-            style: { position: "absolute", inset: 0, padding: "180px 64px 180px 64px", display: "flex", alignItems: "center" },
-            children: { type: "div", props: {
-              style: {
-                fontFamily: "Barlow Condensed", fontWeight: 700,
-                fontSize: headlineUpper.length > 30 ? 180 : 220,
-                lineHeight: 0.88, letterSpacing: -4,
-                color: WHITE, textTransform: "uppercase", display: "flex",
-              },
-              children: headlineUpper,
-            } },
+            style: { position: "absolute", bottom: 110, left: 64, right: 64, display: "flex", flexDirection: "column", gap: 24 },
+            children: [
+              marker("// O QUE NINGUÉM TE CONTA", { color: ORANGE, size: 18 } as any),
+              display(headlineUpper, { size: headlineUpper.length > 30 ? 130 : 160, lineHeight: 0.86, maxWidth: 980 }),
+            ],
           } },
-          // Faixa inferior @handle
-          { type: "div", props: { style: { position: "absolute", bottom: 0, left: 0, right: 0, height: 80, background: BLACK, borderTop: `2px solid ${VS_BLUE}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 64px" } }, children: undefined },
-          { type: "div", props: { style: { position: "absolute", bottom: 28, left: 64, fontFamily: "Barlow", fontSize: 22, color: WHITE, letterSpacing: 2, display: "flex" }, children: "ARRASTE →" } },
-          handleEl(WHITE),
+          marker("ARRASTE →", { bottom: 50, left: 64, color: WHITE_60 }),
+          brandLogo({ bottom: 40, right: 50, size: 56 }),
         ].filter(Boolean),
       },
     };
   }
 
-  // ===== T03 — DATA POINT (NÚMERO GIGANTE) =====
-  if (template === "T03_DATA_POINT") {
+  // ============================================================
+  // T02_SPLIT — Split 55/45 foto P&B esquerda + texto direita
+  // ============================================================
+  if (template === "T02_PROBLEM_STATEMENT") {
+    const hasBg = !!bgUrl;
     return {
       type: "div", props: {
-        style: { ...baseStyle, background: BLACK },
+        style: { ...baseStyle, background: NEAR_BLACK, flexDirection: "row" },
         children: [
-          logoEl(56, 64, 36),
-          { type: "div", props: { style: { position: "absolute", top: 56, right: 64, fontFamily: "Barlow", fontSize: 18, color: VS_BLUE_LIGHT, letterSpacing: 3, display: "flex" }, children: "// DADO" } },
+          // Lado esquerdo: foto P&B (55%)
           { type: "div", props: {
-            style: { position: "absolute", inset: 0, padding: 64, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "flex-start", gap: 32 },
+            style: { position: "absolute", top: 0, left: 0, width: 594, height: 1080, display: "flex" },
+            children: [
+              hasBg ? bwImage(bgUrl!, { position: "absolute", inset: 0, width: 594, height: 1080 }) : null,
+              { type: "div", props: { style: { position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(0,0,0,0.3) 0%, transparent 50%, rgba(0,0,0,0.7) 100%)", display: "flex" } } },
+              marker("CENA", { bottom: 50, left: 50, color: WHITE_60, size: 16 }),
+            ].filter(Boolean),
+          } },
+          // Lado direito: texto (45%)
+          { type: "div", props: {
+            style: { position: "absolute", top: 0, right: 0, width: 486, height: 1080, padding: 56, display: "flex", flexDirection: "column", justifyContent: "space-between" },
+            children: [
+              marker("// DIAGNÓSTICO", { color: ORANGE, size: 18, top: 56, right: 56 } as any),
+              { type: "div", props: {
+                style: { display: "flex", flexDirection: "column", gap: 24, marginTop: 100 },
+                children: [
+                  display(headlineUpper, { size: headlineUpper.length > 18 ? 90 : 110, lineHeight: 0.85, maxWidth: 420 }),
+                  sub ? { type: "div", props: {
+                    style: { fontFamily: "Barlow", fontWeight: 400, fontSize: 26, color: WHITE_60, lineHeight: 1.25, maxWidth: 380, marginTop: 16, display: "flex" },
+                    children: sub,
+                  } } : null,
+                ].filter(Boolean),
+              } },
+              { type: "div", props: { style: { display: "flex", height: 1 } } },
+            ],
+          } },
+          brandLogo({ bottom: 40, right: 50, size: 52 }),
+        ].filter(Boolean),
+      },
+    };
+  }
+
+  // ============================================================
+  // T03_DATA_SPLIT — Split 50/50: foto esquerda + número GIGANTE direita
+  // ============================================================
+  if (template === "T03_DATA_POINT") {
+    const hasBg = !!bgUrl;
+    // Headline esperado: "73%" ou "3X" etc
+    return {
+      type: "div", props: {
+        style: { ...baseStyle, background: BLACK, flexDirection: "row" },
+        children: [
+          // Esquerda: foto P&B
+          { type: "div", props: {
+            style: { position: "absolute", top: 0, left: 0, width: 540, height: 1080, display: "flex" },
+            children: [
+              hasBg ? bwImage(bgUrl!, { position: "absolute", inset: 0, width: 540, height: 1080 }) : null,
+              { type: "div", props: { style: { position: "absolute", inset: 0, background: "linear-gradient(90deg, rgba(0,0,0,0.2) 0%, transparent 40%, rgba(0,0,0,0.7) 100%)", display: "flex" } } },
+              marker("// TEMPO PERDIDO", { bottom: 50, left: 40, color: WHITE_60, size: 16 } as any),
+            ].filter(Boolean),
+          } },
+          // Direita: número heroico
+          { type: "div", props: {
+            style: { position: "absolute", top: 0, right: 0, width: 540, height: 1080, padding: 56, display: "flex", flexDirection: "column", justifyContent: "space-between", background: BLACK },
             children: [
               { type: "div", props: {
-                style: {
-                  fontFamily: "Barlow Condensed", fontWeight: 700,
-                  fontSize: headlineUpper.length > 4 ? 360 : 480,
-                  lineHeight: 0.85, letterSpacing: -10, color: VS_BLUE_LIGHT, display: "flex",
-                },
-                children: headlineUpper,
+                style: { display: "flex", justifyContent: "space-between", width: "100%" },
+                children: [
+                  marker("03", { color: WHITE_60, size: 18 }),
+                  marker("DADO", { color: ORANGE, size: 18 }),
+                ],
               } },
-              sub ? { type: "div", props: {
-                style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 48, color: WHITE, textTransform: "uppercase", maxWidth: 900, lineHeight: 1.05, display: "flex", borderLeft: `6px solid ${VS_BLUE}`, paddingLeft: 24 },
-                children: sub.toUpperCase(),
-              } } : null,
-            ].filter(Boolean),
+              { type: "div", props: {
+                style: { display: "flex", flexDirection: "column", gap: 20 },
+                children: [
+                  display(headlineUpper, { size: headlineUpper.length <= 4 ? 280 : 200, color: ORANGE, lineHeight: 0.78, letterSpacing: -8 }),
+                  { type: "div", props: { style: { width: 80, height: 4, background: ORANGE, display: "flex" } } },
+                  sub ? display(sub.toUpperCase(), { size: 28, lineHeight: 1.0, maxWidth: 420 }) : null,
+                ].filter(Boolean),
+              } },
+              { type: "div", props: { style: { display: "flex", height: 60 } } },
+            ],
           } },
-          handleEl(),
+          brandLogo({ bottom: 40, right: 50, size: 50 }),
         ].filter(Boolean),
       },
     };
   }
 
-  // ===== T04 — BEFORE/AFTER (SPLIT) =====
-  if (template === "T04_BEFORE_AFTER") {
-    // headline esperado: "antes | depois" ou usa fallback
-    const parts = headline.includes("|") ? headline.split("|") : ["ANTES", "DEPOIS"];
-    const left = (parts[0] ?? "ANTES").trim().toUpperCase();
-    const right = (parts[1] ?? "DEPOIS").trim().toUpperCase();
+  // ============================================================
+  // T04_LIST — Lista numerada brutal (3 itens) + foto lateral sutil
+  // headline = título da seção; sub = JSON serializado dos itens OU
+  // formato pipe: "01|título 1|sub 1||02|título 2|sub 2||03|título 3|sub 3"
+  // ============================================================
+  if (template === "T05_PROCESS_STEP" || template === "T04_LIST") {
+    const hasBg = !!bgUrl;
+    let items: { n: string; t: string; s: string }[] = [];
+    if (sub && sub.includes("||")) {
+      items = sub.split("||").map(group => {
+        const [n, t, s] = group.split("|").map(x => x?.trim() ?? "");
+        return { n: n || "", t: t || "", s: s || "" };
+      }).filter(it => it.t).slice(0, 3);
+    }
+    if (items.length === 0) {
+      // Fallback: usa o headline como título único
+      items = [
+        { n: "01", t: "Atende em 30s", s: "IA conectada ao WhatsApp" },
+        { n: "02", t: "Qualifica sozinha", s: "Score automático" },
+        { n: "03", t: "Entrega o lead pronto", s: "Você só fecha" },
+      ];
+    }
     return {
       type: "div", props: {
-        style: { ...baseStyle, flexDirection: "row", background: BLACK },
+        style: { ...baseStyle, background: NEAR_BLACK },
         children: [
-          // LEFT — problema
-          { type: "div", props: {
-            style: { width: 540, height: 1080, background: "#1A1A1A", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: 48, position: "relative" },
+          // Coluna lateral direita com foto sutil (30%)
+          hasBg ? { type: "div", props: {
+            style: { position: "absolute", top: 0, right: 0, width: 324, height: 1080, display: "flex", opacity: 0.4 },
             children: [
-              { type: "div", props: { style: { position: "absolute", top: 56, fontFamily: "Barlow", fontSize: 20, color: "#888", letterSpacing: 4, display: "flex" }, children: "ANTES" } },
-              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 96, lineHeight: 0.95, color: "#888", textTransform: "uppercase", textAlign: "center", letterSpacing: -2, display: "flex" }, children: left } },
-              { type: "div", props: { style: { position: "absolute", bottom: 56, width: 80, height: 6, background: RED_PROBLEM, display: "flex" } } },
+              bwImage(bgUrl!, { position: "absolute", inset: 0, width: 324, height: 1080, filter: "grayscale(100%) contrast(140%)" }),
+              { type: "div", props: { style: { position: "absolute", inset: 0, background: "linear-gradient(270deg, transparent 0%, rgba(10,10,10,0.6) 60%, #0A0A0A 100%)", display: "flex" } } },
             ],
-          } },
-          // RIGHT — solução VS
-          { type: "div", props: {
-            style: { width: 540, height: 1080, background: VS_BLUE, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: 48, position: "relative" },
-            children: [
-              { type: "div", props: { style: { position: "absolute", top: 56, fontFamily: "Barlow", fontSize: 20, color: WHITE, letterSpacing: 4, display: "flex" }, children: "COM A VS" } },
-              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 96, lineHeight: 0.95, color: WHITE, textTransform: "uppercase", textAlign: "center", letterSpacing: -2, display: "flex" }, children: right } },
-              { type: "div", props: { style: { position: "absolute", bottom: 56, width: 80, height: 6, background: WHITE, display: "flex" } } },
-            ],
-          } },
-          // Sub na base se houver
-          sub ? { type: "div", props: {
-            style: { position: "absolute", bottom: 24, left: 0, right: 0, fontFamily: "Barlow", fontSize: 18, color: "rgba(255,255,255,0.6)", textAlign: "center", letterSpacing: 2, display: "flex", justifyContent: "center" },
-            children: sub.toUpperCase(),
           } } : null,
+          marker("04", { top: 56, left: 64, color: WHITE_60 }),
+          marker("SOLUÇÃO · 3 PASSOS", { top: 56, right: 64, color: ORANGE }),
+          // Título da seção
+          { type: "div", props: {
+            style: { position: "absolute", top: 140, left: 64, right: 64, display: "flex" },
+            children: display(headlineUpper, { size: 70, lineHeight: 0.92, maxWidth: 900 }),
+          } },
+          // Lista
+          { type: "div", props: {
+            style: { position: "absolute", left: 64, right: 64, bottom: 130, display: "flex", flexDirection: "column", gap: 36 },
+            children: items.map((it, idx) => ({
+              type: "div", props: {
+                key: idx,
+                style: { display: "flex", flexDirection: "row", alignItems: "flex-start", gap: 36, paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.12)" },
+                children: [
+                  { type: "div", props: { style: { fontFamily: "Poppins", fontWeight: 900, fontStyle: "italic", fontSize: 92, color: ORANGE, lineHeight: 0.85, display: "flex", minWidth: 140 }, children: it.n } },
+                  { type: "div", props: {
+                    style: { display: "flex", flexDirection: "column", gap: 6, flex: 1 },
+                    children: [
+                      display(it.t.toUpperCase(), { size: 38, lineHeight: 1.0, maxWidth: 700 }),
+                      it.s ? { type: "div", props: { style: { fontFamily: "Barlow", fontWeight: 400, fontSize: 22, color: WHITE_60, display: "flex" }, children: it.s } } : null,
+                    ].filter(Boolean),
+                  } },
+                ],
+              },
+            })),
+          } },
+          brandLogo({ bottom: 40, right: 50, size: 50 }),
         ].filter(Boolean),
       },
     };
   }
 
-  // ===== T05 — PROCESS STEP (NÚMERO DA ETAPA) =====
-  if (template === "T05_PROCESS_STEP") {
-    // Tenta extrair "01" ou número do início
-    const match = headline.match(/^(\d{1,2})/);
-    const stepNumber = match ? match[1].padStart(2, "0") : "01";
-    const stepText = headline.replace(/^\d{1,2}[\s.\-]*/, "").toUpperCase() || headlineUpper;
+  // ============================================================
+  // T05_CTA_HOOK — Foto fullbleed + headline + faixa CTA inferior laranja
+  // ============================================================
+  if (template === "T08_CTA_FINAL" || template === "T07_SOLUTION_REVEAL") {
+    const hasBg = !!bgUrl;
     return {
       type: "div", props: {
         style: { ...baseStyle, background: BLACK },
         children: [
-          logoEl(56, 64, 36),
-          { type: "div", props: { style: { position: "absolute", top: 56, right: 64, fontFamily: "Barlow", fontSize: 18, color: VS_BLUE_LIGHT, letterSpacing: 3, display: "flex" }, children: "// ETAPA" } },
+          hasBg ? bwImage(bgUrl!, {
+            position: "absolute", inset: 0, width: 1080, height: 1080,
+            filter: "grayscale(100%) contrast(125%) brightness(70%)",
+          }) : null,
+          { type: "div", props: { style: { position: "absolute", inset: 0, background: "linear-gradient(0deg, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.25) 100%)", display: "flex" } } },
+          // Barra superior laranja
+          { type: "div", props: { style: { position: "absolute", top: 0, left: 0, width: 1080, height: 14, background: ORANGE, display: "flex" } } },
+          marker("05", { top: 56, left: 64, color: WHITE_60 }),
+          marker("VS · DECIDA", { top: 56, right: 64, color: ORANGE }),
+          // Headline
           { type: "div", props: {
-            style: { position: "absolute", inset: 0, padding: "64px 64px 120px 64px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "flex-start" },
+            style: { position: "absolute", bottom: 200, left: 64, right: 64, display: "flex", flexDirection: "column", gap: 24 },
             children: [
-              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 600, lineHeight: 0.78, letterSpacing: -20, color: VS_BLUE, display: "flex" }, children: stepNumber } },
-              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 80, lineHeight: 0.95, color: WHITE, textTransform: "uppercase", letterSpacing: -1, marginTop: 16, maxWidth: 900, display: "flex" }, children: stepText } },
-              sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 26, color: "rgba(255,255,255,0.7)", marginTop: 20, maxWidth: 800, display: "flex" }, children: sub } } : null,
+              marker("// SUA PRÓXIMA DECISÃO", { color: ORANGE, size: 18 } as any),
+              display(headlineUpper, { size: headlineUpper.length > 25 ? 130 : 160, lineHeight: 0.86, maxWidth: 980 }),
+              sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontWeight: 400, fontSize: 26, color: WHITE_60, marginTop: 8, maxWidth: 800, display: "flex" }, children: sub } } : null,
             ].filter(Boolean),
           } },
-          handleEl(),
+          // Faixa CTA inferior laranja
+          { type: "div", props: {
+            style: { position: "absolute", bottom: 0, left: 0, width: 1080, height: 100, background: ORANGE, display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: "0 64px" },
+            children: [
+              { type: "div", props: { style: { fontFamily: "Poppins", fontWeight: 900, fontStyle: "italic", fontSize: 32, color: BLACK, textTransform: "uppercase", letterSpacing: -1, display: "flex" }, children: "→ VENDASDESOLUCOES.COM" } },
+              { type: "img", props: { src: VS_LOGO_DATA_URL, style: { height: 56, width: "auto", filter: "brightness(0)" } } },
+            ],
+          } },
         ].filter(Boolean),
       },
     };
   }
 
-  // ===== T06 — QUOTE (CITAÇÃO EDITORIAL) =====
-  if (template === "T06_QUOTE_FOUNDER") {
-    return {
-      type: "div", props: {
-        style: { ...baseStyle, background: BLACK },
-        children: [
-          logoEl(56, 64, 36),
-          { type: "div", props: {
-            style: { position: "absolute", inset: 0, padding: 100, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "flex-start", gap: 32 },
-            children: [
-              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 200, lineHeight: 0.7, color: VS_BLUE, display: "flex" }, children: "\u201C" } },
-              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 80, lineHeight: 1.05, color: WHITE, maxWidth: 900, letterSpacing: -1, display: "flex" }, children: headline } },
-              sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 22, color: VS_BLUE_LIGHT, letterSpacing: 3, marginTop: 8, display: "flex" }, children: `— ${sub.toUpperCase()}` } } : null,
-            ].filter(Boolean),
-          } },
-          handleEl(),
-        ].filter(Boolean),
-      },
-    };
-  }
-
-  // ===== T07 — SOLUTION REVEAL =====
-  if (template === "T07_SOLUTION_REVEAL") {
-    return {
-      type: "div", props: {
-        style: { ...baseStyle, background: BLACK },
-        children: [
-          logoEl(56, 64, 36),
-          { type: "div", props: { style: { position: "absolute", top: 56, right: 64, fontFamily: "Barlow", fontSize: 18, color: VS_BLUE_LIGHT, letterSpacing: 3, display: "flex" }, children: "// SOLUÇÃO" } },
-          { type: "div", props: {
-            style: { position: "absolute", inset: 0, padding: 80, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "flex-start", gap: 32 },
-            children: [
-              { type: "div", props: { style: { width: 120, height: 8, background: VS_BLUE, display: "flex" } } },
-              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 120, lineHeight: 0.92, color: WHITE, textTransform: "uppercase", letterSpacing: -2, maxWidth: 950, display: "flex" }, children: headlineUpper } },
-              sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 30, color: "rgba(255,255,255,0.75)", maxWidth: 850, display: "flex" }, children: sub } } : null,
-            ].filter(Boolean),
-          } },
-          handleEl(),
-        ].filter(Boolean),
-      },
-    };
-  }
-
-  // ===== T08 — CTA FINAL (FUNDO VS BLUE) =====
-  if (template === "T08_CTA_FINAL") {
-    return {
-      type: "div", props: {
-        style: { ...baseStyle, background: VS_BLUE, justifyContent: "center", alignItems: "center", padding: 80 },
-        children: [
-          { type: "img", props: { src: VS_LOGO_DATA_URL, style: { position: "absolute", top: 80, height: 56, width: "auto" } } },
-          { type: "div", props: {
-            style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 32, textAlign: "center" },
-            children: [
-              { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 22, color: WHITE, letterSpacing: 6, opacity: 0.85, display: "flex" }, children: "// PRÓXIMO PASSO" } },
-              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 130, lineHeight: 0.92, color: WHITE, textTransform: "uppercase", letterSpacing: -2, maxWidth: 920, textAlign: "center", display: "flex" }, children: headlineUpper } },
-              sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 28, color: "rgba(255,255,255,0.95)", marginTop: 16, maxWidth: 800, textAlign: "center", display: "flex" }, children: sub } } : null,
-            ].filter(Boolean),
-          } },
-          { type: "div", props: { style: { position: "absolute", bottom: 64, fontFamily: "Barlow", fontSize: 20, color: WHITE, letterSpacing: 4, opacity: 0.85, display: "flex" }, children: "@VSSOLUCOES_" } },
-        ],
-      },
-    };
-  }
-
-  // ===== DEFAULT — T02 PROBLEM (foto P&B + headline brutal embaixo) =====
-  const hasBg = !!bgUrl;
-  return {
-    type: "div", props: {
-      style: { ...baseStyle, background: BLACK },
-      children: [
-        hasBg ? { type: "img", props: { src: bgUrl!, style: { position: "absolute", inset: 0, width: 1080, height: 1080, objectFit: "cover", filter: "grayscale(100%) contrast(140%) brightness(60%)" } } } : null,
-        // Overlay forte na metade inferior
-        { type: "div", props: { style: { position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.95) 75%)", display: "flex" } } },
-        { type: "div", props: { style: { position: "absolute", top: 0, left: 0, width: 1080, height: 8, background: VS_BLUE, display: "flex" } } },
-        logoEl(56, 64, 36),
-        { type: "div", props: { style: { position: "absolute", top: 56, right: 64, fontFamily: "Barlow", fontSize: 18, color: VS_BLUE_LIGHT, letterSpacing: 3, display: "flex" }, children: "// PROBLEMA" } },
-        { type: "div", props: {
-          style: { position: "absolute", inset: 0, padding: "64px 64px 140px 64px", display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 24 },
-          children: [
-            { type: "div", props: { style: { width: 80, height: 6, background: VS_BLUE, display: "flex" } } },
-            { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 110, lineHeight: 0.92, color: WHITE, textTransform: "uppercase", letterSpacing: -2, maxWidth: 950, display: "flex" }, children: headlineUpper } },
-            sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 28, color: "rgba(255,255,255,0.8)", maxWidth: 800, display: "flex" }, children: sub } } : null,
-          ].filter(Boolean),
-        } },
-        handleEl(),
-      ].filter(Boolean),
-    },
-  };
+  // ============================================================
+  // FALLBACK — qualquer template_id não reconhecido vira HOOK
+  // ============================================================
+  return buildElement("T01_HOOK_BIG_TEXT", headline, sub, bgUrl);
 }
 
 Deno.serve(async (req) => {
