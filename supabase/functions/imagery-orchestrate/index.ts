@@ -44,8 +44,18 @@ async function processSlide(slideId: string, needsImage: boolean, authHeader: st
   }
 
   const comp = await callFn("imagery-compose-slide", { slide_id: slideId }, authHeader);
-  if (!comp.ok) return { slideId, ok: false, step: "compose", error: comp.text.slice(0, 200) };
-  return { slideId, ok: true, final_url: comp.json?.url };
+  if (!comp.ok && comp.status !== 202) {
+    return { slideId, ok: false, step: "compose", error: comp.text.slice(0, 200) };
+  }
+  // Poll status (compose runs in background, up to ~90s)
+  for (let i = 0; i < 45; i++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    const { data: s } = await admin.from("imagery_slides")
+      .select("status, final_png_url, error_message").eq("id", slideId).single();
+    if (s?.status === "ready") return { slideId, ok: true, final_url: s.final_png_url };
+    if (s?.status === "failed") return { slideId, ok: false, step: "compose", error: s.error_message ?? "failed" };
+  }
+  return { slideId, ok: false, step: "compose", error: "timeout" };
 }
 
 Deno.serve(async (req) => {
