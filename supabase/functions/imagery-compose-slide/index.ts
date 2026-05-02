@@ -1,6 +1,6 @@
 // Imagery Engine — Compose (v2 · padrão V4/G4 brutalista aprovado)
 // 5 templates: HOOK, SPLIT, DATA_SPLIT, LIST, CTA_HOOK
-// Tipografia: Poppins Black Italic (display) + Barlow Regular (corpo/markers)
+// Tipografia: Archivo Black (display brutalista) + Barlow Regular (corpo/markers)
 // Logo VS aplicada em TODOS os slides.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import satori from "https://esm.sh/satori@0.10.13";
@@ -11,7 +11,7 @@ import { VS_LOGO_DATA_URL } from "./logo.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// Init Resvg WASM (one-time)
+// Init Resvg WASM (one-time, módulo-level)
 let resvgReady: Promise<void> | null = null;
 async function initResvg() {
   if (!resvgReady) {
@@ -24,7 +24,7 @@ async function initResvg() {
   return resvgReady;
 }
 
-// Carrega Poppins Black Italic (display) + Barlow Regular (corpo)
+// Carrega Archivo Black (display) + Barlow Regular (corpo) — fontes leves pra evitar CPU timeout
 type FontEntry = { name: string; data: ArrayBuffer; weight: number; style: "normal" | "italic" };
 let fontsCache: FontEntry[] | null = null;
 async function loadFonts() {
@@ -36,14 +36,15 @@ async function loadFonts() {
     if (ct.includes("html")) throw new Error(`font fetch returned HTML: ${url}`);
     return await r.arrayBuffer();
   }
-  const [poppinsBlackItalic, barlowRegular] = await Promise.all([
-    fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/poppins/Poppins-BlackItalic.ttf"),
+  // Archivo Black: ~30KB single weight; Barlow Regular: ~80KB
+  const [archivoBlack, barlowRegular] = await Promise.all([
+    fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/archivoblack/ArchivoBlack-Regular.ttf"),
     fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/barlow/Barlow-Regular.ttf"),
   ]);
   fontsCache = [
-    { name: "Poppins", data: poppinsBlackItalic, weight: 900, style: "italic" },
+    { name: "Display", data: archivoBlack, weight: 900, style: "normal" },
+    { name: "Display", data: archivoBlack, weight: 900, style: "italic" }, // alias italic → mesmo arquivo
     { name: "Barlow", data: barlowRegular, weight: 400, style: "normal" },
-    // alias para weight 700 reusa Barlow Regular (markers em caps já chamam atenção)
     { name: "Barlow", data: barlowRegular, weight: 700, style: "normal" },
   ];
   return fontsCache;
@@ -88,6 +89,16 @@ async function finalizePostIfDone(admin: any, postId: string) {
   }).eq("id", postId);
 }
 
+// Sanitiza headline vindo da IA: remove "/" literais que a IA usa achando que quebra linha
+function cleanHeadline(s: string): string {
+  if (!s) return s;
+  return s
+    .replace(/\s*\/\s*/g, " ")  // "DESIGN / SEM / IMPACTO" → "DESIGN SEM IMPACTO"
+    .replace(/\s*\|\s*/g, " ")  // pipes acidentais
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 async function processSlide(slide_id: string, treated_image_url: string | undefined, t0: number) {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
   let postId: string | undefined;
@@ -98,12 +109,16 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
     await admin.from("imagery_slides").update({ status: "composing" }).eq("id", slide_id);
 
     const rawBg = treated_image_url ?? slide.treated_image_url ?? slide.raw_image_url ?? undefined;
-    const bgUrl = rawBg ? await urlToDataUrl(rawBg) : undefined;
-    const headline = (slide.copy_data?.headline as string) ?? "";
-    const sub = (slide.copy_data?.sub_text as string) ?? "";
+    const headline = cleanHeadline((slide.copy_data?.headline as string) ?? "");
+    // sub do T04 usa "||" e "|" como separadores — não sanitizar aqui
+    const sub = ((slide.copy_data?.sub_text as string) ?? "").trim();
 
-    const fonts = await loadFonts();
-    await initResvg();
+    // Paraleliza I/O pesado: imagem + fontes + WASM
+    const [bgUrl, fonts] = await Promise.all([
+      rawBg ? urlToDataUrl(rawBg) : Promise.resolve(undefined),
+      loadFonts(),
+      initResvg(),
+    ]);
 
     const element = buildElement(slide.template_id, headline, sub, bgUrl);
     const svg = await satori(element, { width: 1080, height: 1080, fonts });
@@ -199,7 +214,7 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
   const display = (text: string, opts: { size?: number; color?: string; lineHeight?: number; letterSpacing?: number; maxWidth?: number; align?: "left" | "center" | "right" } = {}) => ({
     type: "div", props: {
       style: {
-        fontFamily: "Poppins", fontWeight: 900, fontStyle: "italic",
+        fontFamily: "Display", fontWeight: 900, fontStyle: "italic",
         fontSize: opts.size ?? 110,
         lineHeight: opts.lineHeight ?? 0.88,
         letterSpacing: opts.letterSpacing ?? -2,
@@ -398,7 +413,7 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
                 key: idx,
                 style: { display: "flex", flexDirection: "row", alignItems: "flex-start", gap: 36, paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.12)" },
                 children: [
-                  { type: "div", props: { style: { fontFamily: "Poppins", fontWeight: 900, fontStyle: "italic", fontSize: 92, color: ORANGE, lineHeight: 0.85, display: "flex", minWidth: 140 }, children: it.n } },
+                  { type: "div", props: { style: { fontFamily: "Display", fontWeight: 900, fontStyle: "italic", fontSize: 92, color: ORANGE, lineHeight: 0.85, display: "flex", minWidth: 140 }, children: it.n } },
                   { type: "div", props: {
                     style: { display: "flex", flexDirection: "column", gap: 6, flex: 1 },
                     children: [
@@ -447,7 +462,7 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
           { type: "div", props: {
             style: { position: "absolute", bottom: 0, left: 0, width: 1080, height: 100, background: ORANGE, display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: "0 64px" },
             children: [
-              { type: "div", props: { style: { fontFamily: "Poppins", fontWeight: 900, fontStyle: "italic", fontSize: 32, color: BLACK, textTransform: "uppercase", letterSpacing: -1, display: "flex" }, children: "→ VENDASDESOLUCOES.COM" } },
+              { type: "div", props: { style: { fontFamily: "Display", fontWeight: 900, fontStyle: "italic", fontSize: 32, color: BLACK, textTransform: "uppercase", letterSpacing: -1, display: "flex" }, children: "→ VENDASDESOLUCOES.COM" } },
               { type: "img", props: { src: VS_LOGO_DATA_URL, style: { height: 56, width: "auto", filter: "brightness(0)" } } },
             ],
           } },
