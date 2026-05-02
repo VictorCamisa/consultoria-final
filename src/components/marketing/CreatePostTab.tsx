@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useNichos } from "@/hooks/useNichos";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -50,12 +49,23 @@ const QUICK_THEMES = [
   "O CRM morreu. O que vem depois.",
 ];
 
+const VS_PRODUCTS = [
+  "VS Sales",
+  "VS Marketing",
+  "VS Atendimento",
+  "VS Financeiro",
+  "VS RH",
+  "VS Operações",
+  "VS Departamentos",
+  "VS 360",
+  "VS Custom",
+  "VS AUTO",
+];
+
 export function CreatePostTab() {
   const qc = useQueryClient();
-  const { labels: nichoLabels } = useNichos();
-
   const [tema, setTema] = useState("");
-  const [nicho, setNicho] = useState("Estética");
+  const [nicho, setNicho] = useState("VS Sales");
   const [objetivo, setObjetivo] = useState("Educar sobre dor + apresentar solução VS");
   const [tipo, setTipo] = useState<"carrossel" | "feed_unico" | "story">("carrossel");
   const [nSlides, setNSlides] = useState(5);
@@ -288,9 +298,9 @@ export function CreatePostTab() {
 
           <div className="grid grid-cols-3 gap-2">
             <Select value={nicho} onValueChange={setNicho}>
-              <SelectTrigger><SelectValue placeholder="Nicho" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Produto VS" /></SelectTrigger>
               <SelectContent>
-                {nichoLabels.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+                {VS_PRODUCTS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
               </SelectContent>
             </Select>
 
