@@ -148,7 +148,7 @@ export function CreatePostTab() {
       });
       if (error) throw new Error(error.message);
       if (data?.error) throw new Error(data.error);
-      toast.success(`Pipeline rodou · ${data.ok}/${data.total} slides ok · $${(data.custo_total_usd ?? 0).toFixed(3)}`);
+      toast.success(data?.accepted ? `Pipeline iniciado · ${data.total ?? 0} slides na fila` : "Pipeline iniciado");
       qc.invalidateQueries({ queryKey: ["imagery-slides", postId] });
       qc.invalidateQueries({ queryKey: ["imagery-post", postId] });
     } catch (e: any) {
@@ -212,6 +212,7 @@ export function CreatePostTab() {
 
   const planReady = post?.status === "draft" || post?.status === "ready" || post?.status === "generating";
   const totalUsd = Number(post?.custo_total_usd ?? 0);
+  const isPipelineRunning = post?.status === "generating";
 
   return (
     <div className="space-y-4">
@@ -283,8 +284,8 @@ export function CreatePostTab() {
                 ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Planejando...</>
                 : <><Brain className="h-4 w-4 mr-1" />1. Planejar Post</>}
             </Button>
-            <Button onClick={handleGenerate} disabled={!planReady || genLoading || planLoading} className="ml-auto">
-              {genLoading
+            <Button onClick={handleGenerate} disabled={!planReady || genLoading || planLoading || isPipelineRunning} className="ml-auto">
+              {genLoading || isPipelineRunning
                 ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Pipeline rodando...</>
                 : <><Sparkles className="h-4 w-4 mr-1" />2. Gerar Imagens (Pipeline)</>}
             </Button>
@@ -351,7 +352,7 @@ export function CreatePostTab() {
                     <img src={s.final_png_url} alt="" className="w-full h-full object-cover" />
                   ) : s.raw_image_url ? (
                     <img src={s.raw_image_url} alt="" className="w-full h-full object-cover opacity-60" />
-                  ) : ["generating", "validating", "composing"].includes(s.status) ? (
+                  ) : ["queued", "generating", "validating", "composing"].includes(s.status) ? (
                     <Loader2 className="h-6 w-6 animate-spin text-accent" />
                   ) : (
                     <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
