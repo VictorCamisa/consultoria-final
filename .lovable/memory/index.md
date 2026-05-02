@@ -14,7 +14,6 @@ Em /configuracoes: Scripts e Cadência são por TIER (Tools/Departamentos/360/Cu
 - [Esteira de Tiers](mem://produto/esteira-tiers) — VS Tools / Departamentos / VS 360 / VS Custom com faixas de preço
 - [Módulos Core OS](mem://produto/modulos-core-os) — 6 módulos (Comercial, Gatekeeper, Onboarding, Telemetria, Financeiro, Governança) e maturidade
 - [Stack Core OS](mem://tecnologia/stack-core-os) — Stack oficial: React/Tailwind dark, Claude Haiku/Sonnet, JetBrains Mono para dados
-- [Identidade Visual](mem://style/identidade-visual) — Brand Bible VS dark-mode com Barlow Condensed/Barlow, VS Blue #2E6FCC e Blue Light #4A8DE0
 - [Rebranding 2026](mem://style/rebranding-2026) — Brutalismo Tech: Cyber Orange #FF5300 + Deep Space Blue #050814, Poppins Black Italic + Montserrat (substitui Barlow no app interno; toggle light disponível)
 - [Fluxo Imersão](mem://funcionalidades/fluxo-imersao-regras) — Formulário 22 campos, mínimo 17 para conclusão
 - [Automação Vendas](mem://funcionalidades/automacao-de-vendas-e-scripts) — Scripts A/B/C, cadência, follow-ups por nicho
