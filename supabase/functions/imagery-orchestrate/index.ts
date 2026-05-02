@@ -16,7 +16,7 @@ async function callFn(name: string, body: unknown, authHeader: string) {
   });
   const text = await resp.text();
   let json: any = null;
-  try { json = JSON.parse(text); } catch {}
+  try { json = JSON.parse(text); } catch { json = null; }
   return { ok: resp.ok, status: resp.status, json, text };
 }
 
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
       await admin.from("imagery_slides").update({ status: "queued", error_message: null }).eq("id", slide.id);
     }
 
-    // @ts-ignore EdgeRuntime is provided at runtime
+    // @ts-expect-error EdgeRuntime is provided at runtime
     EdgeRuntime.waitUntil(processPost(post_id, authHeader));
 
     return new Response(JSON.stringify({
