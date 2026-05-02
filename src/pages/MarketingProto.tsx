@@ -182,6 +182,9 @@ function Slide3() {
         <div className="absolute bottom-5 left-5 font-mono text-[9px] tracking-[0.3em] text-white/70 uppercase">
           // tempo perdido
         </div>
+        <div className="absolute bottom-12 left-5 font-mono text-[8px] tracking-[0.3em] text-white/40">
+          VS · 2025 · n=312
+        </div>
       </div>
 
       {/* lado direito: dado em preto puro */}
@@ -209,8 +212,7 @@ function Slide3() {
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="font-mono text-[8px] tracking-[0.3em] text-white/30">VS · 2025 · n=312</span>
-          <span className="font-mono text-[8px] tracking-[0.3em] text-white/30 invisible">.</span>
+          <div className="h-8" />
         </div>
       </div>
       <BrandMark position="bottom-right" size={32} opacity={0.9} />
