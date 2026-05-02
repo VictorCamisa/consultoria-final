@@ -1,79 +1,115 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNichos } from "@/hooks/useNichos";
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
-  Sparkles, Loader2, ImagePlus, Image, Copy, Download, Hash, Lightbulb,
-  Clock, BookOpen, Smartphone,
+  Sparkles, Loader2, Download, Wand2, ImageIcon, CheckCircle2, AlertTriangle, Layers,
+  Brain, Palette,
 } from "lucide-react";
-import { BrandAssetsPanel } from "./BrandAssetsPanel";
-import { renderAndUpload } from "@/lib/vsPostRenderer";
-import vsLogoUrl from "@/assets/vs-logo-light.png";
+import { treatImage, dataUrlToBlob } from "@/lib/imageryTreatment";
 
-type GeneratedPost = {
-  image_headline?: string;
-  caption: string;
-  hashtags: string[];
-  platform_tips: string;
-  visual_suggestion: string;
-  best_time: string;
+type Slide = {
+  id: string;
+  slide_n: number;
+  template_id: string;
+  needs_image: boolean;
+  image_brief: string | null;
+  image_type: string | null;
+  raw_image_url: string | null;
+  treated_image_url: string | null;
+  final_png_url: string | null;
+  validation_score: any;
+  copy_data: any;
+  status: string;
+  error_message: string | null;
 };
 
-const PLATFORM_EMOJI: Record<string, string> = {
-  Instagram: "📸", LinkedIn: "💼", Facebook: "📘", WhatsApp: "💬",
+const TEMPLATE_LABEL: Record<string, string> = {
+  T01_HOOK_BIG_TEXT: "Hook · Big Text",
+  T02_PROBLEM_STATEMENT: "Problema",
+  T03_DATA_POINT: "Dado",
+  T04_BEFORE_AFTER: "Antes/Depois",
+  T05_PROCESS_STEP: "Etapa",
+  T06_QUOTE_FOUNDER: "Citação",
+  T07_SOLUTION_REVEAL: "Solução",
+  T08_CTA_FINAL: "CTA Final",
 };
 
-const QUICK_IDEAS = [
+const QUICK_THEMES = [
   "Por que seu time comercial é caro e ineficiente",
   "Follow-up no WhatsApp sem depender de humano",
-  "Como uma clínica substituiu a recepcionista por IA",
+  "Como uma clínica trocou recepcionista por IA",
   "O CRM morreu. O que vem depois.",
-  "Quanto custa um vendedor que não vende",
-  "Pare de contratar. Comece a automatizar.",
 ];
 
 export function CreatePostTab() {
   const qc = useQueryClient();
   const { labels: nichoLabels } = useNichos();
-  const [prompt, setPrompt] = useState("");
-  const [platform, setPlatform] = useState("Instagram");
-  const [postFormat, setPostFormat] = useState<"feed" | "story" | "square">("feed");
-  const [nicho, setNicho] = useState<string>("none");
-  const [loading, setLoading] = useState(false);
-  const [imageLoading, setImageLoading] = useState(false);
-  const [imageVariant, setImageVariant] = useState(0);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [bgImage, setBgImage] = useState<string | null>(null);
-  const [generatedPost, setGeneratedPost] = useState<GeneratedPost | null>(null);
-  const [generatedMeta, setGeneratedMeta] = useState<{ pilar?: string; formato?: string } | null>(null);
-  const [showBrandAssets, setShowBrandAssets] = useState(false);
 
-  const { data: brandAssets } = useQuery({
-    queryKey: ["vs-brand-assets-active"],
+  const [tema, setTema] = useState("");
+  const [nicho, setNicho] = useState("Estética");
+  const [objetivo, setObjetivo] = useState("Educar sobre dor + apresentar solução VS");
+  const [tipo, setTipo] = useState<"carrossel" | "feed_unico" | "story">("carrossel");
+  const [nSlides, setNSlides] = useState(5);
+
+  const [postId, setPostId] = useState<string | null>(null);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [genLoading, setGenLoading] = useState(false);
+  const [treating, setTreating] = useState<Record<string, boolean>>({});
+
+  // Polling do post
+  const { data: post } = useQuery({
+    queryKey: ["imagery-post", postId],
     queryFn: async () => {
+      if (!postId) return null;
       const { data, error } = await supabase
-        .from("vs_brand_assets" as any)
+        .from("imagery_posts")
         .select("*")
-        .eq("is_active", true)
-        .order("type");
+        .eq("id", postId)
+        .maybeSingle();
       if (error) throw error;
-      return data ?? [];
+      return data;
+    },
+    enabled: !!postId,
+    refetchInterval: (q) => {
+      const s = (q.state.data as any)?.status;
+      return s === "generating" || s === "planning" ? 2500 : false;
+    },
+  });
+
+  const { data: slides } = useQuery({
+    queryKey: ["imagery-slides", postId],
+    queryFn: async () => {
+      if (!postId) return [];
+      const { data, error } = await supabase
+        .from("imagery_slides")
+        .select("*")
+        .eq("post_id", postId)
+        .order("slide_n");
+      if (error) throw error;
+      return (data ?? []) as Slide[];
+    },
+    enabled: !!postId,
+    refetchInterval: (q) => {
+      const arr = (q.state.data as Slide[] | undefined) ?? [];
+      const incomplete = arr.some((s) => !["ready", "failed"].includes(s.status));
+      return incomplete ? 2500 : false;
     },
   });
 
   const { data: history } = useQuery({
-    queryKey: ["vs-marketing-posts-history"],
+    queryKey: ["imagery-history"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("vs_marketing_posts" as any)
+        .from("imagery_posts")
         .select("*")
         .order("created_at", { ascending: false })
         .limit(10);
@@ -82,501 +118,357 @@ export function CreatePostTab() {
     },
   });
 
-  const referenceContext = useMemo(() => {
-    return ((brandAssets as any[]) || [])
-      .filter((a) => a.type === "reference" && a.content)
-      .map((a, i) => `Referência ${i + 1}: ${a.title} — ${a.content}`)
-      .join("\n");
-  }, [brandAssets]);
-
-  const handleGenerate = async () => {
-    if (!prompt.trim()) return toast.error("Descreva o que deseja para o post");
-    setLoading(true);
-    setGeneratedPost(null);
-    setGeneratedImage(null);
-    setBgImage(null);
+  const handlePlan = async () => {
+    if (!tema.trim()) return toast.error("Descreva o tema");
+    setPlanLoading(true);
+    setPostId(null);
     try {
-      // ── TEXT via Edge Function vs-generate-post (Gemini 2.5 Pro + arquétipos) ──
-      const recentCaptions = ((history as any[]) || [])
-        .slice(0, 5)
-        .map((h) => h.caption)
-        .filter(Boolean);
-      const recentFormatos = ((history as any[]) || [])
-        .slice(0, 5)
-        .map((h) => h.formato || h.arquetipo)
-        .filter(Boolean);
-
-      const { data: textData, error: textErr } = await supabase.functions.invoke("vs-generate-post", {
-        body: {
-          prompt,
-          platform,
-          nicho: nicho !== "none" ? nicho : undefined,
-          referenceContext: referenceContext || undefined,
-          recentCaptions,
-          recentFormatos,
-        },
+      const { data, error } = await supabase.functions.invoke("imagery-plan-post", {
+        body: { tema, nicho, objetivo, tipo, n_slides: nSlides },
       });
-      if (textErr) throw new Error(textErr.message);
-      if (textData?.error) throw new Error(textData.error);
-
-      const post: GeneratedPost = textData?.post ?? {
-        image_headline: prompt.split(" ").slice(0, 3).join(" ").toUpperCase(),
-        caption: prompt,
-        hashtags: ["VS", "VSOS", "EcossistemasDigitais"],
-        platform_tips: "",
-        visual_suggestion: "",
-        best_time: "",
-      };
-
-      setGeneratedPost(post);
-      setGeneratedMeta({ pilar: textData?.pilar, formato: textData?.formato });
-      toast.success("Post gerado! ✨");
-
-      const { data: saved, error: saveErr } = await supabase
-        .from("vs_marketing_posts" as any)
-        .insert({
-          platform,
-          prompt,
-          caption: post.caption,
-          hashtags: post.hashtags || [],
-          best_time: post.best_time || null,
-          nicho: nicho !== "none" ? nicho : null,
-          status: "rascunho",
-        } as any)
-        .select("id")
-        .single();
-      if (saveErr) console.error("Save post error:", saveErr);
-      const savedId = (saved as any)?.id;
-
-      setImageLoading(true);
-      try {
-        // ── IMAGE via Edge Function vs-generate-post-image (Nano Banana 2) ──
-        let newBgUrl: string | undefined = undefined;
-        try {
-          const { data: imgData, error: imgErr } = await supabase.functions.invoke("vs-generate-post-image", {
-            body: {
-              prompt,
-              platform,
-              visual_suggestion: post.visual_suggestion,
-            },
-          });
-
-          if (!imgErr && imgData?.image_url) {
-            newBgUrl = imgData.image_url as string;
-          } else {
-            console.warn("Image generation failed:", imgErr || imgData?.error);
-          }
-        } catch (bgErr) {
-          console.warn("Background photo generation failed (non-fatal):", bgErr);
-        }
-
-
-        setBgImage(newBgUrl || null);
-        const currentVariant = 0;
-        setImageVariant(currentVariant);
-
-        // Use image_headline from AI (cap at 3 words for canvas balance)
-        const rawHeadline = post.image_headline || prompt.split(" ").slice(0, 3).join(" ");
-        const canvasHeadline = rawHeadline.trim().split(/\s+/).slice(0, 3).join(" ");
-        const imageUrl = await renderAndUpload({
-          headline: canvasHeadline,
-          tagline: "",
-          format: postFormat,
-          variant: currentVariant,
-          logoUrl: vsLogoUrl,
-          platform,
-          bgImageUrl: newBgUrl,
-          handle: "@vssolucoes_",
-          supabase,
-        });
-        setGeneratedImage(imageUrl);
-        if (savedId) {
-          await supabase.from("vs_marketing_posts" as any).update({ image_url: imageUrl }).eq("id", savedId);
-        }
-        qc.invalidateQueries({ queryKey: ["vs-marketing-posts-history"] });
-        qc.invalidateQueries({ queryKey: ["vs-marketing-posts-gallery"] });
-        if (newBgUrl) {
-          toast.success("Arte gerada com foto editorial! ✨");
-        } else {
-          toast.success("Arte gerada! (sem foto de fundo desta vez)");
-        }
-      } catch (e: any) {
-        console.error(e);
-        toast.error("Texto gerado, mas houve um erro na arte. Tente regerar.");
-      } finally {
-        setImageLoading(false);
-      }
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      setPostId(data.post_id);
+      qc.invalidateQueries({ queryKey: ["imagery-history"] });
+      toast.success(`Plano criado · ${data.plan?.slides?.length} slides`);
     } catch (e: any) {
       console.error(e);
-      toast.error("Erro ao gerar post. Tente novamente.");
+      toast.error(e.message ?? "Erro no planner");
     } finally {
-      setLoading(false);
+      setPlanLoading(false);
     }
   };
 
-  const handleRegenerateImage = async () => {
-    if (!generatedPost) return;
-    setImageLoading(true);
+  const handleGenerate = async () => {
+    if (!postId) return;
+    setGenLoading(true);
     try {
-      const nextVariant = (imageVariant + 1) % 3;
-      setImageVariant(nextVariant);
-      const imageUrl = await renderAndUpload({
-        headline: generatedPost.image_headline || generatedPost.caption.split("\n")[0].slice(0, 30),
-        tagline: "",
-        format: postFormat,
-        variant: nextVariant,
-        logoUrl: vsLogoUrl,
-        platform,
-        bgImageUrl: bgImage || undefined,
-        handle: "@vssolucoes_",
-        supabase,
+      const { data, error } = await supabase.functions.invoke("imagery-orchestrate", {
+        body: { post_id: postId },
       });
-      setGeneratedImage(imageUrl);
-      toast.success(`Layout ${nextVariant + 1}/3 — regere para alternar`);
-    } catch (e) {
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast.success(`Pipeline rodou · ${data.ok}/${data.total} slides ok · $${(data.custo_total_usd ?? 0).toFixed(3)}`);
+      qc.invalidateQueries({ queryKey: ["imagery-slides", postId] });
+      qc.invalidateQueries({ queryKey: ["imagery-post", postId] });
+    } catch (e: any) {
       console.error(e);
-      toast.error("Erro ao regerar arte.");
+      toast.error(e.message ?? "Erro no pipeline");
     } finally {
-      setImageLoading(false);
+      setGenLoading(false);
     }
   };
 
-  const copy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success("Copiado!");
+  const handleTreatAndRecompose = async (slide: Slide) => {
+    if (!slide.raw_image_url) return toast.error("Sem imagem raw");
+    setTreating((p) => ({ ...p, [slide.id]: true }));
+    try {
+      // 1. trata no client
+      const treatedDataUrl = await treatImage(slide.raw_image_url);
+      const blob = await dataUrlToBlob(treatedDataUrl);
+      const path = `${slide.id}/treated_${Date.now()}.png`;
+      const { error: upErr } = await supabase.storage.from("imagery").upload(path, blob, {
+        contentType: "image/png", upsert: true,
+      });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from("imagery").getPublicUrl(path);
+
+      await supabase.from("imagery_slides").update({
+        treated_image_url: urlData.publicUrl,
+      }).eq("id", slide.id);
+
+      // 2. recompõe slide com a treated
+      const { data: cmp, error: cmpErr } = await supabase.functions.invoke("imagery-compose-slide", {
+        body: { slide_id: slide.id, treated_image_url: urlData.publicUrl },
+      });
+      if (cmpErr) throw new Error(cmpErr.message);
+      if (cmp?.error) throw new Error(cmp.error);
+
+      qc.invalidateQueries({ queryKey: ["imagery-slides", postId] });
+      toast.success("Imagem tratada + recomposta");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message ?? "Erro no tratamento");
+    } finally {
+      setTreating((p) => ({ ...p, [slide.id]: false }));
+    }
   };
 
-  const copyFull = () => {
-    if (!generatedPost) return;
-    const full = `${generatedPost.caption}\n\n${generatedPost.hashtags.map((h) => h.startsWith("#") ? h : `#${h}`).join(" ")}`;
-    copy(full);
+  const downloadAll = async () => {
+    if (!slides?.length) return;
+    for (const s of slides) {
+      const url = s.final_png_url;
+      if (!url) continue;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `slide_${s.slide_n}.png`;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      await new Promise((r) => setTimeout(r, 300));
+    }
   };
 
-  const downloadImage = () => {
-    if (!generatedImage) return;
-    const a = document.createElement("a");
-    a.href = generatedImage;
-    a.download = `vs-post-${platform.toLowerCase()}-${Date.now()}.png`;
-    a.target = "_blank";
-    a.click();
-  };
-
-  const FORMAT_ASPECT: Record<string, string> = {
-    feed: "aspect-[4/5]",
-    story: "aspect-[9/16]",
-    square: "aspect-square",
-  };
-
-  const FORMAT_LABEL: Record<string, string> = {
-    feed: "Feed 4:5",
-    story: "Stories 9:16",
-    square: "1:1",
-  };
+  const planReady = post?.status === "draft" || post?.status === "ready" || post?.status === "generating";
+  const totalUsd = Number(post?.custo_total_usd ?? 0);
 
   return (
     <div className="space-y-4">
       <Card className="border-accent/20">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-accent" />
-            Gerador de Posts — Nível Agência
+            <Wand2 className="h-4 w-4 text-accent" />
+            Imagery Engine v1.0 · Pipeline editorial
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Descreva o tema. A IA cria copy B2B brutalista + arte no padrão VS. Instagram Feed: formato 4:5 atualizado.
+            5 etapas: <b>Plan → Generate → Validate → Treat → Compose</b>. Resultado: post nível agência.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
           <Textarea
-            placeholder="Ex: Post sobre como automatizar o follow-up de leads no WhatsApp para clínicas de estética..."
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            rows={3}
+            placeholder="Tema do post (ex: 'Como pararem de perder leads no WhatsApp')"
+            value={tema}
+            onChange={(e) => setTema(e.target.value)}
+            rows={2}
             className="resize-none"
           />
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <Select value={platform} onValueChange={setPlatform}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Instagram">📸 Instagram</SelectItem>
-                <SelectItem value="LinkedIn">💼 LinkedIn</SelectItem>
-                <SelectItem value="Facebook">📘 Facebook</SelectItem>
-                <SelectItem value="WhatsApp">💬 WhatsApp</SelectItem>
-              </SelectContent>
-            </Select>
+          <Input
+            placeholder="Objetivo (ex: educar sobre dor X)"
+            value={objetivo}
+            onChange={(e) => setObjetivo(e.target.value)}
+          />
 
+          <div className="grid grid-cols-3 gap-2">
             <Select value={nicho} onValueChange={setNicho}>
-              <SelectTrigger><SelectValue placeholder="Nicho alvo (opcional)" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Nicho" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Sem nicho específico</SelectItem>
                 {nichoLabels.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}
               </SelectContent>
             </Select>
 
-            <Select value={postFormat} onValueChange={(v: "feed" | "story" | "square") => setPostFormat(v)}>
+            <Select value={tipo} onValueChange={(v: any) => setTipo(v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="feed">Feed 4:5 (1080×1350)</SelectItem>
-                <SelectItem value="story">Stories 9:16</SelectItem>
-                <SelectItem value="square">Quadrado 1:1</SelectItem>
+                <SelectItem value="carrossel">Carrossel</SelectItem>
+                <SelectItem value="feed_unico">Feed único</SelectItem>
+                <SelectItem value="story">Story</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={String(nSlides)} onValueChange={(v) => setNSlides(Number(v))}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {[1, 3, 5, 7, 10].map((n) => <SelectItem key={n} value={String(n)}>{n} slide{n > 1 ? "s" : ""}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs gap-1.5"
-              onClick={() => setShowBrandAssets((v) => !v)}
-            >
-              <BookOpen className="h-3.5 w-3.5" />
-              Central de Marca
-              {((brandAssets as any[])?.length ?? 0) > 0 && (
-                <Badge variant="secondary" className="text-[9px] ml-1">
-                  {(brandAssets as any[])?.length} ativos
-                </Badge>
-              )}
-            </Button>
-            <Button onClick={handleGenerate} disabled={loading || imageLoading} className="ml-auto">
-              {loading
-                ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />Gerando...</>
-                : <><Sparkles className="h-4 w-4 mr-1" />Gerar Post + Imagem</>}
-            </Button>
-          </div>
-
           <div className="flex flex-wrap gap-1.5">
-            {QUICK_IDEAS.map((idea) => (
+            {QUICK_THEMES.map((t) => (
               <button
-                key={idea}
-                onClick={() => setPrompt(idea)}
+                key={t}
+                onClick={() => setTema(t)}
                 className="text-[10px] px-2.5 py-1 rounded-full bg-secondary hover:bg-secondary/70 text-muted-foreground hover:text-foreground transition-colors"
               >
-                <Lightbulb className="h-2.5 w-2.5 inline mr-1" />{idea}
+                {t}
               </button>
             ))}
           </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <Button onClick={handlePlan} disabled={planLoading || genLoading} variant="outline">
+              {planLoading
+                ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Planejando...</>
+                : <><Brain className="h-4 w-4 mr-1" />1. Planejar Post</>}
+            </Button>
+            <Button onClick={handleGenerate} disabled={!planReady || genLoading || planLoading} className="ml-auto">
+              {genLoading
+                ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" />Pipeline rodando...</>
+                : <><Sparkles className="h-4 w-4 mr-1" />2. Gerar Imagens (Pipeline)</>}
+            </Button>
+          </div>
+
+          {post && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border">
+              <Badge variant={post.status === "ready" ? "default" : "secondary"} className="text-[10px]">
+                {post.status}
+              </Badge>
+              <span>Custo: <b>${totalUsd.toFixed(3)}</b></span>
+              <span>·</span>
+              <span>{slides?.length ?? 0} slides</span>
+              {post.status === "ready" && (
+                <Button size="sm" variant="outline" className="ml-auto" onClick={downloadAll}>
+                  <Download className="h-3 w-3 mr-1" />Baixar tudo
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {showBrandAssets && <BrandAssetsPanel onClose={() => setShowBrandAssets(false)} />}
-
-      {(loading || imageLoading) && !generatedPost && (
+      {post?.copy_data && (() => {
+        const cd = post.copy_data as any;
+        return (
         <Card>
-          <CardContent className="p-8 flex flex-col items-center gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-accent" />
-            <p className="text-sm text-muted-foreground">Criando post com a identidade VS...</p>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs flex items-center gap-2">
+              <Layers className="h-3.5 w-3.5 text-accent" />
+              {cd.titulo ?? "Post"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xs whitespace-pre-wrap text-muted-foreground">{cd.caption}</p>
+            {!!cd.hashtags?.length && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {cd.hashtags.map((h: string, i: number) => (
+                  <Badge key={i} variant="secondary" className="text-[9px]">#{h.replace(/^#/, "")}</Badge>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
+        );
+      })()}
 
-      {generatedPost && !loading && (
-        <div className="space-y-3 animate-in fade-in duration-300">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <Card className="border-accent/30">
+      {!!slides?.length && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {slides.map((s) => (
+            <Card key={s.id} className="border-accent/20">
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <ImagePlus className="h-4 w-4 text-accent" />
-                    Imagem do Post
-                    <Badge variant="secondary" className="text-[9px] gap-1">
-                      <Smartphone className="h-2.5 w-2.5" />
-                      {FORMAT_LABEL[postFormat]}
-                    </Badge>
-                    {generatedImage && (
-                      <Badge variant="outline" className="text-[9px]">
-                        Layout {imageVariant + 1}/3
-                      </Badge>
-                    )}
+                  <CardTitle className="text-xs flex items-center gap-2">
+                    <Badge variant="outline" className="text-[10px]">#{s.slide_n}</Badge>
+                    <span>{TEMPLATE_LABEL[s.template_id] ?? s.template_id}</span>
                   </CardTitle>
-                  <div className="flex gap-1.5">
-                    {generatedImage && (
-                      <Button size="sm" variant="outline" onClick={downloadImage}>
-                        <Download className="h-3 w-3 mr-1" />Baixar
-                      </Button>
-                    )}
-                    <Button size="sm" variant="outline" onClick={handleRegenerateImage} disabled={imageLoading}>
-                      {imageLoading
-                        ? <Loader2 className="h-3 w-3 animate-spin" />
-                        : <><Sparkles className="h-3 w-3 mr-1" />Regerar</>}
-                    </Button>
-                  </div>
+                  <SlideStatus status={s.status} score={s.validation_score} />
                 </div>
               </CardHeader>
-              <CardContent>
-                {imageLoading && !generatedImage ? (
-                  <div className={`${FORMAT_ASPECT[postFormat]} rounded-lg bg-[#050814] border border-accent/10 flex flex-col items-center justify-center gap-3`}>
-                    <Loader2 className="h-8 w-8 animate-spin text-[#FF5300]" />
-                    <p className="text-xs text-muted-foreground">Gerando arte com IA...</p>
-                    <p className="text-[10px] text-muted-foreground/50">Pode levar 20–40 segundos</p>
+              <CardContent className="space-y-2">
+                <div className="aspect-square rounded-lg bg-secondary/50 overflow-hidden border border-border flex items-center justify-center">
+                  {s.final_png_url ? (
+                    <img src={s.final_png_url} alt="" className="w-full h-full object-cover" />
+                  ) : s.raw_image_url ? (
+                    <img src={s.raw_image_url} alt="" className="w-full h-full object-cover opacity-60" />
+                  ) : ["generating", "validating", "composing"].includes(s.status) ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-accent" />
+                  ) : (
+                    <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
+                  )}
+                </div>
+
+                <div className="text-[10px] text-muted-foreground">
+                  <p className="font-semibold text-foreground line-clamp-1">{s.copy_data?.headline}</p>
+                  {s.copy_data?.sub_text && <p className="line-clamp-2">{s.copy_data.sub_text}</p>}
+                  {s.image_brief && (
+                    <p className="mt-1 italic line-clamp-2 opacity-70">📷 {s.image_brief}</p>
+                  )}
+                </div>
+
+                {s.validation_score && (
+                  <div className="grid grid-cols-4 gap-1 text-[9px]">
+                    <ScoreBadge label="Brand" v={s.validation_score.brand_fit} />
+                    <ScoreBadge label="Brief" v={s.validation_score.brief_match} />
+                    <ScoreBadge label="Tech" v={s.validation_score.tech_quality} />
+                    <ScoreBadge label="Use" v={s.validation_score.usability} />
                   </div>
-                ) : generatedImage ? (
-                  <div className="relative group">
-                    <img
-                      src={generatedImage}
-                      alt="Post gerado"
-                      className="w-full rounded-lg border border-accent/20 shadow-lg"
-                    />
-                    <div className="absolute inset-0 rounded-lg bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <Button size="sm" variant="secondary" onClick={downloadImage}>
-                        <Download className="h-3 w-3 mr-1" />Baixar PNG
-                      </Button>
-                      <Button size="sm" variant="secondary" onClick={handleRegenerateImage} disabled={imageLoading}>
-                        <Sparkles className="h-3 w-3 mr-1" />Regerar
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className={`${FORMAT_ASPECT[postFormat]} rounded-lg bg-[#050814] border border-accent/10 flex flex-col items-center justify-center gap-2`}>
-                    <Image className="h-8 w-8 text-muted-foreground/20" />
-                    <p className="text-xs text-muted-foreground/60">Arte não gerada</p>
-                    <Button size="sm" variant="outline" onClick={handleRegenerateImage}>
-                      <Sparkles className="h-3 w-3 mr-1" />Gerar Arte
+                )}
+
+                <div className="flex gap-1 pt-1">
+                  {s.raw_image_url && (
+                    <Button
+                      size="sm" variant="outline" className="flex-1 text-[10px] h-7"
+                      onClick={() => handleTreatAndRecompose(s)}
+                      disabled={!!treating[s.id]}
+                    >
+                      {treating[s.id]
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <><Palette className="h-3 w-3 mr-1" />Tratar + Recompor</>}
                     </Button>
-                  </div>
+                  )}
+                  {s.final_png_url && (
+                    <Button
+                      size="sm" variant="outline" className="text-[10px] h-7"
+                      onClick={() => window.open(s.final_png_url!, "_blank")}
+                    >
+                      <Download className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+
+                {s.error_message && (
+                  <p className="text-[10px] text-destructive flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" />{s.error_message}
+                  </p>
                 )}
               </CardContent>
             </Card>
-
-            <Card className="border-accent/30">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2">
-                    <span>{PLATFORM_EMOJI[platform]}</span>
-                    Post para {platform}
-                    {generatedMeta?.pilar && (
-                      <Badge variant="secondary" className="text-[9px] uppercase tracking-wider">
-                        {generatedMeta.pilar}
-                      </Badge>
-                    )}
-                    {generatedMeta?.formato && (
-                      <Badge variant="outline" className="text-[9px]">
-                        {generatedMeta.formato.replace(/_/g, " ")}
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <Button size="sm" variant="outline" onClick={copyFull}>
-                    <Copy className="h-3 w-3 mr-1" />Copiar Tudo
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="relative">
-                  <div className="p-4 rounded-lg bg-secondary/50 whitespace-pre-wrap text-sm leading-relaxed max-h-[300px] overflow-y-auto">
-                    {generatedPost.caption}
-                  </div>
-                  <button
-                    onClick={() => copy(generatedPost.caption)}
-                    className="absolute top-2 right-2 p-1.5 rounded-md bg-background/80 hover:bg-background"
-                    title="Copiar legenda"
-                  >
-                    <Copy className="h-3 w-3" />
-                  </button>
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Hashtags</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {generatedPost.hashtags.map((h, i) => (
-                      <Badge
-                        key={i}
-                        variant="secondary"
-                        className="text-[10px] cursor-pointer hover:bg-accent/20"
-                        onClick={() => copy(h.startsWith("#") ? h : `#${h}`)}
-                      >
-                        <Hash className="h-2.5 w-2.5 mr-0.5" />{h.replace(/^#/, "")}
-                      </Badge>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => copy(generatedPost.hashtags.map((h) => h.startsWith("#") ? h : `#${h}`).join(" "))}
-                    className="text-[10px] text-accent hover:underline mt-1.5"
-                  >
-                    Copiar todas as hashtags
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Image className="h-4 w-4 text-accent" />
-                  <p className="text-xs font-semibold">Sugestão Visual</p>
-                </div>
-                <p className="text-xs text-muted-foreground">{generatedPost.visual_suggestion}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Lightbulb className="h-4 w-4 text-warning" />
-                  <p className="text-xs font-semibold">Dicas da Plataforma</p>
-                </div>
-                <p className="text-xs text-muted-foreground">{generatedPost.platform_tips}</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="h-4 w-4 text-accent" />
-                  <p className="text-xs font-semibold">Melhor Horário</p>
-                </div>
-                <p className="text-xs text-muted-foreground">{generatedPost.best_time}</p>
-              </CardContent>
-            </Card>
-          </div>
+          ))}
         </div>
       )}
 
-      {((history as any[])?.length ?? 0) > 0 && (
+      {!!(history as any[])?.length && (
         <div>
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-            Histórico de Posts Gerados
+            Histórico
           </h3>
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {(history as any[]).map((h) => (
               <Card
                 key={h.id}
-                className="hover:border-accent/20 transition-colors cursor-pointer"
-                onClick={() => {
-                  setGeneratedPost({
-                    caption: h.caption,
-                    hashtags: h.hashtags || [],
-                    platform_tips: "",
-                    visual_suggestion: "",
-                    best_time: h.best_time || "",
-                  });
-                  if (h.image_url) {
-                    setGeneratedImage(h.image_url);
-                    setBgImage(null); // Clear background image when loading history since we just have the composed image
-                  }
-                  if (h.platform) setPlatform(h.platform);
-                }}
+                className="hover:border-accent/30 transition-colors cursor-pointer"
+                onClick={() => setPostId(h.id)}
               >
-                <CardContent className="p-3 flex items-center gap-3">
-                  {h.image_url ? (
-                    <img src={h.image_url} alt="" className="h-10 w-10 rounded-lg object-cover border border-accent/20" />
-                  ) : (
-                    <span className="text-lg">{PLATFORM_EMOJI[h.platform || "Instagram"]}</span>
-                  )}
+                <CardContent className="p-2.5 flex items-center gap-3">
+                  <Badge variant="outline" className="text-[10px]">{h.tipo}</Badge>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">{h.prompt}</p>
-                    <p className="text-[10px] text-muted-foreground truncate">{h.caption?.slice(0, 80)}...</p>
+                    <p className="text-xs font-medium truncate">{h.tema}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{h.nicho} · {h.n_slides} slides · ${Number(h.custo_total_usd ?? 0).toFixed(3)}</p>
                   </div>
-                  <div className="flex flex-col items-end gap-0.5 shrink-0">
-                    <Badge variant="secondary" className="text-[10px]">{h.platform}</Badge>
-                    <span className="text-[9px] text-muted-foreground">
-                      {format(new Date(h.created_at), "dd/MM HH:mm")}
-                    </span>
-                  </div>
+                  <Badge variant={h.status === "ready" ? "default" : "secondary"} className="text-[9px]">
+                    {h.status}
+                  </Badge>
+                  <span className="text-[9px] text-muted-foreground">
+                    {format(new Date(h.created_at), "dd/MM HH:mm")}
+                  </span>
                 </CardContent>
               </Card>
             ))}
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function SlideStatus({ status, score }: { status: string; score: any }) {
+  if (status === "ready") {
+    const media = score?.media;
+    return (
+      <Badge variant="default" className="text-[10px] gap-1">
+        <CheckCircle2 className="h-2.5 w-2.5" />
+        {media ? `${media}/10` : "ok"}
+      </Badge>
+    );
+  }
+  if (status === "failed") {
+    return <Badge variant="destructive" className="text-[10px]">falhou</Badge>;
+  }
+  return (
+    <Badge variant="secondary" className="text-[10px] gap-1">
+      <Loader2 className="h-2.5 w-2.5 animate-spin" />
+      {status}
+    </Badge>
+  );
+}
+
+function ScoreBadge({ label, v }: { label: string; v: number }) {
+  const color = v >= 7 ? "bg-green-500/15 text-green-600" : v >= 5 ? "bg-yellow-500/15 text-yellow-600" : "bg-red-500/15 text-red-600";
+  return (
+    <div className={`px-1.5 py-0.5 rounded text-center ${color}`}>
+      <div className="opacity-70">{label}</div>
+      <div className="font-semibold">{v}</div>
     </div>
   );
 }

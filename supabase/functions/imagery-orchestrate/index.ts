@@ -1,6 +1,10 @@
-// Imagery Engine — Orchestrator (Onda 1: stub)
-// Recebe { post_id } → roda generate-image em todos os slides com needs_image em paralelo.
-// Onda 2 acrescentará: validate → retry → compose.
+// Imagery Engine — Orchestrator (pipeline completo)
+// Para cada slide com needs_image:
+//   1. generate-image
+//   2. validate-image
+//   3. se decisao=retry, generate novamente (max 1 retry)
+//   4. compose-slide
+// Slides sem imagem vão direto para compose.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -18,6 +22,30 @@ async function callFn(name: string, body: unknown, authHeader: string) {
   let json: any = null;
   try { json = JSON.parse(text); } catch {}
   return { ok: resp.ok, status: resp.status, json, text };
+}
+
+async function processSlide(slideId: string, needsImage: boolean, authHeader: string, admin: any) {
+  if (needsImage) {
+    const gen1 = await callFn("imagery-generate-image", { slide_id: slideId }, authHeader);
+    if (!gen1.ok) return { slideId, ok: false, step: "generate", error: gen1.text.slice(0, 200) };
+
+    const val1 = await callFn("imagery-validate-image", { slide_id: slideId }, authHeader);
+    if (!val1.ok) {
+      // segue mesmo sem validação
+      console.warn("validate falhou, seguindo:", val1.text.slice(0, 200));
+    } else if (val1.json?.decisao === "retry") {
+      // 1 retry
+      await admin.from("imagery_slides").update({ retry_count: 1 }).eq("id", slideId);
+      const gen2 = await callFn("imagery-generate-image", { slide_id: slideId }, authHeader);
+      if (gen2.ok) {
+        await callFn("imagery-validate-image", { slide_id: slideId }, authHeader);
+      }
+    }
+  }
+
+  const comp = await callFn("imagery-compose-slide", { slide_id: slideId }, authHeader);
+  if (!comp.ok) return { slideId, ok: false, step: "compose", error: comp.text.slice(0, 200) };
+  return { slideId, ok: true, final_url: comp.json?.url };
 }
 
 Deno.serve(async (req) => {
@@ -45,27 +73,26 @@ Deno.serve(async (req) => {
       .select("id, needs_image").eq("post_id", post_id).order("slide_n");
     if (error) throw error;
 
-    const targets = (slides ?? []).filter((s) => s.needs_image);
     const results = await Promise.allSettled(
-      targets.map((s) => callFn("imagery-generate-image", { slide_id: s.id }, authHeader))
+      (slides ?? []).map((s: any) => processSlide(s.id, s.needs_image, authHeader, admin))
     );
 
     const ok = results.filter((r) => r.status === "fulfilled" && (r as any).value.ok).length;
     const failed = results.length - ok;
 
-    // Total cost
     const { data: logs } = await admin.from("imagery_logs")
       .select("custo_usd").eq("post_id", post_id);
     const total = (logs ?? []).reduce((acc: number, l: any) => acc + Number(l.custo_usd ?? 0), 0);
 
     await admin.from("imagery_posts").update({
-      status: failed === 0 ? "ready" : "failed",
-      error_message: failed > 0 ? `${failed}/${results.length} slides falharam` : null,
+      status: failed === 0 ? "ready" : (ok > 0 ? "ready" : "failed"),
+      error_message: failed > 0 ? `${failed}/${results.length} slides com problema` : null,
       custo_total_usd: total,
     }).eq("id", post_id);
 
     return new Response(JSON.stringify({
-      post_id, total_slides: targets.length, ok, failed, custo_total_usd: total,
+      post_id, total: results.length, ok, failed, custo_total_usd: total,
+      results: results.map((r) => r.status === "fulfilled" ? (r as any).value : { ok: false, error: (r as any).reason?.message }),
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     console.error("imagery-orchestrate error:", e);
