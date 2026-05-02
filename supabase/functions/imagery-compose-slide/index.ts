@@ -270,7 +270,7 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
             style: { position: "absolute", bottom: 110, left: 64, right: 64, display: "flex", flexDirection: "column", gap: 24 },
             children: [
               marker("// O QUE NINGUÉM TE CONTA", { color: ORANGE, size: 18 } as any),
-              display(headlineUpper, { size: headlineUpper.length > 30 ? 130 : 160, lineHeight: 0.86, maxWidth: 980 }),
+              display(headlineUpper, { size: headlineUpper.length > 30 ? 110 : 150, lineHeight: 0.86, width: 952 }),
             ],
           } },
           marker("ARRASTE →", { bottom: 50, left: 64, color: WHITE_60 }),
@@ -306,9 +306,9 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
               { type: "div", props: {
                 style: { display: "flex", flexDirection: "column", gap: 24, marginTop: 100 },
                 children: [
-                  display(headlineUpper, { size: headlineUpper.length > 18 ? 90 : 110, lineHeight: 0.85, maxWidth: 420 }),
+                  display(headlineUpper, { size: headlineUpper.length > 18 ? 76 : 100, lineHeight: 0.85, width: 374 }),
                   sub ? { type: "div", props: {
-                    style: { fontFamily: "Barlow", fontWeight: 400, fontSize: 26, color: WHITE_60, lineHeight: 1.25, maxWidth: 380, marginTop: 16, display: "flex" },
+                    style: { fontFamily: "Barlow", fontWeight: 400, fontSize: 24, color: WHITE_60, lineHeight: 1.3, width: 374, marginTop: 16, display: "flex", flexWrap: "wrap" as const },
                     children: sub,
                   } } : null,
                 ].filter(Boolean),
@@ -357,7 +357,7 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
                 children: [
                   display(headlineUpper, { size: headlineUpper.length <= 4 ? 280 : 200, color: ORANGE, lineHeight: 0.78, letterSpacing: -8 }),
                   { type: "div", props: { style: { width: 80, height: 4, background: ORANGE, display: "flex" } } },
-                  sub ? display(sub.toUpperCase(), { size: 28, lineHeight: 1.0, maxWidth: 420 }) : null,
+                  sub ? display(sub.toUpperCase(), { size: 26, lineHeight: 1.1, width: 428 }) : null,
                 ].filter(Boolean),
               } },
               { type: "div", props: { style: { display: "flex", height: 60 } } },
@@ -408,7 +408,7 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
           // Título da seção
           { type: "div", props: {
             style: { position: "absolute", top: 140, left: 64, right: 64, display: "flex" },
-            children: display(headlineUpper, { size: 70, lineHeight: 0.92, maxWidth: 900 }),
+            children: display(headlineUpper, { size: 64, lineHeight: 0.95, width: 952 }),
           } },
           // Lista
           { type: "div", props: {
@@ -422,8 +422,8 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
                   { type: "div", props: {
                     style: { display: "flex", flexDirection: "column", gap: 6, flex: 1 },
                     children: [
-                      display(it.t.toUpperCase(), { size: 38, lineHeight: 1.0, maxWidth: 700 }),
-                      it.s ? { type: "div", props: { style: { fontFamily: "Barlow", fontWeight: 400, fontSize: 22, color: WHITE_60, display: "flex" }, children: it.s } } : null,
+                      display(it.t.toUpperCase(), { size: 36, lineHeight: 1.05, width: 776 }),
+                      it.s ? { type: "div", props: { style: { fontFamily: "Barlow", fontWeight: 400, fontSize: 22, color: WHITE_60, display: "flex", flexWrap: "wrap" as const, width: 776 }, children: it.s } } : null,
                     ].filter(Boolean),
                   } },
                 ],
@@ -459,8 +459,8 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
             style: { position: "absolute", bottom: 200, left: 64, right: 64, display: "flex", flexDirection: "column", gap: 24 },
             children: [
               marker("// SUA PRÓXIMA DECISÃO", { color: ORANGE, size: 18 } as any),
-              display(headlineUpper, { size: headlineUpper.length > 25 ? 130 : 160, lineHeight: 0.86, maxWidth: 980 }),
-              sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontWeight: 400, fontSize: 26, color: WHITE_60, marginTop: 8, maxWidth: 800, display: "flex" }, children: sub } } : null,
+              display(headlineUpper, { size: headlineUpper.length > 25 ? 110 : 150, lineHeight: 0.86, width: 952 }),
+              sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontWeight: 400, fontSize: 24, color: WHITE_60, marginTop: 8, width: 952, display: "flex", flexWrap: "wrap" as const }, children: sub } } : null,
             ].filter(Boolean),
           } },
           // Faixa CTA inferior laranja
