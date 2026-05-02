@@ -23,6 +23,12 @@ REGRAS DA MARCA VS:
 - Sub_text opcional, máx 12 palavras. Apoio do headline, nunca repete.
 - Voz de quem domina o problema. Nunca corporativo.
 
+REGRAS DE FORMATAÇÃO DE TEXTO (CRÍTICO):
+- NUNCA use "/" pra separar palavras no headline (ex: "DESIGN / SEM / IMPACTO" é ERRADO).
+- NUNCA use "|" no headline. Escreva frase fluida: "DESIGN SEM IMPACTO".
+- A quebra de linha é feita automaticamente pelo template — não force.
+- Caracteres "/" e "|" são RESERVADOS apenas pro sub_text do T04_LIST.
+
 TEMPLATES DISPONÍVEIS (apenas estes 5 — escolha 1 por slide):
 
 1. T01_HOOK_BIG_TEXT — CAPA. Foto P&B fullbleed + headline gigante embaixo + barra laranja topo.
