@@ -117,7 +117,7 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
     const finalUrl = urlData.publicUrl;
 
     await admin.from("imagery_slides").update({
-      final_png_url: finalUrl, status: "ready",
+      final_png_url: finalUrl, status: "ready", error_message: null,
     }).eq("id", slide_id);
 
     await admin.from("imagery_logs").insert({
