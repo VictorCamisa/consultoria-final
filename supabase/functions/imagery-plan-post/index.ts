@@ -133,7 +133,7 @@ Gere a estrutura completa.`;
                     type: "object",
                     properties: {
                       slide_n: { type: "number" },
-                      template_id: { type: "string", enum: ["T01_HOOK_BIG_TEXT","T02_PROBLEM_STATEMENT","T03_DATA_POINT","T04_BEFORE_AFTER","T05_PROCESS_STEP","T06_QUOTE_FOUNDER","T07_SOLUTION_REVEAL","T08_CTA_FINAL"] },
+                      template_id: { type: "string", enum: ["T01_HOOK_BIG_TEXT","T02_PROBLEM_STATEMENT","T03_DATA_POINT","T04_LIST","T08_CTA_FINAL"] },
                       headline: { type: "string", description: "Texto principal, max 8 palavras" },
                       sub_text: { type: "string", description: "Apoio opcional, max 15 palavras" },
                       needs_image: { type: "boolean" },
