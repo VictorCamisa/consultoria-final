@@ -47,6 +47,9 @@ async function loadFonts() {
 
 const VS_BLUE = "#2E6FCC";
 const VS_BLUE_LIGHT = "#4A8DE0";
+const BLACK = "#0A0A0A";
+const WHITE = "#FAFAFA";
+const RED_PROBLEM = "#7A1F1F";
 
 async function urlToDataUrl(url: string): Promise<string | undefined> {
   try {
@@ -139,115 +142,244 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
   const headlineUpper = headline.toUpperCase();
   const baseStyle = {
     width: 1080, height: 1080,
-    display: "flex", flexDirection: "column",
+    display: "flex", flexDirection: "column" as const,
     fontFamily: "Barlow Condensed",
-    color: "white", position: "relative" as const,
+    color: WHITE, position: "relative" as const,
   };
 
-  const bgLayer = bgUrl ? {
-    type: "img", props: {
-      src: bgUrl,
-      style: { position: "absolute", top: 0, left: 0, width: 1080, height: 1080, objectFit: "cover" },
-    },
-  } : null;
-
-  const overlay = {
+  // Helpers
+  const handleEl = (color = "rgba(255,255,255,0.55)") => ({
     type: "div", props: {
       style: {
-        position: "absolute", top: 0, left: 0, width: 1080, height: 1080,
-        background: "linear-gradient(180deg, rgba(5,8,20,0.4) 0%, rgba(5,8,20,0.85) 100%)",
-        display: "flex",
+        position: "absolute", bottom: 56, right: 64,
+        fontFamily: "Barlow", fontSize: 20, color, letterSpacing: 1, display: "flex",
       },
+      children: "@VSSOLUCOES_",
     },
-  };
+  });
 
-  const logo = {
+  const logoEl = (top = 56, left = 64, height = 44) => ({
     type: "img", props: {
       src: VS_LOGO_DATA_URL,
-      style: { position: "absolute", top: 48, left: 48, height: 56, width: "auto" },
+      style: { position: "absolute", top, left, height, width: "auto" },
     },
-  };
+  });
 
-  const handle = {
-    type: "div", props: {
-      style: {
-        position: "absolute", bottom: 48, left: 48,
-        fontFamily: "Barlow", fontSize: 22, color: "rgba(255,255,255,0.6)", display: "flex",
-      },
-      children: "@vssolucoes_",
-    },
-  };
-
-  // Variants por template
-  let content: any;
-  switch (template) {
-    case "T01_HOOK_BIG_TEXT":
-      content = {
-        type: "div", props: {
-          style: {
-            position: "absolute", inset: 0, padding: 80,
-            display: "flex", alignItems: "center", justifyContent: "flex-start",
-          },
-          children: {
-            type: "div", props: {
+  // ===== T01 — CAPA HOOK GIGANTE =====
+  if (template === "T01_HOOK_BIG_TEXT") {
+    const hasBg = !!bgUrl;
+    return {
+      type: "div", props: {
+        style: { ...baseStyle, background: BLACK },
+        children: [
+          hasBg ? { type: "img", props: { src: bgUrl!, style: { position: "absolute", inset: 0, width: 1080, height: 1080, objectFit: "cover", filter: "grayscale(100%) contrast(140%) brightness(70%)" } } } : null,
+          hasBg ? { type: "div", props: { style: { position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex" } } } : null,
+          // Barra azul VS no topo
+          { type: "div", props: { style: { position: "absolute", top: 0, left: 0, width: 1080, height: 12, background: VS_BLUE, display: "flex" } } },
+          logoEl(56, 64, 40),
+          // Headline gigante centro-esquerda
+          { type: "div", props: {
+            style: { position: "absolute", inset: 0, padding: "180px 64px 180px 64px", display: "flex", alignItems: "center" },
+            children: { type: "div", props: {
               style: {
                 fontFamily: "Barlow Condensed", fontWeight: 700,
-                fontSize: 160, lineHeight: 0.95, letterSpacing: -2,
-                color: "white", textTransform: "uppercase", display: "flex",
+                fontSize: headlineUpper.length > 30 ? 180 : 220,
+                lineHeight: 0.88, letterSpacing: -4,
+                color: WHITE, textTransform: "uppercase", display: "flex",
               },
               children: headlineUpper,
-            },
-          },
-        },
-      };
-      break;
-    case "T03_DATA_POINT":
-      content = {
-        type: "div", props: {
-          style: {
-            position: "absolute", inset: 0, padding: 80,
-            display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "flex-start", gap: 24,
-          },
-          children: [
-            { type: "div", props: { style: { fontSize: 240, fontWeight: 700, color: VS_BLUE_LIGHT, lineHeight: 1, display: "flex" }, children: headlineUpper } },
-            sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 32, color: "rgba(255,255,255,0.85)", maxWidth: 800, display: "flex" }, children: sub } } : null,
-          ].filter(Boolean),
-        },
-      };
-      break;
-    case "T08_CTA_FINAL":
-      // Fundo VS Blue sólido, sem bgImage
-      return {
-        type: "div", props: {
-          style: { ...baseStyle, background: VS_BLUE, alignItems: "center", justifyContent: "center", padding: 80 },
-          children: [
-            { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 110, lineHeight: 1, color: "white", textAlign: "center", display: "flex", textTransform: "uppercase", letterSpacing: -1 }, children: headlineUpper } },
-            sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 32, color: "rgba(255,255,255,0.9)", marginTop: 32, maxWidth: 800, textAlign: "center", display: "flex" }, children: sub } } : null,
-            { type: "img", props: { src: VS_LOGO_DATA_URL, style: { position: "absolute", bottom: 56, height: 56, width: "auto" } } },
-            { type: "div", props: { style: { position: "absolute", bottom: 24, fontFamily: "Barlow", fontSize: 22, color: "rgba(255,255,255,0.85)", display: "flex" }, children: "@vssolucoes_" } },
-          ].filter(Boolean),
-        },
-      };
-    default:
-      // T02, T04, T05, T06, T07 — layout padrão headline embaixo + sub
-      content = {
-        type: "div", props: {
-          style: {
-            position: "absolute", inset: 0, padding: 80,
-            display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 16,
-          },
-          children: [
-            { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 92, lineHeight: 0.98, color: "white", textTransform: "uppercase", letterSpacing: -1, maxWidth: 900, display: "flex" }, children: headlineUpper } },
-            sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 30, color: "rgba(255,255,255,0.85)", maxWidth: 800, display: "flex" }, children: sub } } : null,
-          ].filter(Boolean),
-        },
-      };
+            } },
+          } },
+          // Faixa inferior @handle
+          { type: "div", props: { style: { position: "absolute", bottom: 0, left: 0, right: 0, height: 80, background: BLACK, borderTop: `2px solid ${VS_BLUE}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 64px" } }, children: undefined },
+          { type: "div", props: { style: { position: "absolute", bottom: 28, left: 64, fontFamily: "Barlow", fontSize: 22, color: WHITE, letterSpacing: 2, display: "flex" }, children: "ARRASTE →" } },
+          handleEl(WHITE),
+        ].filter(Boolean),
+      },
+    };
   }
 
+  // ===== T03 — DATA POINT (NÚMERO GIGANTE) =====
+  if (template === "T03_DATA_POINT") {
+    return {
+      type: "div", props: {
+        style: { ...baseStyle, background: BLACK },
+        children: [
+          logoEl(56, 64, 36),
+          { type: "div", props: { style: { position: "absolute", top: 56, right: 64, fontFamily: "Barlow", fontSize: 18, color: VS_BLUE_LIGHT, letterSpacing: 3, display: "flex" }, children: "// DADO" } },
+          { type: "div", props: {
+            style: { position: "absolute", inset: 0, padding: 64, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "flex-start", gap: 32 },
+            children: [
+              { type: "div", props: {
+                style: {
+                  fontFamily: "Barlow Condensed", fontWeight: 700,
+                  fontSize: headlineUpper.length > 4 ? 360 : 480,
+                  lineHeight: 0.85, letterSpacing: -10, color: VS_BLUE_LIGHT, display: "flex",
+                },
+                children: headlineUpper,
+              } },
+              sub ? { type: "div", props: {
+                style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 48, color: WHITE, textTransform: "uppercase", maxWidth: 900, lineHeight: 1.05, display: "flex", borderLeft: `6px solid ${VS_BLUE}`, paddingLeft: 24 },
+                children: sub.toUpperCase(),
+              } } : null,
+            ].filter(Boolean),
+          } },
+          handleEl(),
+        ].filter(Boolean),
+      },
+    };
+  }
+
+  // ===== T04 — BEFORE/AFTER (SPLIT) =====
+  if (template === "T04_BEFORE_AFTER") {
+    // headline esperado: "antes | depois" ou usa fallback
+    const parts = headline.includes("|") ? headline.split("|") : ["ANTES", "DEPOIS"];
+    const left = (parts[0] ?? "ANTES").trim().toUpperCase();
+    const right = (parts[1] ?? "DEPOIS").trim().toUpperCase();
+    return {
+      type: "div", props: {
+        style: { ...baseStyle, flexDirection: "row", background: BLACK },
+        children: [
+          // LEFT — problema
+          { type: "div", props: {
+            style: { width: 540, height: 1080, background: "#1A1A1A", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: 48, position: "relative" },
+            children: [
+              { type: "div", props: { style: { position: "absolute", top: 56, fontFamily: "Barlow", fontSize: 20, color: "#888", letterSpacing: 4, display: "flex" }, children: "ANTES" } },
+              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 96, lineHeight: 0.95, color: "#888", textTransform: "uppercase", textAlign: "center", letterSpacing: -2, display: "flex" }, children: left } },
+              { type: "div", props: { style: { position: "absolute", bottom: 56, width: 80, height: 6, background: RED_PROBLEM, display: "flex" } } },
+            ],
+          } },
+          // RIGHT — solução VS
+          { type: "div", props: {
+            style: { width: 540, height: 1080, background: VS_BLUE, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: 48, position: "relative" },
+            children: [
+              { type: "div", props: { style: { position: "absolute", top: 56, fontFamily: "Barlow", fontSize: 20, color: WHITE, letterSpacing: 4, display: "flex" }, children: "COM A VS" } },
+              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 96, lineHeight: 0.95, color: WHITE, textTransform: "uppercase", textAlign: "center", letterSpacing: -2, display: "flex" }, children: right } },
+              { type: "div", props: { style: { position: "absolute", bottom: 56, width: 80, height: 6, background: WHITE, display: "flex" } } },
+            ],
+          } },
+          // Sub na base se houver
+          sub ? { type: "div", props: {
+            style: { position: "absolute", bottom: 24, left: 0, right: 0, fontFamily: "Barlow", fontSize: 18, color: "rgba(255,255,255,0.6)", textAlign: "center", letterSpacing: 2, display: "flex", justifyContent: "center" },
+            children: sub.toUpperCase(),
+          } } : null,
+        ].filter(Boolean),
+      },
+    };
+  }
+
+  // ===== T05 — PROCESS STEP (NÚMERO DA ETAPA) =====
+  if (template === "T05_PROCESS_STEP") {
+    // Tenta extrair "01" ou número do início
+    const match = headline.match(/^(\d{1,2})/);
+    const stepNumber = match ? match[1].padStart(2, "0") : "01";
+    const stepText = headline.replace(/^\d{1,2}[\s.\-]*/, "").toUpperCase() || headlineUpper;
+    return {
+      type: "div", props: {
+        style: { ...baseStyle, background: BLACK },
+        children: [
+          logoEl(56, 64, 36),
+          { type: "div", props: { style: { position: "absolute", top: 56, right: 64, fontFamily: "Barlow", fontSize: 18, color: VS_BLUE_LIGHT, letterSpacing: 3, display: "flex" }, children: "// ETAPA" } },
+          { type: "div", props: {
+            style: { position: "absolute", inset: 0, padding: "64px 64px 120px 64px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "flex-start" },
+            children: [
+              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 600, lineHeight: 0.78, letterSpacing: -20, color: VS_BLUE, display: "flex" }, children: stepNumber } },
+              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 80, lineHeight: 0.95, color: WHITE, textTransform: "uppercase", letterSpacing: -1, marginTop: 16, maxWidth: 900, display: "flex" }, children: stepText } },
+              sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 26, color: "rgba(255,255,255,0.7)", marginTop: 20, maxWidth: 800, display: "flex" }, children: sub } } : null,
+            ].filter(Boolean),
+          } },
+          handleEl(),
+        ].filter(Boolean),
+      },
+    };
+  }
+
+  // ===== T06 — QUOTE (CITAÇÃO EDITORIAL) =====
+  if (template === "T06_QUOTE_FOUNDER") {
+    return {
+      type: "div", props: {
+        style: { ...baseStyle, background: BLACK },
+        children: [
+          logoEl(56, 64, 36),
+          { type: "div", props: {
+            style: { position: "absolute", inset: 0, padding: 100, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "flex-start", gap: 32 },
+            children: [
+              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 200, lineHeight: 0.7, color: VS_BLUE, display: "flex" }, children: "\u201C" } },
+              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 80, lineHeight: 1.05, color: WHITE, maxWidth: 900, letterSpacing: -1, display: "flex" }, children: headline } },
+              sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 22, color: VS_BLUE_LIGHT, letterSpacing: 3, marginTop: 8, display: "flex" }, children: `— ${sub.toUpperCase()}` } } : null,
+            ].filter(Boolean),
+          } },
+          handleEl(),
+        ].filter(Boolean),
+      },
+    };
+  }
+
+  // ===== T07 — SOLUTION REVEAL =====
+  if (template === "T07_SOLUTION_REVEAL") {
+    return {
+      type: "div", props: {
+        style: { ...baseStyle, background: BLACK },
+        children: [
+          logoEl(56, 64, 36),
+          { type: "div", props: { style: { position: "absolute", top: 56, right: 64, fontFamily: "Barlow", fontSize: 18, color: VS_BLUE_LIGHT, letterSpacing: 3, display: "flex" }, children: "// SOLUÇÃO" } },
+          { type: "div", props: {
+            style: { position: "absolute", inset: 0, padding: 80, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "flex-start", gap: 32 },
+            children: [
+              { type: "div", props: { style: { width: 120, height: 8, background: VS_BLUE, display: "flex" } } },
+              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 120, lineHeight: 0.92, color: WHITE, textTransform: "uppercase", letterSpacing: -2, maxWidth: 950, display: "flex" }, children: headlineUpper } },
+              sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 30, color: "rgba(255,255,255,0.75)", maxWidth: 850, display: "flex" }, children: sub } } : null,
+            ].filter(Boolean),
+          } },
+          handleEl(),
+        ].filter(Boolean),
+      },
+    };
+  }
+
+  // ===== T08 — CTA FINAL (FUNDO VS BLUE) =====
+  if (template === "T08_CTA_FINAL") {
+    return {
+      type: "div", props: {
+        style: { ...baseStyle, background: VS_BLUE, justifyContent: "center", alignItems: "center", padding: 80 },
+        children: [
+          { type: "img", props: { src: VS_LOGO_DATA_URL, style: { position: "absolute", top: 80, height: 56, width: "auto" } } },
+          { type: "div", props: {
+            style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 32, textAlign: "center" },
+            children: [
+              { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 22, color: WHITE, letterSpacing: 6, opacity: 0.85, display: "flex" }, children: "// PRÓXIMO PASSO" } },
+              { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 130, lineHeight: 0.92, color: WHITE, textTransform: "uppercase", letterSpacing: -2, maxWidth: 920, textAlign: "center", display: "flex" }, children: headlineUpper } },
+              sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 28, color: "rgba(255,255,255,0.95)", marginTop: 16, maxWidth: 800, textAlign: "center", display: "flex" }, children: sub } } : null,
+            ].filter(Boolean),
+          } },
+          { type: "div", props: { style: { position: "absolute", bottom: 64, fontFamily: "Barlow", fontSize: 20, color: WHITE, letterSpacing: 4, opacity: 0.85, display: "flex" }, children: "@VSSOLUCOES_" } },
+        ],
+      },
+    };
+  }
+
+  // ===== DEFAULT — T02 PROBLEM (foto P&B + headline brutal embaixo) =====
+  const hasBg = !!bgUrl;
   return {
     type: "div", props: {
-      style: { ...baseStyle, background: "#050814" },
-      children: [bgLayer, overlay, logo, content, handle].filter(Boolean),
+      style: { ...baseStyle, background: BLACK },
+      children: [
+        hasBg ? { type: "img", props: { src: bgUrl!, style: { position: "absolute", inset: 0, width: 1080, height: 1080, objectFit: "cover", filter: "grayscale(100%) contrast(140%) brightness(60%)" } } } : null,
+        // Overlay forte na metade inferior
+        { type: "div", props: { style: { position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.95) 75%)", display: "flex" } } },
+        { type: "div", props: { style: { position: "absolute", top: 0, left: 0, width: 1080, height: 8, background: VS_BLUE, display: "flex" } } },
+        logoEl(56, 64, 36),
+        { type: "div", props: { style: { position: "absolute", top: 56, right: 64, fontFamily: "Barlow", fontSize: 18, color: VS_BLUE_LIGHT, letterSpacing: 3, display: "flex" }, children: "// PROBLEMA" } },
+        { type: "div", props: {
+          style: { position: "absolute", inset: 0, padding: "64px 64px 140px 64px", display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: 24 },
+          children: [
+            { type: "div", props: { style: { width: 80, height: 6, background: VS_BLUE, display: "flex" } } },
+            { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 110, lineHeight: 0.92, color: WHITE, textTransform: "uppercase", letterSpacing: -2, maxWidth: 950, display: "flex" }, children: headlineUpper } },
+            sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 28, color: "rgba(255,255,255,0.8)", maxWidth: 800, display: "flex" }, children: sub } } : null,
+          ].filter(Boolean),
+        } },
+        handleEl(),
+      ].filter(Boolean),
     },
   };
 }
