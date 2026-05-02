@@ -106,10 +106,10 @@ function Slide1() {
         </h1>
       </div>
 
-      <div className="absolute bottom-5 left-8 right-8 flex items-center justify-between z-10">
-        <span className="font-mono text-[10px] tracking-[0.3em] text-white/50">@VSSOLUCOES</span>
+      <div className="absolute bottom-5 left-8 z-10">
         <span className="font-mono text-[10px] tracking-[0.3em] text-white/60">ARRASTE →</span>
       </div>
+      <BrandMark position="bottom-right" size={32} opacity={0.9} />
     </SlideShell>
   );
 }
