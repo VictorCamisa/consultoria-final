@@ -5,6 +5,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import satori from "https://esm.sh/satori@0.10.13";
 import { Resvg } from "https://esm.sh/@resvg/resvg-wasm@2.6.2";
 import { corsHeaders } from "../_shared/cors.ts";
+import { VS_LOGO_DATA_URL } from "./logo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -139,13 +140,9 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
   };
 
   const logo = {
-    type: "div", props: {
-      style: {
-        position: "absolute", top: 48, left: 48,
-        fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 28,
-        letterSpacing: 6, color: "white", display: "flex",
-      },
-      children: "VS",
+    type: "img", props: {
+      src: VS_LOGO_DATA_URL,
+      style: { position: "absolute", top: 48, left: 48, height: 56, width: "auto" },
     },
   };
 
@@ -204,7 +201,8 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
           children: [
             { type: "div", props: { style: { fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 110, lineHeight: 1, color: "white", textAlign: "center", display: "flex", textTransform: "uppercase", letterSpacing: -1 }, children: headlineUpper } },
             sub ? { type: "div", props: { style: { fontFamily: "Barlow", fontSize: 32, color: "rgba(255,255,255,0.9)", marginTop: 32, maxWidth: 800, textAlign: "center", display: "flex" }, children: sub } } : null,
-            { type: "div", props: { style: { position: "absolute", bottom: 64, fontFamily: "Barlow Condensed", fontWeight: 700, fontSize: 28, letterSpacing: 6, color: "white", display: "flex" }, children: "VS · @vssolucoes_" } },
+            { type: "img", props: { src: VS_LOGO_DATA_URL, style: { position: "absolute", bottom: 56, height: 56, width: "auto" } } },
+            { type: "div", props: { style: { position: "absolute", bottom: 24, fontFamily: "Barlow", fontSize: 22, color: "rgba(255,255,255,0.85)", display: "flex" }, children: "@vssolucoes_" } },
           ].filter(Boolean),
         },
       };
