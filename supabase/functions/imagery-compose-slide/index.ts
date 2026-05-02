@@ -3,26 +3,11 @@
 // Tipografia: Archivo Black (display brutalista) + Barlow Regular (corpo/markers)
 // Logo VS aplicada em TODOS os slides.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import satori from "https://esm.sh/satori@0.10.13";
-import { Resvg } from "https://esm.sh/@resvg/resvg-wasm@2.6.2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { VS_LOGO_DATA_URL } from "./logo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-// Init Resvg WASM (one-time, módulo-level)
-let resvgReady: Promise<void> | null = null;
-async function initResvg() {
-  if (!resvgReady) {
-    resvgReady = (async () => {
-      const wasm = await fetch("https://esm.sh/@resvg/resvg-wasm@2.6.2/index_bg.wasm").then(r => r.arrayBuffer());
-      const { initWasm } = await import("https://esm.sh/@resvg/resvg-wasm@2.6.2");
-      await initWasm(wasm);
-    })();
-  }
-  return resvgReady;
-}
 
 // Carrega Archivo Black (display) + Barlow Regular (corpo) — fontes leves pra evitar CPU timeout
 type FontEntry = { name: string; data: ArrayBuffer; weight: number; style: "normal" | "italic" };
