@@ -134,46 +134,55 @@ function Slide2() {
   );
 }
 
-// ─────────── SLIDE 3: DATA POINT (número heroico sobre foto do telefone) ───────────
+// ─────────── SLIDE 3: DATA-SPLIT (substitui antigo "73% sobre telefone") ───────────
+// Estrutura derivada do SLIDE 2 (que você amou): split 50/50 — foto P&B à esquerda,
+// número GIGANTE em fundo preto à direita. Lê fácil, dado domina.
 function Slide3() {
   return (
-    <SlideShell image={bgPhone} imageOpacity={0.4}>
-      <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#FF5300] z-10" />
-
-      <div className="absolute top-8 left-8 font-mono text-[10px] tracking-[0.3em] text-white/60 z-10">
-        03 / 05
-      </div>
-      <div className="absolute top-8 right-8 font-mono text-[10px] tracking-[0.3em] text-[#FF5300] z-10">
-        DADO
-      </div>
-
-      <div className="absolute top-20 left-8 right-8 z-10">
-        <p className="font-mono text-[9px] tracking-[0.4em] text-white/50 uppercase">
-          // pesquisa VS · 2025 · n=312
-        </p>
-      </div>
-
-      {/* NÚMERO GIGANTE centralizado-esquerda */}
-      <div className="absolute left-2 right-2 bottom-28 z-10">
-        <div
-          className="text-[#FF5300] font-black italic leading-[0.75] tracking-tighter text-center"
-          style={{ fontFamily: "Poppins, sans-serif", fontSize: 320 }}
-        >
-          73<span className="text-white">%</span>
+    <SlideShell bg="bg-black">
+      {/* lado esquerdo: foto P&B do relógio (tempo escorrendo) */}
+      <div className="absolute top-0 left-0 bottom-0 w-1/2 overflow-hidden">
+        <img
+          src={bgClock}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ filter: "grayscale(100%) contrast(1.25)" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/70" />
+        <div className="absolute bottom-5 left-5 font-mono text-[9px] tracking-[0.3em] text-white/70 uppercase">
+          // tempo perdido
         </div>
       </div>
 
-      <div className="absolute bottom-10 left-8 right-8 z-10">
-        <p
-          className="text-white font-black italic uppercase leading-[0.95] text-center"
-          style={{ fontFamily: "Poppins, sans-serif", fontSize: 18 }}
-        >
-          Dos PMEs perdem o lead em menos de 2 horas
-        </p>
-      </div>
+      {/* lado direito: dado em preto puro */}
+      <div className="absolute top-0 right-0 bottom-0 w-1/2 flex flex-col justify-between p-7">
+        <div className="flex items-start justify-between">
+          <span className="font-mono text-[10px] tracking-[0.3em] text-white/50">03 / 05</span>
+          <span className="font-mono text-[10px] tracking-[0.3em] text-[#FF5300]">DADO</span>
+        </div>
 
-      <div className="absolute bottom-3 left-8 font-mono text-[9px] tracking-[0.3em] text-white/40 z-10">
-        @VSSOLUCOES
+        {/* número gigante */}
+        <div className="-mx-2">
+          <div
+            className="text-[#FF5300] font-black italic leading-[0.75] tracking-tighter"
+            style={{ fontFamily: "Poppins, sans-serif", fontSize: 220 }}
+          >
+            73<span className="text-white">%</span>
+          </div>
+          <div className="mt-3 h-[2px] w-16 bg-[#FF5300]" />
+          <p
+            className="text-white font-black italic uppercase leading-[0.95] mt-4"
+            style={{ fontFamily: "Poppins, sans-serif", fontSize: 22 }}
+          >
+            Dos PMEs<br />perdem o lead<br />em &lt; 2h.
+          </p>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-[9px] tracking-[0.3em] text-white/30">@VSSOLUCOES</span>
+          <span className="font-mono text-[8px] tracking-[0.3em] text-white/30">VS · 2025 · n=312</span>
+        </div>
       </div>
     </SlideShell>
   );
@@ -245,60 +254,50 @@ function Slide4() {
   );
 }
 
-// ─────────── SLIDE 5: CTA brutal (foto do executivo decidido + overlay laranja) ───────────
+// ─────────── SLIDE 5: CTA-HOOK (substitui antigo CTA chapado laranja) ───────────
+// Mesma DNA do SLIDE 1 (que você amou): foto P&B fullbleed + headline embaixo.
+// Diferenciais: barra inferior laranja com CTA explícito + URL em destaque.
 function Slide5() {
   return (
-    <SlideShell bg="bg-[#FF5300]">
-      {/* foto P&B do executivo caminhando — multiply com laranja */}
-      <img
-        src={bgAction}
-        alt=""
-        loading="lazy"
-        className="absolute inset-0 w-full h-full object-cover"
-        style={{ filter: "grayscale(100%) contrast(1.4)", mixBlendMode: "multiply", opacity: 0.85 }}
-      />
-      {/* leve textura pra não ficar plástico */}
-      <div
-        className="absolute inset-0 opacity-15 mix-blend-overlay pointer-events-none"
-        style={{
-          backgroundImage:
-            "repeating-linear-gradient(45deg, rgba(0,0,0,0.2) 0px, rgba(0,0,0,0.2) 1px, transparent 1px, transparent 4px)",
-        }}
-      />
+    <SlideShell image={bgDecision} imageOpacity={0.75}>
+      {/* barra superior laranja — espelha o slide 1 */}
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#FF5300] z-10" />
 
-      {/* faixa preta diagonal de marca no topo */}
-      <div className="absolute top-0 left-0 right-0 h-12 bg-black flex items-center justify-between px-8 z-10">
-        <span className="font-mono text-[10px] tracking-[0.3em] text-[#FF5300]">VS · CTA FINAL</span>
-        <span className="font-mono text-[10px] tracking-[0.3em] text-white/60">05 / 05</span>
+      <div className="absolute top-8 left-8 font-mono text-[10px] tracking-[0.3em] text-white/60 z-10">
+        05 / 05
+      </div>
+      <div className="absolute top-8 right-8 font-mono text-[10px] tracking-[0.3em] text-[#FF5300] z-10">
+        VS · DECIDA
       </div>
 
-      {/* headline desalinhada pra esquerda, embaixo */}
-      <div className="absolute left-8 right-8 bottom-28 z-10">
-        <p className="font-mono text-[10px] tracking-[0.4em] text-black uppercase mb-4 font-bold">
-          // próximo passo
+      {/* headline embaixo, mesmo padrão do slide 1 */}
+      <div className="absolute left-8 right-8 bottom-24 z-10">
+        <p className="font-mono text-[10px] tracking-[0.4em] text-[#FF5300] uppercase mb-3">
+          // sua próxima decisão
         </p>
         <h2
-          className="text-black font-black italic uppercase leading-[0.82] tracking-tight"
-          style={{ fontFamily: "Poppins, sans-serif", fontSize: 88 }}
+          className="text-white font-black italic uppercase leading-[0.85] tracking-tight"
+          style={{ fontFamily: "Poppins, sans-serif", fontSize: 74 }}
         >
           Para de
           <br />
-          perder
+          perder.
           <br />
-          dinheiro.
+          <span className="text-[#FF5300]">Vende.</span>
         </h2>
-        <div className="mt-6 flex items-center gap-3">
-          <div className="h-[2px] w-12 bg-black" />
-          <p className="font-mono text-[10px] tracking-[0.2em] text-black uppercase font-bold">
-            vendasdesolucoes.com
-          </p>
-        </div>
       </div>
 
-      {/* footer preto */}
-      <div className="absolute bottom-0 left-0 right-0 h-10 bg-black flex items-center justify-between px-8 z-10">
-        <span className="font-mono text-[10px] tracking-[0.3em] text-white/60">@VSSOLUCOES</span>
-        <span className="font-mono text-[10px] tracking-[0.3em] text-[#FF5300]">→ FALAR AGORA</span>
+      {/* faixa inferior laranja com CTA explícito */}
+      <div className="absolute bottom-0 left-0 right-0 h-12 bg-[#FF5300] flex items-center justify-between px-8 z-10">
+        <span
+          className="text-black font-black italic uppercase tracking-tight"
+          style={{ fontFamily: "Poppins, sans-serif", fontSize: 14 }}
+        >
+          → vendasdesolucoes.com
+        </span>
+        <span className="font-mono text-[10px] tracking-[0.3em] text-black font-bold">
+          @VSSOLUCOES
+        </span>
       </div>
     </SlideShell>
   );
