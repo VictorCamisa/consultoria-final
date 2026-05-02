@@ -372,6 +372,73 @@ export function CreatePostTab() {
         );
       })()}
 
+      {readyToPublish && (
+        <Card className="border-pink-500/30 bg-gradient-to-br from-pink-50/50 to-orange-50/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs flex items-center gap-2">
+              <Instagram className="h-3.5 w-3.5 text-pink-600" />
+              Publicar no Instagram @vssolucoes_
+              {(post as any)?.ig_status === "published" && (
+                <Badge variant="default" className="text-[9px] ml-1 bg-green-600">publicado</Badge>
+              )}
+              {(post as any)?.ig_status === "publishing" && (
+                <Badge variant="secondary" className="text-[9px] ml-1">publicando…</Badge>
+              )}
+              {(post as any)?.ig_status === "failed" && (
+                <Badge variant="destructive" className="text-[9px] ml-1">falhou</Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Textarea
+              value={igCaption}
+              onChange={(e) => setIgCaption(e.target.value)}
+              placeholder="Legenda + hashtags…"
+              rows={6}
+              className="text-xs"
+              disabled={igPublishing || (post as any)?.ig_status === "publishing"}
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground">
+                {igCaption.length}/2200 · {slides?.length} {slides?.length === 1 ? "imagem" : "slides (carrossel)"}
+              </span>
+              {(post as any)?.ig_permalink && (
+                <Button
+                  size="sm" variant="outline" className="h-7 text-[10px]"
+                  onClick={() => window.open((post as any).ig_permalink, "_blank")}
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />Ver no Instagram
+                </Button>
+              )}
+              <Button
+                size="sm"
+                onClick={handlePublishInstagram}
+                disabled={
+                  igPublishing ||
+                  (post as any)?.ig_status === "publishing" ||
+                  (post as any)?.ig_status === "published"
+                }
+                className="ml-auto bg-gradient-to-r from-pink-600 to-orange-500 text-white hover:opacity-90"
+              >
+                {igPublishing || (post as any)?.ig_status === "publishing" ? (
+                  <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Publicando…</>
+                ) : (post as any)?.ig_status === "published" ? (
+                  <><CheckCircle2 className="h-3 w-3 mr-1" />Publicado</>
+                ) : (
+                  <><Instagram className="h-3 w-3 mr-1" />Publicar agora</>
+                )}
+              </Button>
+            </div>
+            {(post as any)?.ig_error && (
+              <p className="text-[10px] text-destructive flex items-start gap-1">
+                <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                {(post as any).ig_error}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {!!slides?.length && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {slides.map((s) => (
