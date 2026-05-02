@@ -3,6 +3,7 @@
 // Tipografia: Archivo Black (display brutalista) + Barlow Regular (corpo/markers)
 // Logo VS aplicada em TODOS os slides.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import satori from "https://esm.sh/satori@0.10.13";
 import { corsHeaders } from "../_shared/cors.ts";
 import { VS_LOGO_DATA_URL } from "./logo.ts";
 
