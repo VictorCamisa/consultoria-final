@@ -1063,6 +1063,12 @@ export type Database = {
           custo_total_usd: number | null
           error_message: string | null
           id: string
+          ig_caption: string | null
+          ig_error: string | null
+          ig_media_id: string | null
+          ig_permalink: string | null
+          ig_published_at: string | null
+          ig_status: string | null
           n_slides: number
           nicho: string
           objetivo: string
@@ -1078,6 +1084,12 @@ export type Database = {
           custo_total_usd?: number | null
           error_message?: string | null
           id?: string
+          ig_caption?: string | null
+          ig_error?: string | null
+          ig_media_id?: string | null
+          ig_permalink?: string | null
+          ig_published_at?: string | null
+          ig_status?: string | null
           n_slides?: number
           nicho: string
           objetivo: string
@@ -1093,6 +1105,12 @@ export type Database = {
           custo_total_usd?: number | null
           error_message?: string | null
           id?: string
+          ig_caption?: string | null
+          ig_error?: string | null
+          ig_media_id?: string | null
+          ig_permalink?: string | null
+          ig_published_at?: string | null
+          ig_status?: string | null
           n_slides?: number
           nicho?: string
           objetivo?: string
