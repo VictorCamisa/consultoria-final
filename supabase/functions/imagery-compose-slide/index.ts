@@ -98,23 +98,18 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
     // sub do T04 usa "||" e "|" como separadores — não sanitizar aqui
     const sub = ((slide.copy_data?.sub_text as string) ?? "").trim();
 
-    // Paraleliza I/O pesado: imagem + fontes + WASM
+    // Paraleliza I/O pesado: imagem + fontes. O render SVG é rápido; conversão PNG fica no navegador.
     const [bgUrl, fonts] = await Promise.all([
       rawBg ? urlToDataUrl(rawBg) : Promise.resolve(undefined),
       loadFonts(),
-      initResvg(),
     ]);
 
     const element = buildElement(slide.template_id, headline, sub, bgUrl);
     const svg = await satori(element, { width: 1080, height: 1080, fonts });
 
-    const { Resvg: ResvgClass } = await import("https://esm.sh/@resvg/resvg-wasm@2.6.2");
-    const resvg = new ResvgClass(svg, { fitTo: { mode: "width", value: 1080 } });
-    const png = resvg.render().asPng();
-
-    const path = `${slide.post_id}/${slide.id}_final_${Date.now()}.png`;
-    const { error: upErr } = await admin.storage.from("imagery").upload(path, png, {
-      contentType: "image/png", upsert: true,
+    const path = `${slide.post_id}/${slide.id}_final_${Date.now()}.svg`;
+    const { error: upErr } = await admin.storage.from("imagery").upload(path, new Blob([svg], { type: "image/svg+xml" }), {
+      contentType: "image/svg+xml; charset=utf-8", upsert: true,
     });
     if (upErr) throw upErr;
     const { data: urlData } = admin.storage.from("imagery").getPublicUrl(path);
