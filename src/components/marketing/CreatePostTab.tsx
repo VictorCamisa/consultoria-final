@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNichos } from "@/hooks/useNichos";
@@ -218,13 +218,19 @@ export function CreatePostTab() {
     slides.every((s) => s.final_png_url && s.status === "ready");
 
   // Inicializa caption quando o post ficar pronto
-  if (post?.copy_data && igCaption === "" && (post as any).ig_status !== "published") {
+  useEffect(() => {
+    if (!post?.copy_data) return;
+    if (igCaption !== "") return;
+    if ((post as any).ig_status === "published") return;
     const cd: any = post.copy_data;
     const base = cd.caption ?? "";
     const tags = (cd.hashtags ?? []).map((h: string) => `#${h.replace(/^#/, "")}`).join(" ");
     const initial = `${base}${tags ? "\n\n" + tags : ""}`;
-    if (initial) queueMicrotask(() => setIgCaption(initial));
-  }
+    if (initial) setIgCaption(initial);
+  }, [post, igCaption]);
+
+  // Reset caption quando troca de post
+  useEffect(() => { setIgCaption(""); }, [postId]);
 
   const handlePublishInstagram = async () => {
     if (!postId) return;
