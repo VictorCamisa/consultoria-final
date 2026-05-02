@@ -5,6 +5,7 @@ import bgAction from "@/assets/proto/bg-action.jpg";
 import bgPhone from "@/assets/proto/bg-phone.jpg";
 import bgDecision from "@/assets/proto/bg-decision.jpg";
 import bgClock from "@/assets/proto/bg-clock.jpg";
+import vsLogo from "@/assets/vs-logo-light.png";
 
 // Protótipo estático — carrossel V4/G4 brutalista
 // Renderiza 5 slides 1080x1080 (escalados pra caber na tela) lado a lado
@@ -12,6 +13,33 @@ import bgClock from "@/assets/proto/bg-clock.jpg";
 // Sem IA, sem fetch, sem nada dinâmico. Só HTML/CSS pra você julgar.
 
 const SLIDE_SIZE = 540; // 1080 / 2 — preview
+
+// Logo VS marca d'água — usada em todos os slides
+function BrandMark({
+  position = "bottom-right",
+  size = 36,
+  opacity = 0.85,
+}: {
+  position?: "bottom-right" | "bottom-left" | "top-right";
+  size?: number;
+  opacity?: number;
+}) {
+  const pos =
+    position === "bottom-right"
+      ? "bottom-5 right-5"
+      : position === "bottom-left"
+      ? "bottom-5 left-5"
+      : "top-5 right-5";
+  return (
+    <img
+      src={vsLogo}
+      alt="VS"
+      className={`absolute ${pos} z-20 pointer-events-none select-none`}
+      style={{ height: size, width: "auto", opacity }}
+      draggable={false}
+    />
+  );
+}
 
 function SlideShell({
   children,
