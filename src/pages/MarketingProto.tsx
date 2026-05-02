@@ -1,4 +1,8 @@
 import { useState } from "react";
+import bgDefeat from "@/assets/proto/bg-defeat.jpg";
+import bgCash from "@/assets/proto/bg-cash.jpg";
+import bgAction from "@/assets/proto/bg-action.jpg";
+import bgPhone from "@/assets/proto/bg-phone.jpg";
 
 // Protótipo estático — carrossel V4/G4 brutalista
 // Renderiza 5 slides 1080x1080 (escalados pra caber na tela) lado a lado
@@ -7,82 +11,100 @@ import { useState } from "react";
 
 const SLIDE_SIZE = 540; // 1080 / 2 — preview
 
-function SlideShell({ children, bg = "bg-black" }: { children: React.ReactNode; bg?: string }) {
+function SlideShell({
+  children,
+  bg = "bg-black",
+  image,
+  imageOpacity = 0.55,
+}: {
+  children: React.ReactNode;
+  bg?: string;
+  image?: string;
+  imageOpacity?: number;
+}) {
   return (
     <div
       className={`relative ${bg} overflow-hidden flex-shrink-0 rounded-md shadow-2xl`}
       style={{ width: SLIDE_SIZE, height: SLIDE_SIZE }}
     >
+      {image && (
+        <>
+          <img
+            src={image}
+            alt=""
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{ opacity: imageOpacity, filter: "grayscale(100%) contrast(1.15)" }}
+          />
+          {/* gradient overlay para legibilidade do texto (escurece embaixo) */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/30" />
+        </>
+      )}
       {children}
     </div>
   );
 }
 
 // ─────────── SLIDE 1: HOOK ───────────
-// Fundo preto. Headline brutal quebrada em linhas. Marca laranja no canto.
+// Foto P&B do empresário derrotado de fundo. Headline curta brutal.
 function Slide1() {
   return (
-    <SlideShell>
+    <SlideShell image={bgDefeat} imageOpacity={0.7}>
       {/* barra superior cyber orange */}
-      <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#FF5300]" />
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#FF5300] z-10" />
 
-      {/* slide number */}
-      <div className="absolute top-8 left-8 font-mono text-xs tracking-[0.3em] text-white/40">
+      <div className="absolute top-8 left-8 font-mono text-[10px] tracking-[0.3em] text-white/60 z-10">
         01 / 05
       </div>
-      <div className="absolute top-8 right-8 font-mono text-xs tracking-[0.3em] text-[#FF5300]">
+      <div className="absolute top-8 right-8 font-mono text-[10px] tracking-[0.3em] text-[#FF5300] z-10">
         VS · MANIFESTO
       </div>
 
-      {/* headline gigante — alinhado à esquerda, baixo, italic black */}
-      <div className="absolute left-8 right-8 bottom-20">
-        <p className="font-mono text-[10px] tracking-[0.4em] text-[#FF5300] uppercase mb-4">
-          // o problema que ninguém quer ver
+      {/* headline — encurtada pra não vazar */}
+      <div className="absolute left-8 right-8 bottom-16 z-10">
+        <p className="font-mono text-[10px] tracking-[0.4em] text-[#FF5300] uppercase mb-3">
+          // o que ninguém te conta
         </p>
         <h1
           className="text-white font-black italic uppercase leading-[0.85] tracking-tight"
-          style={{ fontFamily: "Poppins, sans-serif", fontSize: 92 }}
+          style={{ fontFamily: "Poppins, sans-serif", fontSize: 74 }}
         >
           Seu vendedor
           <br />
-          custa <span className="text-[#FF5300]">3x</span>
-          <br />
-          mais do que
-          <br />
-          você acha.
+          custa <span className="text-[#FF5300]">3x</span>{" "}
+          mais.
         </h1>
       </div>
 
-      {/* footer */}
-      <div className="absolute bottom-6 left-8 right-8 flex items-center justify-between">
-        <span className="font-mono text-[10px] tracking-[0.3em] text-white/30">@VSSOLUCOES</span>
-        <span className="font-mono text-[10px] tracking-[0.3em] text-white/40">ARRASTE →</span>
+      <div className="absolute bottom-5 left-8 right-8 flex items-center justify-between z-10">
+        <span className="font-mono text-[10px] tracking-[0.3em] text-white/50">@VSSOLUCOES</span>
+        <span className="font-mono text-[10px] tracking-[0.3em] text-white/60">ARRASTE →</span>
       </div>
     </SlideShell>
   );
 }
 
-// ─────────── SLIDE 2: PROBLEM (split foto + texto) ───────────
+// ─────────── SLIDE 2: PROBLEM (split foto real + texto) ───────────
 function Slide2() {
   return (
     <SlideShell bg="bg-[#0a0a0a]">
-      {/* lado esquerdo: "foto" simulada com gradient escuro + grão */}
-      <div className="absolute top-0 left-0 bottom-0 w-[55%] bg-gradient-to-br from-neutral-800 via-neutral-900 to-black">
-        <div
-          className="absolute inset-0 opacity-30 mix-blend-overlay"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(0deg, rgba(255,255,255,0.05) 0px, rgba(255,255,255,0.05) 1px, transparent 1px, transparent 3px)",
-          }}
+      {/* lado esquerdo: foto P&B real do dinheiro */}
+      <div className="absolute top-0 left-0 bottom-0 w-[55%] overflow-hidden">
+        <img
+          src={bgCash}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ filter: "grayscale(100%) contrast(1.2)" }}
         />
-        {/* canto: tag editorial */}
-        <div className="absolute bottom-6 left-6 font-mono text-[9px] tracking-[0.3em] text-white/40 uppercase">
-          Cena 02 · Realidade do PME brasileiro
+        <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/60" />
+        <div className="absolute bottom-5 left-5 font-mono text-[9px] tracking-[0.3em] text-white/70 uppercase">
+          Cena 02
         </div>
       </div>
 
       {/* lado direito: texto */}
-      <div className="absolute top-0 right-0 bottom-0 w-[45%] flex flex-col justify-between p-8">
+      <div className="absolute top-0 right-0 bottom-0 w-[45%] flex flex-col justify-between p-7">
         <div className="font-mono text-[10px] tracking-[0.3em] text-[#FF5300]">02 / 05</div>
 
         <div>
@@ -90,17 +112,17 @@ function Slide2() {
             // diagnóstico
           </p>
           <h2
-            className="text-white font-black italic uppercase leading-[0.88] tracking-tight"
-            style={{ fontFamily: "Poppins, sans-serif", fontSize: 56 }}
+            className="text-white font-black italic uppercase leading-[0.85] tracking-tight"
+            style={{ fontFamily: "Poppins, sans-serif", fontSize: 52 }}
           >
-            Treina,
+            Treina.
             <br />
-            paga,
+            Paga.
             <br />
-            <span className="text-[#FF5300]">repete.</span>
+            <span className="text-[#FF5300]">Repete.</span>
           </h2>
-          <p className="text-white/60 text-sm mt-6 leading-snug max-w-[200px]">
-            Salário, comissão, INSS, FGTS, plano. E o cara pede demissão em 8 meses.
+          <p className="text-white/70 text-xs mt-5 leading-snug max-w-[200px]">
+            Salário, comissão, encargos. Em 8 meses pede demissão.
           </p>
         </div>
 
@@ -110,47 +132,45 @@ function Slide2() {
   );
 }
 
-// ─────────── SLIDE 3: DATA POINT (número heroico) ───────────
+// ─────────── SLIDE 3: DATA POINT (número heroico sobre foto do telefone) ───────────
 function Slide3() {
   return (
-    <SlideShell>
-      <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#FF5300]" />
+    <SlideShell image={bgPhone} imageOpacity={0.4}>
+      <div className="absolute top-0 left-0 right-0 h-1.5 bg-[#FF5300] z-10" />
 
-      <div className="absolute top-8 left-8 font-mono text-xs tracking-[0.3em] text-white/40">
+      <div className="absolute top-8 left-8 font-mono text-[10px] tracking-[0.3em] text-white/60 z-10">
         03 / 05
       </div>
-      <div className="absolute top-8 right-8 font-mono text-xs tracking-[0.3em] text-[#FF5300]">
+      <div className="absolute top-8 right-8 font-mono text-[10px] tracking-[0.3em] text-[#FF5300] z-10">
         DADO
       </div>
 
-      {/* contexto top */}
-      <div className="absolute top-24 left-8 right-8">
-        <p className="font-mono text-[10px] tracking-[0.4em] text-white/40 uppercase">
-          // pesquisa interna VS · 2025 · n=312
+      <div className="absolute top-20 left-8 right-8 z-10">
+        <p className="font-mono text-[9px] tracking-[0.4em] text-white/50 uppercase">
+          // pesquisa VS · 2025 · n=312
         </p>
       </div>
 
-      {/* NÚMERO GIGANTE — empurrado pra baixo-esquerda */}
-      <div className="absolute left-4 bottom-32">
+      {/* NÚMERO GIGANTE centralizado-esquerda */}
+      <div className="absolute left-2 right-2 bottom-28 z-10">
         <div
-          className="text-[#FF5300] font-black italic leading-[0.75] tracking-tighter"
-          style={{ fontFamily: "Poppins, sans-serif", fontSize: 360 }}
+          className="text-[#FF5300] font-black italic leading-[0.75] tracking-tighter text-center"
+          style={{ fontFamily: "Poppins, sans-serif", fontSize: 320 }}
         >
-          73<span className="text-white/90">%</span>
+          73<span className="text-white">%</span>
         </div>
       </div>
 
-      {/* legenda do dado */}
-      <div className="absolute bottom-12 right-8 max-w-[260px] text-right">
+      <div className="absolute bottom-10 left-8 right-8 z-10">
         <p
-          className="text-white font-black italic uppercase leading-[0.95]"
-          style={{ fontFamily: "Poppins, sans-serif", fontSize: 22 }}
+          className="text-white font-black italic uppercase leading-[0.95] text-center"
+          style={{ fontFamily: "Poppins, sans-serif", fontSize: 18 }}
         >
-          Dos PMEs perdem o lead<br />em menos de 2 horas.
+          Dos PMEs perdem o lead em menos de 2 horas
         </p>
       </div>
 
-      <div className="absolute bottom-4 left-8 font-mono text-[9px] tracking-[0.3em] text-white/30">
+      <div className="absolute bottom-3 left-8 font-mono text-[9px] tracking-[0.3em] text-white/40 z-10">
         @VSSOLUCOES
       </div>
     </SlideShell>
@@ -161,14 +181,26 @@ function Slide3() {
 function Slide4() {
   return (
     <SlideShell bg="bg-[#0a0a0a]">
+      {/* coluna lateral com foto sutil */}
+      <div className="absolute top-0 right-0 bottom-0 w-[30%] overflow-hidden opacity-40">
+        <img
+          src={bgAction}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ filter: "grayscale(100%) contrast(1.3)" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-l from-transparent via-black/60 to-black" />
+      </div>
+
       <div className="absolute top-8 left-8 font-mono text-xs tracking-[0.3em] text-white/40">
         04 / 05
       </div>
-      <div className="absolute top-8 right-8 font-mono text-xs tracking-[0.3em] text-[#FF5300]">
+      <div className="absolute top-8 right-8 font-mono text-xs tracking-[0.3em] text-[#FF5300] z-10">
         SOLUÇÃO · 3 PASSOS
       </div>
 
-      <div className="absolute top-24 left-8 right-8">
+      <div className="absolute top-24 left-8 right-8 z-10">
         <p
           className="text-white font-black italic uppercase leading-[0.9]"
           style={{ fontFamily: "Poppins, sans-serif", fontSize: 38 }}
@@ -178,7 +210,7 @@ function Slide4() {
       </div>
 
       {/* lista */}
-      <div className="absolute left-8 right-8 bottom-16 space-y-5">
+      <div className="absolute left-8 right-8 bottom-16 space-y-5 z-10">
         {[
           { n: "01", t: "Atende em 30s", s: "IA conectada ao seu WhatsApp" },
           { n: "02", t: "Qualifica sozinha", s: "Score MEDDIC automático" },
@@ -204,40 +236,48 @@ function Slide4() {
         ))}
       </div>
 
-      <div className="absolute bottom-4 left-8 font-mono text-[9px] tracking-[0.3em] text-white/30">
+      <div className="absolute bottom-4 left-8 font-mono text-[9px] tracking-[0.3em] text-white/30 z-10">
         @VSSOLUCOES
       </div>
     </SlideShell>
   );
 }
 
-// ─────────── SLIDE 5: CTA brutal (NÃO centralizado, NÃO chapado) ───────────
+// ─────────── SLIDE 5: CTA brutal (foto do executivo decidido + overlay laranja) ───────────
 function Slide5() {
   return (
     <SlideShell bg="bg-[#FF5300]">
-      {/* grão sutil pra não ficar chapado */}
+      {/* foto P&B do executivo caminhando — multiply com laranja */}
+      <img
+        src={bgAction}
+        alt=""
+        loading="lazy"
+        className="absolute inset-0 w-full h-full object-cover"
+        style={{ filter: "grayscale(100%) contrast(1.4)", mixBlendMode: "multiply", opacity: 0.85 }}
+      />
+      {/* leve textura pra não ficar plástico */}
       <div
-        className="absolute inset-0 opacity-20 mix-blend-overlay pointer-events-none"
+        className="absolute inset-0 opacity-15 mix-blend-overlay pointer-events-none"
         style={{
           backgroundImage:
-            "repeating-linear-gradient(45deg, rgba(0,0,0,0.15) 0px, rgba(0,0,0,0.15) 1px, transparent 1px, transparent 4px)",
+            "repeating-linear-gradient(45deg, rgba(0,0,0,0.2) 0px, rgba(0,0,0,0.2) 1px, transparent 1px, transparent 4px)",
         }}
       />
 
       {/* faixa preta diagonal de marca no topo */}
-      <div className="absolute top-0 left-0 right-0 h-12 bg-black flex items-center justify-between px-8">
+      <div className="absolute top-0 left-0 right-0 h-12 bg-black flex items-center justify-between px-8 z-10">
         <span className="font-mono text-[10px] tracking-[0.3em] text-[#FF5300]">VS · CTA FINAL</span>
         <span className="font-mono text-[10px] tracking-[0.3em] text-white/60">05 / 05</span>
       </div>
 
       {/* headline desalinhada pra esquerda, embaixo */}
-      <div className="absolute left-8 right-8 bottom-32">
-        <p className="font-mono text-[10px] tracking-[0.4em] text-black/60 uppercase mb-4">
+      <div className="absolute left-8 right-8 bottom-28 z-10">
+        <p className="font-mono text-[10px] tracking-[0.4em] text-black uppercase mb-4 font-bold">
           // próximo passo
         </p>
         <h2
           className="text-black font-black italic uppercase leading-[0.82] tracking-tight"
-          style={{ fontFamily: "Poppins, sans-serif", fontSize: 96 }}
+          style={{ fontFamily: "Poppins, sans-serif", fontSize: 88 }}
         >
           Para de
           <br />
@@ -247,14 +287,14 @@ function Slide5() {
         </h2>
         <div className="mt-6 flex items-center gap-3">
           <div className="h-[2px] w-12 bg-black" />
-          <p className="font-mono text-xs tracking-[0.2em] text-black uppercase font-bold">
+          <p className="font-mono text-[10px] tracking-[0.2em] text-black uppercase font-bold">
             vendasdesolucoes.com
           </p>
         </div>
       </div>
 
       {/* footer preto */}
-      <div className="absolute bottom-0 left-0 right-0 h-10 bg-black flex items-center justify-between px-8">
+      <div className="absolute bottom-0 left-0 right-0 h-10 bg-black flex items-center justify-between px-8 z-10">
         <span className="font-mono text-[10px] tracking-[0.3em] text-white/60">@VSSOLUCOES</span>
         <span className="font-mono text-[10px] tracking-[0.3em] text-[#FF5300]">→ FALAR AGORA</span>
       </div>
