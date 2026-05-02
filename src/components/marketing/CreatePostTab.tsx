@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import {
   Sparkles, Loader2, Download, Wand2, ImageIcon, CheckCircle2, AlertTriangle, Layers,
-  Brain, Palette,
+  Brain, Palette, Instagram, ExternalLink,
 } from "lucide-react";
 import { treatImage, dataUrlToBlob } from "@/lib/imageryTreatment";
 
@@ -64,6 +64,8 @@ export function CreatePostTab() {
   const [planLoading, setPlanLoading] = useState(false);
   const [genLoading, setGenLoading] = useState(false);
   const [treating, setTreating] = useState<Record<string, boolean>>({});
+  const [igCaption, setIgCaption] = useState<string>("");
+  const [igPublishing, setIgPublishing] = useState(false);
 
   // Polling do post
   const { data: post } = useQuery({
