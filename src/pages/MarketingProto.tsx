@@ -3,6 +3,8 @@ import bgDefeat from "@/assets/proto/bg-defeat.jpg";
 import bgCash from "@/assets/proto/bg-cash.jpg";
 import bgAction from "@/assets/proto/bg-action.jpg";
 import bgPhone from "@/assets/proto/bg-phone.jpg";
+import bgDecision from "@/assets/proto/bg-decision.jpg";
+import bgClock from "@/assets/proto/bg-clock.jpg";
 
 // Protótipo estático — carrossel V4/G4 brutalista
 // Renderiza 5 slides 1080x1080 (escalados pra caber na tela) lado a lado
