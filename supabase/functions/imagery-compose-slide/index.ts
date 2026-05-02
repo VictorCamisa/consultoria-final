@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // @ts-ignore EdgeRuntime is provided at runtime
+    // @ts-expect-error EdgeRuntime is provided at runtime
     EdgeRuntime.waitUntil(processSlide(slide_id, treated_image_url, t0));
 
     return new Response(JSON.stringify({ accepted: true, slide_id }), {
