@@ -23,6 +23,19 @@ type Produto = {
   tipo: string;
   ativo: boolean;
   nichos: string[];
+  tier: string | null;
+  ordem?: number | null;
+};
+
+// Tiers oficiais da esteira VS Core OS — fonte da verdade para Scripts/Cadência.
+// Order matters: Tools → Departamentos → 360 → Custom.
+const TIER_ORDER = ["VS Tools", "VS Departamentos", "VS 360", "VS Custom"] as const;
+
+const TIER_DESCRIPTIONS: Record<string, string> = {
+  "VS Tools": "Micro-tools R$ 89–397 · entrega em 7 dias",
+  "VS Departamentos": "Automação de 1 departamento · até R$ 3 mil/mês · 21 dias",
+  "VS 360": "Operação comercial completa · até R$ 12 mil/mês · 45 dias",
+  "VS Custom": "Projeto sob medida · setup + fee sob consulta",
 };
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
@@ -52,14 +65,27 @@ export default function Configuracoes() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("vs_produtos" as any)
-        .select("id, nome, categoria, tipo, ativo, nichos")
+        .select("id, nome, categoria, tipo, ativo, nichos, tier, ordem")
         .order("ordem", { ascending: true });
       if (error) throw error;
       return ((data ?? []) as unknown) as Produto[];
     },
   });
 
-  // Nichos únicos derivados de TODOS os produtos (todas as categorias)
+  // Tiers da esteira VS Core OS (nomes que viram a chave em consultoria_config.nicho).
+  // Derivados dos produtos cadastrados; cai no fallback fixo se a tabela estiver vazia.
+  const tiers = useMemo(() => {
+    const fromDb = (produtos ?? [])
+      .filter((p) => p.ativo)
+      .map((p) => p.nome)
+      .filter((n) => TIER_ORDER.includes(n as typeof TIER_ORDER[number]));
+    const list = fromDb.length ? fromDb : [...TIER_ORDER];
+    return [...new Set(list)].sort(
+      (a, b) => TIER_ORDER.indexOf(a as any) - TIER_ORDER.indexOf(b as any),
+    );
+  }, [produtos]);
+
+  // Nichos (segmentos de cliente) únicos para a aba Nichos
   const nichosDosProdutos = useMemo(() => {
     if (!produtos) return [];
     const all = produtos.flatMap((p) => p.nichos ?? []);
