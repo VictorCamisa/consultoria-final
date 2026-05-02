@@ -12,26 +12,26 @@ const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? Deno.env.get("GOOGLE_AI
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const NEGATIVE_PROMPT = "stock photo, generic smiling people, pointing at camera, flat icons, clipart, cartoon, illustration, vector art, watermark, low quality, oversaturated, harsh flash, motion blur, distorted hands, extra fingers, text artifacts, cluttered background";
+const NEGATIVE_PROMPT = "stock photo, generic smiling people, pointing at camera, flat icons, clipart, cartoon, illustration, vector art, watermark, low quality, oversaturated, color photography, vibrant colors, pastel tones, soft lighting, harsh flash, motion blur, distorted hands, extra fingers, text artifacts, cluttered background, lens flare, instagram filter";
 
 function buildPrompt(brief: string, imageType: string): string {
-  const styleAnchor = "Editorial, cinematic photography. Professional studio quality. Magazine-grade composition. Natural lighting with depth. Muted, sophisticated color palette. 1:1 aspect ratio.";
+  const styleAnchor = "HIGH CONTRAST BLACK AND WHITE photography. Pure monochrome, no color. Deep blacks, bright whites, dramatic shadows. Editorial documentary style, gritty and raw. Magazine-grade composition. Heavy grain, film aesthetic. 1:1 aspect ratio. The image must look like a 35mm B&W photograph from a high-end editorial magazine.";
   let typeHint = "";
   switch (imageType) {
     case "founder":
-      typeHint = "Portrait of an unidentifiable professional (face partially out of frame or back to camera, gender and ethnicity ambiguous). Natural posture, no forced smile.";
+      typeHint = "Anonymous portrait of a professional (face partially out of frame, back to camera, or shadowed silhouette). Gender and ethnicity ambiguous. Strong rembrandt-style lighting from one side. Brutal shadows.";
       break;
     case "dashboard":
-      typeHint = "Close-up of a clean, modern software interface or analytics dashboard on a screen. Real data feel, no Lorem Ipsum.";
+      typeHint = "Close-up of a software interface on a dark screen. Monochrome UI, single accent color allowed. Real data feel.";
       break;
     case "vertical":
-      typeHint = "Real environment shot of the niche context. Authentic, lived-in space with depth of field.";
+      typeHint = "Documentary B&W shot of the niche workspace. Real, lived-in. Strong directional light, deep shadows. Wide angle, environmental.";
       break;
     case "abstract":
-      typeHint = "Abstract textured background, gradient or material study. Moody, premium feel.";
+      typeHint = "Abstract material study in pure B&W. Concrete texture, raw paper, brushed metal, or architectural shadows.";
       break;
     case "product":
-      typeHint = "Product mockup on a clean surface with controlled shadows and reflections.";
+      typeHint = "Product mockup in B&W studio shot. Single hard light source, dramatic shadows, dark backdrop.";
       break;
   }
   return `${brief}\n\n${typeHint}\n\nStyle: ${styleAnchor}\n\nAvoid: ${NEGATIVE_PROMPT}`;
