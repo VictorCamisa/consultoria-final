@@ -34,8 +34,8 @@ async function loadFonts() {
     return await r.arrayBuffer();
   }
   const [bold, regular] = await Promise.all([
-    fetchFont("https://github.com/google/fonts/raw/main/ofl/barlowcondensed/BarlowCondensed-Bold.ttf"),
-    fetchFont("https://github.com/google/fonts/raw/main/ofl/barlow/Barlow-Regular.ttf"),
+    fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/barlowcondensed/BarlowCondensed-Bold.ttf"),
+    fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/barlow/Barlow-Regular.ttf"),
   ]);
   fontsCache = [
     { name: "Barlow Condensed", data: bold, weight: 700, style: "normal" },
