@@ -1416,6 +1416,60 @@ export type Database = {
         }
         Relationships: []
       }
+      vs_ideias: {
+        Row: {
+          autor: string
+          categoria: string
+          created_at: string
+          descricao: string | null
+          esforco: number
+          id: string
+          impacto: number
+          link_origem: string | null
+          modulo: string | null
+          observacoes: string | null
+          score: number | null
+          status: string
+          tags: string[] | null
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          autor?: string
+          categoria?: string
+          created_at?: string
+          descricao?: string | null
+          esforco?: number
+          id?: string
+          impacto?: number
+          link_origem?: string | null
+          modulo?: string | null
+          observacoes?: string | null
+          score?: number | null
+          status?: string
+          tags?: string[] | null
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          autor?: string
+          categoria?: string
+          created_at?: string
+          descricao?: string | null
+          esforco?: number
+          id?: string
+          impacto?: number
+          link_origem?: string | null
+          modulo?: string | null
+          observacoes?: string | null
+          score?: number | null
+          status?: string
+          tags?: string[] | null
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       vs_marketing_posts: {
         Row: {
           best_time: string | null
