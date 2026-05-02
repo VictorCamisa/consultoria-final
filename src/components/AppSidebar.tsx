@@ -1,7 +1,7 @@
 import {
   LayoutDashboard, Megaphone, Users, CalendarCheck, Settings,
   LogOut, BrainCircuit, Search, UserRoundCog, FolderKanban, Users2,
-  DollarSign, Package, Sparkles, Activity, ShieldCheck,
+  DollarSign, Package, Sparkles, Activity, ShieldCheck, Lightbulb,
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -72,6 +72,7 @@ const navSections: NavSection[] = [
   {
     label: "Governança",
     items: [
+      { title: "Banco de Ideias", url: "/ideias", icon: Lightbulb },
       { title: "Configurações", url: "/configuracoes", icon: ShieldCheck },
     ],
   },

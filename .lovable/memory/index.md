@@ -19,6 +19,7 @@ Em /configuracoes: Scripts e Cadência são por TIER (Tools/Departamentos/360/Cu
 - [Fluxo Imersão](mem://funcionalidades/fluxo-imersao-regras) — Formulário 22 campos, mínimo 17 para conclusão
 - [Automação Vendas](mem://funcionalidades/automacao-de-vendas-e-scripts) — Scripts A/B/C, cadência, follow-ups por nicho
 - [Scripts por Tier](mem://funcionalidades/scripts-por-tier) — Configurações organiza scripts/cadência pelos 4 tiers da esteira (não por nicho de cliente)
+- [Banco de Ideias](mem://funcionalidades/banco-de-ideias) — Módulo /ideias, Kanban 6 status, scoring impacto/esforço, vincula a módulos Core OS
 - [Agente IA](mem://funcionalidades/agente-ia-monitoramento) — Dashboard de performance e monitoramento de automações
 - [Pipeline Comercial](mem://funcionalidades/pipeline-comercial) — Kanban 11 estágios com filtros avançados
 - [WhatsApp](mem://tecnologia/gestao-de-instancias-whatsapp) — Evolution API internalizada em Configurações

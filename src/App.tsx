@@ -24,6 +24,7 @@ import Leads from "@/pages/Leads";
 import Financeiro from "@/pages/Financeiro";
 import Produtos from "@/pages/Produtos";
 import Marketing from "@/pages/Marketing";
+import Ideias from "@/pages/Ideias";
 import LandingPage from "@/pages/LandingPage";
 import NotFound from "@/pages/NotFound";
 
@@ -72,6 +73,7 @@ const App = () => (
                   <Route path="/financeiro" element={<Financeiro />} />
                   <Route path="/produtos" element={<Produtos />} />
                   <Route path="/marketing" element={<Marketing />} />
+                  <Route path="/ideias" element={<Ideias />} />
                   <Route path="/configuracoes" element={<Configuracoes />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
