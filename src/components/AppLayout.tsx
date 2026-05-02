@@ -1,14 +1,16 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import WhatsAppOnboarding from "@/components/WhatsAppOnboarding";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { ChevronLeft } from "lucide-react";
 
 const routeTitles: Record<string, string> = {
-  "/": "Dashboard",
+  "/dashboard": "Dashboard",
   "/comercial": "Comercial",
+  "/marketing": "Marketing",
   "/agente-ia": "Agente IA",
   "/prospeccao": "Prospecção",
   "/leads": "Leads",
@@ -16,35 +18,83 @@ const routeTitles: Record<string, string> = {
   "/clientes": "Clientes",
   "/acompanhamento": "Acompanhamento",
   "/operacional": "Operacional",
+  "/financeiro": "Financeiro",
+  "/produtos": "Produtos",
+  "/ideias": "Ideias",
   "/configuracoes": "Configurações",
 };
 
 export default function AppLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
 
-  const base = "/" + location.pathname.split("/").filter(Boolean).slice(0, 1).join("/");
+  const segments = location.pathname.split("/").filter(Boolean);
+  const base = "/" + segments.slice(0, 1).join("/");
   const pageTitle = routeTitles[base] ?? "VS OS";
+
+  // Detail pages (e.g. /clientes/:id) — show back button on mobile
+  const isDetailPage = segments.length > 1;
 
   useEffect(() => {
     document.title = `${pageTitle} — VS OS`;
   }, [pageTitle]);
 
-  // Mobile layout
+  // ── Mobile layout ───────────────────────────────────────────────────────
   if (isMobile) {
     return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <main className="flex-1 overflow-auto pb-16">
-          <div className="page-enter px-4 py-4">
+      <div
+        className="min-h-screen flex flex-col bg-background"
+        style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+      >
+        {/* iOS-style navigation bar */}
+        <header
+          className="fixed left-0 right-0 z-[60] flex items-center h-[52px] border-b border-border/50"
+          style={{
+            top: "env(safe-area-inset-top, 0px)",
+            backgroundColor: "hsl(var(--card) / 0.92)",
+            backdropFilter: "blur(20px) saturate(180%)",
+            WebkitBackdropFilter: "blur(20px) saturate(180%)",
+          }}
+        >
+          {isDetailPage ? (
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-1 pl-3 pr-4 h-full text-primary active:opacity-60 transition-opacity"
+            >
+              <ChevronLeft className="h-5 w-5" strokeWidth={2.5} />
+              <span className="text-[15px] font-medium">Voltar</span>
+            </button>
+          ) : (
+            <div className="w-20" />
+          )}
+
+          <h1
+            className="flex-1 text-center text-[17px] font-semibold text-foreground tracking-[-0.01em]"
+            style={{ fontFamily: "'Montserrat', sans-serif" }}
+          >
+            {pageTitle}
+          </h1>
+
+          <div className="w-20" />
+        </header>
+
+        {/* Content — offset for fixed header + bottom nav */}
+        <main
+          className="flex-1 overflow-auto"
+          style={{ paddingTop: "calc(52px + env(safe-area-inset-top, 0px))" }}
+        >
+          <div className="page-enter pb-20">
             <Outlet />
           </div>
         </main>
+
         <MobileBottomNav />
       </div>
     );
   }
 
-  // Desktop layout
+  // ── Desktop layout ──────────────────────────────────────────────────────
   return (
     <SidebarProvider>
       <WhatsAppOnboarding />

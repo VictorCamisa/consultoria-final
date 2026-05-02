@@ -6,8 +6,8 @@ import { BrandAssetsPanel } from "@/components/marketing/BrandAssetsPanel";
 
 export default function Marketing() {
   return (
-    <div className="p-6 space-y-6">
-      <div>
+    <div className="px-4 py-5 sm:p-6 space-y-5 sm:space-y-6">
+      <div className="hidden sm:block">
         <h1 className="vs-h1">Marketing</h1>
         <p className="text-sm text-muted-foreground">
           Geração de posts com IA, galeria de conteúdo e ativos de marca da VS.
