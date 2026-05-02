@@ -156,8 +156,9 @@ function Slide2() {
           </p>
         </div>
 
-        <div className="font-mono text-[9px] tracking-[0.3em] text-white/30">@VSSOLUCOES</div>
+        <div className="h-8" />
       </div>
+      <BrandMark position="bottom-right" size={32} opacity={0.9} />
     </SlideShell>
   );
 }
@@ -208,10 +209,11 @@ function Slide3() {
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="font-mono text-[9px] tracking-[0.3em] text-white/30">@VSSOLUCOES</span>
           <span className="font-mono text-[8px] tracking-[0.3em] text-white/30">VS · 2025 · n=312</span>
+          <span className="font-mono text-[8px] tracking-[0.3em] text-white/30 invisible">.</span>
         </div>
       </div>
+      <BrandMark position="bottom-right" size={32} opacity={0.9} />
     </SlideShell>
   );
 }
