@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNichos } from "@/hooks/useNichos";
@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import {
   Sparkles, Loader2, Download, Wand2, ImageIcon, CheckCircle2, AlertTriangle, Layers,
-  Brain, Palette,
+  Brain, Palette, Instagram, ExternalLink,
 } from "lucide-react";
 import { treatImage, dataUrlToBlob } from "@/lib/imageryTreatment";
 
@@ -64,6 +64,8 @@ export function CreatePostTab() {
   const [planLoading, setPlanLoading] = useState(false);
   const [genLoading, setGenLoading] = useState(false);
   const [treating, setTreating] = useState<Record<string, boolean>>({});
+  const [igCaption, setIgCaption] = useState<string>("");
+  const [igPublishing, setIgPublishing] = useState(false);
 
   // Polling do post
   const { data: post } = useQuery({
@@ -210,6 +212,49 @@ export function CreatePostTab() {
     }
   };
 
+  const readyToPublish =
+    post?.status === "ready" &&
+    !!slides?.length &&
+    slides.every((s) => s.final_png_url && s.status === "ready");
+
+  // Inicializa caption quando o post ficar pronto
+  useEffect(() => {
+    if (!post?.copy_data) return;
+    if (igCaption !== "") return;
+    if ((post as any).ig_status === "published") return;
+    const cd: any = post.copy_data;
+    const base = cd.caption ?? "";
+    const tags = (cd.hashtags ?? []).map((h: string) => `#${h.replace(/^#/, "")}`).join(" ");
+    const initial = `${base}${tags ? "\n\n" + tags : ""}`;
+    if (initial) setIgCaption(initial);
+  }, [post, igCaption]);
+
+  // Reset caption quando troca de post
+  useEffect(() => { setIgCaption(""); }, [postId]);
+
+  const handlePublishInstagram = async () => {
+    if (!postId) return;
+    if (!igCaption.trim()) return toast.error("Escreva uma legenda");
+    if (!readyToPublish) return toast.error("Aguarde todas as slides ficarem prontas");
+    if (!confirm("Publicar agora no Instagram @vssolucoes_?")) return;
+    setIgPublishing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("imagery-publish-instagram", {
+        body: { post_id: postId, caption: igCaption },
+      });
+      if (error) throw new Error(error.message);
+      if (data?.error) throw new Error(data.error);
+      toast.success("Post publicado no Instagram!");
+      qc.invalidateQueries({ queryKey: ["imagery-post", postId] });
+      qc.invalidateQueries({ queryKey: ["imagery-history"] });
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message ?? "Erro ao publicar");
+    } finally {
+      setIgPublishing(false);
+    }
+  };
+
   const planReady = post?.status === "draft" || post?.status === "ready" || post?.status === "generating";
   const totalUsd = Number(post?.custo_total_usd ?? 0);
   const isPipelineRunning = post?.status === "generating";
@@ -332,6 +377,73 @@ export function CreatePostTab() {
         </Card>
         );
       })()}
+
+      {readyToPublish && (
+        <Card className="border-pink-500/30 bg-gradient-to-br from-pink-50/50 to-orange-50/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs flex items-center gap-2">
+              <Instagram className="h-3.5 w-3.5 text-pink-600" />
+              Publicar no Instagram @vssolucoes_
+              {(post as any)?.ig_status === "published" && (
+                <Badge variant="default" className="text-[9px] ml-1 bg-green-600">publicado</Badge>
+              )}
+              {(post as any)?.ig_status === "publishing" && (
+                <Badge variant="secondary" className="text-[9px] ml-1">publicando…</Badge>
+              )}
+              {(post as any)?.ig_status === "failed" && (
+                <Badge variant="destructive" className="text-[9px] ml-1">falhou</Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Textarea
+              value={igCaption}
+              onChange={(e) => setIgCaption(e.target.value)}
+              placeholder="Legenda + hashtags…"
+              rows={6}
+              className="text-xs"
+              disabled={igPublishing || (post as any)?.ig_status === "publishing"}
+            />
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground">
+                {igCaption.length}/2200 · {slides?.length} {slides?.length === 1 ? "imagem" : "slides (carrossel)"}
+              </span>
+              {(post as any)?.ig_permalink && (
+                <Button
+                  size="sm" variant="outline" className="h-7 text-[10px]"
+                  onClick={() => window.open((post as any).ig_permalink, "_blank")}
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />Ver no Instagram
+                </Button>
+              )}
+              <Button
+                size="sm"
+                onClick={handlePublishInstagram}
+                disabled={
+                  igPublishing ||
+                  (post as any)?.ig_status === "publishing" ||
+                  (post as any)?.ig_status === "published"
+                }
+                className="ml-auto bg-gradient-to-r from-pink-600 to-orange-500 text-white hover:opacity-90"
+              >
+                {igPublishing || (post as any)?.ig_status === "publishing" ? (
+                  <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Publicando…</>
+                ) : (post as any)?.ig_status === "published" ? (
+                  <><CheckCircle2 className="h-3 w-3 mr-1" />Publicado</>
+                ) : (
+                  <><Instagram className="h-3 w-3 mr-1" />Publicar agora</>
+                )}
+              </Button>
+            </div>
+            {(post as any)?.ig_error && (
+              <p className="text-[10px] text-destructive flex items-start gap-1">
+                <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                {(post as any).ig_error}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {!!slides?.length && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
