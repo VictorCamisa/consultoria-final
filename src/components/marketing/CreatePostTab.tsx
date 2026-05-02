@@ -308,26 +308,29 @@ export function CreatePostTab() {
         </CardContent>
       </Card>
 
-      {post?.copy_data && (
+      {post?.copy_data && (() => {
+        const cd = post.copy_data as any;
+        return (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-xs flex items-center gap-2">
               <Layers className="h-3.5 w-3.5 text-accent" />
-              {post.copy_data.titulo ?? "Post"}
+              {cd.titulo ?? "Post"}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xs whitespace-pre-wrap text-muted-foreground">{post.copy_data.caption}</p>
-            {!!post.copy_data.hashtags?.length && (
+            <p className="text-xs whitespace-pre-wrap text-muted-foreground">{cd.caption}</p>
+            {!!cd.hashtags?.length && (
               <div className="flex flex-wrap gap-1 mt-2">
-                {post.copy_data.hashtags.map((h: string, i: number) => (
+                {cd.hashtags.map((h: string, i: number) => (
                   <Badge key={i} variant="secondary" className="text-[9px]">#{h.replace(/^#/, "")}</Badge>
                 ))}
               </div>
             )}
           </CardContent>
         </Card>
-      )}
+        );
+      })()}
 
       {!!slides?.length && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
