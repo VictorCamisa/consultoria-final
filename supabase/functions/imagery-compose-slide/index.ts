@@ -36,17 +36,15 @@ async function loadFonts() {
     if (ct.includes("html")) throw new Error(`font fetch returned HTML: ${url}`);
     return await r.arrayBuffer();
   }
-  const [poppinsBlackItalic, poppinsBlack, barlowRegular, barlowBold] = await Promise.all([
+  const [poppinsBlackItalic, barlowRegular] = await Promise.all([
     fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/poppins/Poppins-BlackItalic.ttf"),
-    fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/poppins/Poppins-Black.ttf"),
     fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/barlow/Barlow-Regular.ttf"),
-    fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/barlow/Barlow-Bold.ttf"),
   ]);
   fontsCache = [
     { name: "Poppins", data: poppinsBlackItalic, weight: 900, style: "italic" },
-    { name: "Poppins", data: poppinsBlack, weight: 900, style: "normal" },
     { name: "Barlow", data: barlowRegular, weight: 400, style: "normal" },
-    { name: "Barlow", data: barlowBold, weight: 700, style: "normal" },
+    // alias para weight 700 reusa Barlow Regular (markers em caps já chamam atenção)
+    { name: "Barlow", data: barlowRegular, weight: 700, style: "normal" },
   ];
   return fontsCache;
 }
