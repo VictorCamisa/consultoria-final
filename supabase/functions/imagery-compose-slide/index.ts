@@ -121,7 +121,7 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
 
     await admin.from("imagery_logs").insert({
       slide_id, post_id: slide.post_id, step: "compose",
-      provider: "satori", model: "resvg-wasm",
+      provider: "satori", model: "svg-output",
       response_summary: { final_url: finalUrl, template: slide.template_id },
       duracao_ms: Date.now() - t0, success: true,
     });
@@ -132,7 +132,7 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
       status: "failed", error_message: String(e?.message ?? e).slice(0, 500),
     }).eq("id", slide_id);
     await admin.from("imagery_logs").insert({
-      slide_id, step: "compose", provider: "satori", model: "resvg-wasm",
+      slide_id, step: "compose", provider: "satori", model: "svg-output",
       success: false, error_message: String(e?.message ?? e).slice(0, 500),
       duracao_ms: Date.now() - t0,
     });
