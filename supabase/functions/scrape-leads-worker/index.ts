@@ -1,37 +1,109 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
-type FirecrawlResult = { results: any[]; error?: string; status?: number };
+// ─────────────────────────────────────────────────────────────────────────────
+// SCRAPER v2 — Serper (Google Places + Search) + Jina Reader
+//
+// Por que substituímos o Firecrawl:
+//   • Serper /places usa o índice do Google Maps → retorna negócios brasileiros
+//     com title, phoneNumber, website, address, rating já estruturados.
+//     Sem precisar de IA pra extrair em ~80% dos casos (muito mais barato).
+//   • Serper /search é Google Search puro com gl=br/hl=pt-br. Cobertura
+//     incomparável em conteúdo brasileiro (vs Firecrawl que usa Bing/DDG).
+//   • Jina Reader (r.jina.ai/{url}) converte qualquer página em markdown limpo,
+//     gratuito até 200 req/min. Substitui o scrapeOptions do Firecrawl.
+//
+// Fluxo:
+//   Phase 1: Serper /places → contatos diretos (nome, fone, site, ICP via Claude lite)
+//   Phase 2: Serper /search + Jina (só quando /places não bastou) → IA extrai
+//   Phase 3: Dedup + persist
+//   Phase 4: Expansion via /places em cidades vizinhas
+// ─────────────────────────────────────────────────────────────────────────────
 
-async function firecrawlSearch(apiKey: string, query: string, limit: number): Promise<FirecrawlResult> {
+type SerperPlace = {
+  title?: string;
+  address?: string;
+  phoneNumber?: string;
+  website?: string;
+  rating?: number;
+  ratingCount?: number;
+  category?: string;
+  cid?: string;
+  latitude?: number;
+  longitude?: number;
+};
+
+type SerperSearchHit = { title?: string; link?: string; snippet?: string };
+
+type ScrapedPage = { url: string; title?: string; markdown: string };
+
+async function serperPlaces(apiKey: string, query: string, location: string): Promise<SerperPlace[]> {
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const resp = await fetch("https://api.firecrawl.dev/v1/search", {
+      const resp = await fetch("https://google.serper.dev/places", {
         method: "POST",
-        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ query, limit, lang: "pt-br", country: "br", scrapeOptions: { formats: ["markdown"], onlyMainContent: true } }),
+        headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ q: query, gl: "br", hl: "pt-br", location: location || "Brasil" }),
       });
       if (resp.ok) {
         const data = await resp.json();
-        return { results: data?.data || data?.results || [] };
+        return Array.isArray(data?.places) ? data.places : [];
       }
-      const errorText = await resp.text();
-      console.error(`Firecrawl search error (${resp.status}) attempt ${attempt}: ${errorText.substring(0, 200)}`);
-      if (resp.status === 401 || resp.status === 402 || resp.status === 403) {
-        return { results: [], error: `Firecrawl API error ${resp.status}: ${errorText.substring(0, 200)}`, status: resp.status };
-      }
-      if (resp.status === 429) {
-        if (attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
-        return { results: [], error: "Firecrawl rate limit (429).", status: 429 };
-      }
+      const txt = (await resp.text()).slice(0, 200);
+      console.error(`Serper /places ${resp.status} attempt ${attempt}: ${txt}`);
+      if ([401, 402, 403].includes(resp.status)) return [];
+      if (resp.status === 429 && attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
       if (resp.status >= 500 && attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
-      return { results: [], error: `Firecrawl error ${resp.status}`, status: resp.status };
+      return [];
     } catch (e) {
-      console.error(`Firecrawl network error attempt ${attempt}:`, e);
+      console.error(`Serper /places network error attempt ${attempt}:`, e);
       if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
     }
   }
-  return { results: [], error: "Firecrawl indisponível" };
+  return [];
+}
+
+async function serperSearch(apiKey: string, query: string, num: number): Promise<SerperSearchHit[]> {
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const resp = await fetch("https://google.serper.dev/search", {
+        method: "POST",
+        headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ q: query, gl: "br", hl: "pt-br", num: Math.min(num, 20) }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        return Array.isArray(data?.organic) ? data.organic : [];
+      }
+      const txt = (await resp.text()).slice(0, 200);
+      console.error(`Serper /search ${resp.status} attempt ${attempt}: ${txt}`);
+      if ([401, 402, 403].includes(resp.status)) return [];
+      if (resp.status === 429 && attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
+      if (resp.status >= 500 && attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
+      return [];
+    } catch (e) {
+      console.error(`Serper /search network error attempt ${attempt}:`, e);
+      if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+  return [];
+}
+
+async function jinaRead(url: string, apiKey?: string): Promise<string> {
+  // Jina Reader: GET https://r.jina.ai/{url} → markdown limpo. Sem key = rate baixo mas funciona.
+  try {
+    const headers: Record<string, string> = { "X-Return-Format": "markdown" };
+    if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
+    const resp = await fetch(`https://r.jina.ai/${url}`, { headers });
+    if (!resp.ok) {
+      console.warn(`Jina ${resp.status} for ${url.slice(0, 80)}`);
+      return "";
+    }
+    return (await resp.text()).slice(0, 4000);
+  } catch (e) {
+    console.warn(`Jina error for ${url.slice(0, 80)}:`, e);
+    return "";
+  }
 }
 
 const CONSULTORIA_VS_CONTEXT = `
@@ -40,99 +112,112 @@ ICP: Donos de negócios locais, faturamento >R$30k/mês, equipe >=3, investem em
 Score ICP 80-100=perfeito, 60-79=bom, 40-59=médio, 20-39=fraco, 0-19=ruim.
 `.trim();
 
-function buildSmartQueries(niche: string, locationStr: string, intent: string): string[] {
-  const loc = locationStr || "";
-  const city = loc.split(",")[0]?.trim() || "";
+function buildPlacesQueries(niche: string, locationStr: string, intent: string): string[] {
+  const city = (locationStr || "").split(",")[0]?.trim() || "";
   const nicheLower = niche.toLowerCase();
+  const base: string[] = [];
 
   if (nicheLower.includes("revenda") || nicheLower.includes("veículo") || nicheLower.includes("seminovo") || nicheLower.includes("carro") || nicheLower.includes("auto")) {
-    const queries = [
-      `revenda seminovos ${city} WhatsApp telefone`,
-      `loja carros usados ${city} contato celular`,
-      `multimarcas ${city} veículos seminovos endereço`,
-      `compra venda veículos ${city} WhatsApp celular`,
-      `seminovos ${loc} telefone site`,
-      `"revenda" "${city}" veículos fone contato`,
-      `automoveis seminovos ${city} celular endereço`,
-    ];
-    if (intent?.trim()) queries.push(`${city} veículos seminovos ${intent.trim().slice(0, 80)}`);
-    return queries.slice(0, 8);
+    base.push("revenda de veículos", "loja de carros usados", "multimarcas seminovos", "concessionária seminovos");
+  } else if (nicheLower.includes("estética") || nicheLower.includes("estetic") || nicheLower.includes("depilação") || nicheLower.includes("skincare")) {
+    base.push("clínica de estética", "estética avançada", "centro de estética", "clínica de depilação");
+  } else if (nicheLower.includes("odonto") || nicheLower.includes("dentist")) {
+    base.push("clínica odontológica", "dentista", "consultório odontológico", "ortodontia");
+  } else if (nicheLower.includes("advoca") || nicheLower.includes("jurídic") || nicheLower.includes("direito")) {
+    base.push("escritório de advocacia", "advogado", "advocacia trabalhista", "advocacia empresarial");
+  } else {
+    base.push(niche, `${niche} empresa`, `${niche} clínica`, `${niche} escritório`);
   }
 
-  if (nicheLower.includes("estética") || nicheLower.includes("estetic") || nicheLower.includes("bem-estar") || nicheLower.includes("depilação") || nicheLower.includes("skincare")) {
-    const queries = [
-      `clínica estética ${city} WhatsApp telefone`,
-      `estética ${city} agendamento contato celular`,
-      `salão estética ${city} telefone endereço`,
-      `clínica depilação ${city} WhatsApp contato`,
-      `estética dermato ${city} celular site`,
-      `"estética" "${city}" fone agendamento`,
-      `clínica beleza ${city} contato WhatsApp`,
-    ];
-    if (intent?.trim()) queries.push(`${city} estética ${intent.trim().slice(0, 80)}`);
-    return queries.slice(0, 8);
-  }
-
-  if (nicheLower.includes("odonto") || nicheLower.includes("dentist") || nicheLower.includes("clínica odontológ")) {
-    const queries = [
-      `clínica odontológica ${city} WhatsApp telefone`,
-      `dentista ${city} contato celular endereço`,
-      `odontologia ${city} agendamento site`,
-      `clínica dental ${city} WhatsApp`,
-      `"odontológica" "${city}" fone contato`,
-    ];
-    if (intent?.trim()) queries.push(`${city} odontologia ${intent.trim().slice(0, 80)}`);
-    return queries.slice(0, 6);
-  }
-
-  if (nicheLower.includes("advoca") || nicheLower.includes("jurídic") || nicheLower.includes("direito")) {
-    const queries = [
-      `escritório advocacia ${city} WhatsApp telefone`,
-      `advogado ${city} contato celular`,
-      `advogados ${city} site endereço`,
-      `"advocacia" "${city}" fone`,
-      `direito ${city} escritório contato`,
-    ];
-    if (intent?.trim()) queries.push(`${city} advocacia ${intent.trim().slice(0, 80)}`);
-    return queries.slice(0, 6);
-  }
-
-  // Generic niche: 6 diverse queries to maximize coverage
-  const queries = [
-    `${niche} ${loc} telefone contato`,
-    `${niche} ${loc} WhatsApp celular`,
-    `"${niche}" "${city}" endereço telefone`,
-    `${niche} ${city} site contato`,
-    `${niche} perto de ${city} celular WhatsApp`,
-    `${niche} ${loc} fone endereço site`,
-  ];
-  if (intent?.trim()) queries[5] = `${niche} ${loc} ${intent.trim().slice(0, 80)}`;
-  return queries.slice(0, 6);
+  const queries = base.map(q => city ? `${q} em ${city}` : q);
+  if (intent?.trim()) queries.push(`${base[0]} ${intent.trim().slice(0, 60)}${city ? ` ${city}` : ""}`);
+  return Array.from(new Set(queries)).slice(0, 5);
 }
 
-/** Split pages into batches and call AI for each batch, then merge contacts */
-async function extractContactsBatch(
-  pages: any[],
+function buildSearchQueries(niche: string, locationStr: string, intent: string): string[] {
+  const city = (locationStr || "").split(",")[0]?.trim() || "";
+  const queries: string[] = [
+    `${niche} ${city} contato site WhatsApp`,
+    `${niche} ${city} telefone empresa`,
+    `"${niche}" "${city}" contato`,
+  ];
+  if (intent?.trim()) queries.push(`${niche} ${city} ${intent.trim().slice(0, 80)}`);
+  return queries.slice(0, 4);
+}
+
+function buildExpansionPlacesQueries(niche: string, locationStr: string): string[] {
+  const parts = (locationStr || "").split(",");
+  const city = parts[0]?.trim() || "";
+  const state = parts[parts.length - 1]?.trim() || "";
+  const nicheLower = niche.toLowerCase();
+  let core = niche;
+  if (nicheLower.includes("revenda") || nicheLower.includes("seminovo")) core = "revenda de veículos";
+  else if (nicheLower.includes("estética") || nicheLower.includes("estetic")) core = "clínica de estética";
+  else if (nicheLower.includes("odonto") || nicheLower.includes("dentist")) core = "clínica odontológica";
+  else if (nicheLower.includes("advoca")) core = "escritório de advocacia";
+  return [
+    state ? `${core} ${state}` : `${core} interior`,
+    `${core} região metropolitana ${city}`,
+    `${core} ${state || "Brasil"} interior`,
+  ].filter(Boolean);
+}
+
+/** Mapeia um SerperPlace direto pra um "contato" pronto (sem IA). */
+function placeToContact(p: SerperPlace, niche: string, locationStr: string) {
+  const phone = p.phoneNumber || null;
+  return {
+    name: p.title || null,
+    company: p.title || null,
+    phone,
+    email: null,
+    role: null,
+    city: (p.address || "").split(",").slice(-2, -1)[0]?.trim() || locationStr.split(",")[0]?.trim() || null,
+    website: p.website || null,
+    segment: p.category || niche,
+    company_size: null,
+    icp_score: scorePlaceICP(p),
+    icp_reason: p.rating ? `Rating ${p.rating} (${p.ratingCount ?? 0} reviews) · ${p.category ?? niche}` : `${p.category ?? niche}`,
+  };
+}
+
+/** Score ICP heurístico baseado em sinais públicos (sem custo de IA). */
+function scorePlaceICP(p: SerperPlace): number {
+  let score = 50;
+  if (p.website) score += 15;
+  if (p.phoneNumber) score += 10;
+  if (typeof p.rating === "number") {
+    if (p.rating >= 4.5) score += 10;
+    else if (p.rating >= 4.0) score += 5;
+    else if (p.rating < 3.5) score -= 10;
+  }
+  if (typeof p.ratingCount === "number") {
+    if (p.ratingCount >= 50) score += 10;
+    else if (p.ratingCount >= 20) score += 5;
+    else if (p.ratingCount < 5) score -= 5;
+  }
+  return Math.max(0, Math.min(100, score));
+}
+
+/** Para páginas sem dado estruturado, usa Claude pra extrair contatos do markdown. */
+async function extractContactsFromPages(
+  pages: ScrapedPage[],
   niche: string,
   locationStr: string,
   prospecting_intent: string,
   jobId: string,
 ): Promise<any[]> {
+  if (pages.length === 0) return [];
   const { callClaude } = await import("../_shared/ai-client.ts");
-
-  // Process in batches of 8 pages to stay within token limits but cover more
   const BATCH_SIZE = 8;
-  const allContacts: any[] = [];
+  const all: any[] = [];
 
   for (let i = 0; i < pages.length; i += BATCH_SIZE) {
     const batch = pages.slice(i, i + BATCH_SIZE);
     const batchNum = Math.floor(i / BATCH_SIZE) + 1;
 
-    const pagesContent = batch.map((r: any, idx: number) => {
-      const title = r.title || r.metadata?.title || `Resultado ${idx + 1}`;
-      const url = r.url || r.metadata?.sourceURL || "";
-      const markdown = (r.markdown || r.content || "").substring(0, 2500);
-      return `--- PÁG ${idx + 1}: ${title} (${url}) ---\n${markdown}`;
+    const pagesContent = batch.map((r, idx) => {
+      const md = (r.markdown || "").substring(0, 2500);
+      return `--- PÁG ${idx + 1}: ${r.title ?? ""} (${r.url}) ---\n${md}`;
     }).join("\n\n");
 
     const extractionPrompt = `Extraia TODOS os contatos de empresas "${niche}" ${locationStr ? `em ${locationStr}` : ""} das páginas abaixo.
@@ -146,7 +231,6 @@ IMPORTANTE: Extraia TODOS os telefones/contatos que encontrar, mesmo que pareça
 Responda APENAS JSON: {"contacts":[{"name":"str|null","phone":"str|null","email":"str|null","company":"str|null","role":"str|null","city":"str|null","website":"str|null","segment":"str|null","company_size":"str|null","icp_score":0,"icp_reason":"str|null"}]}`;
 
     console.log(`[${jobId}] AI batch ${batchNum}: ${batch.length} pages...`);
-
     try {
       const aiResult = await callClaude({
         system: `Extraia o MÁXIMO de contatos B2B possível. Cada empresa com telefone ou email deve ser um contato separado. Retorne APENAS JSON válido.`,
@@ -154,64 +238,34 @@ Responda APENAS JSON: {"contacts":[{"name":"str|null","phone":"str|null","email"
         max_tokens: 4096,
       });
       const aiContent = aiResult.text ?? "";
-
       let contacts: any[] = [];
       try {
         const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
         if (jsonMatch) contacts = JSON.parse(jsonMatch[0]).contacts || [];
       } catch {
-        const contactMatches = aiContent.matchAll(/\{\s*"name"\s*:\s*(?:"[^"]*"|null)[\s\S]*?"icp_score"\s*:\s*\d+[\s\S]*?\}/g);
-        for (const m of contactMatches) {
-          try { contacts.push(JSON.parse(m[0])); } catch {}
-        }
+        const matches = aiContent.matchAll(/\{\s*"name"\s*:\s*(?:"[^"]*"|null)[\s\S]*?"icp_score"\s*:\s*\d+[\s\S]*?\}/g);
+        for (const m of matches) { try { contacts.push(JSON.parse(m[0])); } catch {} }
       }
-
       console.log(`[${jobId}] AI batch ${batchNum}: extracted ${contacts.length} contacts`);
-      allContacts.push(...contacts);
+      all.push(...contacts);
     } catch (e) {
       console.error(`[${jobId}] AI batch ${batchNum} error:`, e);
     }
   }
-
-  return allContacts;
+  return all;
 }
 
-/** Queries de expansão geográfica para quando a cidade local não tem leads suficientes */
-function buildExpansionQueries(niche: string, locationStr: string): string[] {
-  const parts = (locationStr || "").split(",");
-  const city  = parts[0]?.trim() || "";
-  const state = parts[parts.length - 1]?.trim() || "";
-  const nicheLower = niche.toLowerCase();
+const formatPhone = (phone: string | null | undefined): string | null => {
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length < 8) return null;
+  if (digits.startsWith("55") && digits.length >= 12) return `+${digits}`;
+  if (digits.length === 11 || digits.length === 10) return `+55${digits}`;
+  return null;
+};
 
-  if (nicheLower.includes("revenda") || nicheLower.includes("veículo") || nicheLower.includes("seminovo") || nicheLower.includes("carro") || nicheLower.includes("auto")) {
-    return [
-      `revenda veículos região ${city} ${state} contato celular`,
-      `carros usados ${state} interior telefone WhatsApp`,
-      `comprar carro seminovo ${state} revenda contato`,
-      `multimarcas interior ${state} veículos celular endereço`,
-      `revenda automoveis cidades próximas ${city} WhatsApp`,
-    ];
-  }
-  if (nicheLower.includes("estética") || nicheLower.includes("estetic") || nicheLower.includes("depilação") || nicheLower.includes("skincare")) {
-    return [
-      `clínica estética região ${city} ${state} WhatsApp`,
-      `estética ${state} interior celular agendamento`,
-      `procedimentos estéticos ${state} interior contato`,
-      `depilação ${state} ${city} região WhatsApp`,
-    ];
-  }
-  if (nicheLower.includes("odonto") || nicheLower.includes("dentist")) {
-    return [
-      `clínica odontológica região ${city} ${state} telefone`,
-      `dentista ${state} interior contato celular`,
-    ];
-  }
-  return [
-    `${niche} ${state} interior região ${city} telefone`,
-    `${niche} ${state} celular contato endereço`,
-    `${niche} cidades próximas ${city} WhatsApp`,
-  ];
-}
+const capitalizeName = (name: string | null | undefined): string | null =>
+  name ? name.replace(/\b\w/g, (c) => c.toUpperCase()).trim() : null;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -219,7 +273,8 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY")!;
+    const SERPER_API_KEY = Deno.env.get("SERPER_API_KEY") ?? "";
+    const JINA_API_KEY = Deno.env.get("JINA_API_KEY") ?? "";
 
     const authHeader = req.headers.get("authorization");
     if (authHeader !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
@@ -229,83 +284,87 @@ Deno.serve(async (req) => {
     const { niche, locationStr, desiredCount, prospecting_intent, jobId } = await req.json();
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    console.log(`[${jobId}] Worker started: "${niche}" in "${locationStr}" (${desiredCount} leads)`);
+    console.log(`[${jobId}] Worker v2 (Serper+Jina): "${niche}" in "${locationStr}" (${desiredCount} leads)`);
 
-    // PHASE 1: Search — each query gets a fixed minimum so total coverage
-    // isn't penalized by having more queries. perQueryLimit is at least 15
-    // regardless of query count so a wider query set doesn't shrink each search.
-    const queries = buildSmartQueries(niche, locationStr, prospecting_intent);
-    const perQueryLimit = Math.max(Math.ceil(desiredCount * 1.5 / queries.length), 15);
+    if (!SERPER_API_KEY) {
+      await supabaseAdmin.from("leads_raw").insert({
+        name: `__job_complete__`, source: "system", status: "job_failed",
+        tags: [`job:${jobId}`],
+        enrichment_data: { job_id: jobId, status: "failed", error: "SERPER_API_KEY ausente" },
+      });
+      return new Response(JSON.stringify({ error: "SERPER_API_KEY ausente" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const allResults: any[] = [];
-    const seenUrls = new Set<string>();
-    let firecrawlError: string | null = null;
+    // ─── PHASE 1: Serper Places → contatos diretos sem IA ────────────────────
+    const placesQueries = buildPlacesQueries(niche, locationStr, prospecting_intent);
+    const allPlaces: SerperPlace[] = [];
+    const seenPlaceKeys = new Set<string>();
 
-    for (const q of queries) {
-      const result = await firecrawlSearch(FIRECRAWL_API_KEY, q, perQueryLimit);
-      if (result.error && !firecrawlError) firecrawlError = result.error;
-      for (const r of result.results) {
-        const url = r.url || r.metadata?.sourceURL || "";
-        if (url && !seenUrls.has(url)) {
-          seenUrls.add(url);
-          allResults.push(r);
+    for (const q of placesQueries) {
+      const places = await serperPlaces(SERPER_API_KEY, q, locationStr);
+      for (const p of places) {
+        const key = (p.cid || `${p.title}|${p.address}`).toLowerCase();
+        if (!seenPlaceKeys.has(key)) {
+          seenPlaceKeys.add(key);
+          allPlaces.push(p);
         }
       }
     }
+    console.log(`[${jobId}] Phase 1: ${allPlaces.length} places`);
 
-    console.log(`[${jobId}] ${allResults.length} unique pages found`);
+    const placeContacts = allPlaces.map(p => placeToContact(p, niche, locationStr));
 
-    if (allResults.length === 0) {
-      await supabaseAdmin.from("leads_raw").insert({
-        name: `__job_complete__`, source: "system", status: "job_complete",
-        tags: [`job:${jobId}`],
-        enrichment_data: { job_id: jobId, status: "completed", count: 0, error: firecrawlError || "Nenhum resultado" },
-      });
-      return new Response(JSON.stringify({ status: "completed", count: 0 }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // ─── PHASE 2: complementa com Search + Jina se ainda preciso ─────────────
+    const seenUrls = new Set<string>();
+    const scrapedPages: ScrapedPage[] = [];
+    let searchUsed = false;
+
+    if (placeContacts.filter(c => c.phone).length < desiredCount) {
+      searchUsed = true;
+      const searchQueries = buildSearchQueries(niche, locationStr, prospecting_intent);
+      const allHits: SerperSearchHit[] = [];
+      for (const q of searchQueries) {
+        const hits = await serperSearch(SERPER_API_KEY, q, 15);
+        for (const h of hits) {
+          const url = h.link || "";
+          if (url && !seenUrls.has(url)) { seenUrls.add(url); allHits.push(h); }
+        }
+      }
+      console.log(`[${jobId}] Phase 2: ${allHits.length} unique URLs from search`);
+
+      // Limita o nº de páginas que rodam Jina (cada uma é uma req)
+      const toScrape = allHits.slice(0, 20);
+      const scraped = await Promise.all(toScrape.map(async (h) => {
+        const md = await jinaRead(h.link!, JINA_API_KEY);
+        return md ? { url: h.link!, title: h.title, markdown: md } : null;
+      }));
+      for (const s of scraped) if (s) scrapedPages.push(s);
+      console.log(`[${jobId}] Phase 2: ${scrapedPages.length} pages scraped via Jina`);
     }
 
-    // PHASE 2: Send pages to AI in batches — raised cap to 80 to handle
-    // larger result sets from the expanded query list
-    const maxPages = Math.min(allResults.length, 80);
-    const pagesForAI = allResults.slice(0, maxPages);
+    const aiContacts = await extractContactsFromPages(scrapedPages, niche, locationStr, prospecting_intent, jobId);
 
-    console.log(`[${jobId}] Sending ${pagesForAI.length} pages to AI in batches...`);
-
-    const contacts = await extractContactsBatch(pagesForAI, niche, locationStr, prospecting_intent, jobId);
-
-    console.log(`[${jobId}] Total AI extracted: ${contacts.length} contacts`);
-
-    // PHASE 3: Format, deduplicate, save
-    const formatPhone = (phone: string): string | null => {
-      if (!phone) return null;
-      const digits = phone.replace(/\D/g, "");
-      if (digits.length < 8) return null;
-      if (digits.startsWith("55") && digits.length >= 12) return `+${digits}`;
-      if (digits.length === 11 || digits.length === 10) return `+55${digits}`;
-      return null;
-    };
-
-    const capitalizeName = (name: string): string | null =>
-      name ? name.replace(/\b\w/g, (c) => c.toUpperCase()).trim() : null;
+    // ─── PHASE 3: merge, dedup, persist ──────────────────────────────────────
+    const allContacts = [...placeContacts, ...aiContacts];
 
     const seenPhones = new Set<string>();
     const seenEmails = new Set<string>();
-    const uniqueContacts = contacts.filter((c: any) => {
-      const phone = formatPhone(c.phone || "");
+    const uniqueContacts = allContacts.filter((c: any) => {
+      const phone = formatPhone(c.phone);
       const email = c.email?.toLowerCase()?.trim();
       if (phone && seenPhones.has(phone)) return false;
       if (!phone && email && seenEmails.has(email)) return false;
       if (phone) seenPhones.add(phone);
       if (email) seenEmails.add(email);
-      return phone || email;
+      return phone || email || c.website;
     });
 
     uniqueContacts.sort((a: any, b: any) => (b.icp_score || 50) - (a.icp_score || 50));
 
-    // Check DB duplicates
-    const phonesToCheck = uniqueContacts.map((c: any) => formatPhone(c.phone || "")).filter(Boolean) as string[];
+    const phonesToCheck = uniqueContacts.map((c: any) => formatPhone(c.phone)).filter(Boolean) as string[];
     const existingPhones = new Set<string>();
-
     if (phonesToCheck.length > 0) {
       const [{ data: rawByPhone }, { data: prospectByPhone }] = await Promise.all([
         supabaseAdmin.from("leads_raw").select("phone").in("phone", phonesToCheck),
@@ -324,7 +383,7 @@ Deno.serve(async (req) => {
 
     const newLeads = uniqueContacts
       .map((c: any) => {
-        const phone = formatPhone(c.phone || "");
+        const phone = formatPhone(c.phone);
         const email = c.email?.toLowerCase()?.trim() || null;
         const icpScore = typeof c.icp_score === "number" ? Math.min(100, Math.max(0, Math.round(c.icp_score))) : 50;
         if (phone && existingPhones.has(phone)) return null;
@@ -344,6 +403,7 @@ Deno.serve(async (req) => {
             prospecting_intent: prospecting_intent || null,
             icp_score: icpScore, icp_reason: c.icp_reason || null,
             job_id: jobId,
+            scraper: "serper+jina",
           },
         };
       })
@@ -359,97 +419,83 @@ Deno.serve(async (req) => {
       }
     }
 
-    // PHASE 4: Geographic expansion — if we still need more leads, try regional queries
+    // ─── PHASE 4: Expansion via Places em cidades vizinhas ───────────────────
     if (savedCount < desiredCount) {
       const needed = desiredCount - savedCount;
-      console.log(`[${jobId}] Phase 4: need ${needed} more leads — expanding geographically...`);
+      console.log(`[${jobId}] Phase 4: need ${needed} more — expanding via Places (regional)...`);
 
-      const expandQueries = buildExpansionQueries(niche, locationStr);
-      const expandResults: any[] = [];
-
-      for (const q of expandQueries) {
-        const result = await firecrawlSearch(FIRECRAWL_API_KEY, q, 15);
-        for (const r of result.results) {
-          const url = r.url || r.metadata?.sourceURL || "";
-          if (url && !seenUrls.has(url)) {
-            seenUrls.add(url);
-            expandResults.push(r);
-          }
+      const expansionQueries = buildExpansionPlacesQueries(niche, locationStr);
+      const expandPlaces: SerperPlace[] = [];
+      for (const q of expansionQueries) {
+        const places = await serperPlaces(SERPER_API_KEY, q, "Brasil");
+        for (const p of places) {
+          const key = (p.cid || `${p.title}|${p.address}`).toLowerCase();
+          if (!seenPlaceKeys.has(key)) { seenPlaceKeys.add(key); expandPlaces.push(p); }
         }
       }
+      console.log(`[${jobId}] Phase 4: ${expandPlaces.length} new places from expansion`);
 
-      console.log(`[${jobId}] Phase 4: ${expandResults.length} new pages from expansion`);
-
-      if (expandResults.length > 0) {
-        const expandContacts = await extractContactsBatch(
-          expandResults.slice(0, 30), niche, locationStr, prospecting_intent, jobId
-        );
-
-        // Deduplicate within expansion (reuse seenPhones/seenEmails from phase 3)
-        const expandUnique = expandContacts.filter((c: any) => {
-          const phone = formatPhone(c.phone || "");
+      const expandContacts = expandPlaces
+        .map(p => placeToContact(p, niche, locationStr))
+        .filter((c: any) => {
+          const phone = formatPhone(c.phone);
           const email = c.email?.toLowerCase()?.trim();
           if (phone && seenPhones.has(phone)) return false;
           if (!phone && email && seenEmails.has(email)) return false;
           if (phone) seenPhones.add(phone);
           if (email) seenEmails.add(email);
-          return phone || email;
+          return phone || email || c.website;
         });
 
-        // Check DB for expansion contacts
-        const expandPhones = expandUnique.map((c: any) => formatPhone(c.phone || "")).filter(Boolean) as string[];
-        if (expandPhones.length > 0) {
-          const [{ data: rawExp }, { data: prospectsExp }] = await Promise.all([
-            supabaseAdmin.from("leads_raw").select("phone").in("phone", expandPhones),
-            supabaseAdmin.from("consultoria_prospects").select("whatsapp").in("whatsapp", expandPhones),
-          ]);
-          (rawExp || []).forEach((l: any) => existingPhones.add(l.phone));
-          (prospectsExp || []).forEach((l: any) => existingPhones.add(l.whatsapp));
-        }
-
-        const expandNewLeads = expandUnique
-          .map((c: any) => {
-            const phone = formatPhone(c.phone || "");
-            const email = c.email?.toLowerCase()?.trim() || null;
-            const icpScore = typeof c.icp_score === "number" ? Math.min(100, Math.max(0, Math.round(c.icp_score))) : 50;
-            if (phone && existingPhones.has(phone)) return null;
-            return {
-              name: capitalizeName(c.name || c.company || "") || "Lead sem nome",
-              phone, email,
-              source: "web" as const,
-              status: "pending" as const,
-              tags: [`job:${jobId}`, "expansion"],
-              enrichment_data: {
-                company: c.company || null, role: c.role || null, city: c.city || null,
-                website: c.website || null, segment: c.segment || niche,
-                scraped_niche: niche, scraped_location: locationStr,
-                scraped_at: new Date().toISOString(),
-                prospecting_intent: prospecting_intent || null,
-                icp_score: icpScore, icp_reason: c.icp_reason || null,
-                job_id: jobId, expansion: true,
-              },
-            };
-          })
-          .filter(Boolean);
-
-        if (expandNewLeads.length > 0) {
-          for (let i = 0; i < expandNewLeads.length; i += 50) {
-            const chunk = expandNewLeads.slice(i, i + 50);
-            const { error: insertError } = await supabaseAdmin.from("leads_raw").insert(chunk);
-            if (insertError) console.error("Expand insert error:", insertError);
-            else savedCount += chunk.length;
-          }
-        }
-
-        // Merge for sentinel results
-        uniqueContacts.push(...expandUnique);
-        contacts.push(...expandContacts);
-
-        console.log(`[${jobId}] Phase 4 done: +${expandNewLeads.length} leads (total ${savedCount})`);
+      const expandPhones = expandContacts.map((c: any) => formatPhone(c.phone)).filter(Boolean) as string[];
+      if (expandPhones.length > 0) {
+        const [{ data: rawExp }, { data: prospectsExp }] = await Promise.all([
+          supabaseAdmin.from("leads_raw").select("phone").in("phone", expandPhones),
+          supabaseAdmin.from("consultoria_prospects").select("whatsapp").in("whatsapp", expandPhones),
+        ]);
+        (rawExp || []).forEach((l: any) => existingPhones.add(l.phone));
+        (prospectsExp || []).forEach((l: any) => existingPhones.add(l.whatsapp));
       }
+
+      const expandNewLeads = expandContacts
+        .map((c: any) => {
+          const phone = formatPhone(c.phone);
+          const icpScore = typeof c.icp_score === "number" ? Math.min(100, Math.max(0, Math.round(c.icp_score))) : 50;
+          if (phone && existingPhones.has(phone)) return null;
+          return {
+            name: capitalizeName(c.name || c.company || "") || "Lead sem nome",
+            phone,
+            email: null,
+            source: "web" as const,
+            status: "pending" as const,
+            tags: [`job:${jobId}`, "expansion"],
+            enrichment_data: {
+              company: c.company || null, city: c.city || null,
+              website: c.website || null, segment: c.segment || niche,
+              scraped_niche: niche, scraped_location: locationStr,
+              scraped_at: new Date().toISOString(),
+              prospecting_intent: prospecting_intent || null,
+              icp_score: icpScore, icp_reason: c.icp_reason || null,
+              job_id: jobId, expansion: true,
+              scraper: "serper+jina",
+            },
+          };
+        })
+        .filter(Boolean);
+
+      if (expandNewLeads.length > 0) {
+        for (let i = 0; i < expandNewLeads.length; i += 50) {
+          const chunk = expandNewLeads.slice(i, i + 50);
+          const { error: insertError } = await supabaseAdmin.from("leads_raw").insert(chunk);
+          if (insertError) console.error("Expand insert error:", insertError);
+          else savedCount += chunk.length;
+        }
+      }
+      uniqueContacts.push(...expandContacts);
+      console.log(`[${jobId}] Phase 4 done: +${expandNewLeads.length} leads (total ${savedCount})`);
     }
 
-    // Insert sentinel row to signal completion
+    // ─── Sentinel ────────────────────────────────────────────────────────────
     await supabaseAdmin.from("leads_raw").insert({
       name: `__job_complete__`,
       source: "system",
@@ -457,24 +503,28 @@ Deno.serve(async (req) => {
       tags: [`job:${jobId}`],
       enrichment_data: {
         job_id: jobId, status: "completed",
-        count: savedCount, total_found: contacts.length,
-        duplicates_skipped: contacts.length - newLeads.length,
-        pages_searched: allResults.length,
+        count: savedCount, total_found: uniqueContacts.length,
+        duplicates_skipped: uniqueContacts.length - newLeads.length,
+        places_searched: allPlaces.length,
+        pages_scraped: scrapedPages.length,
+        pages_searched: allPlaces.length + scrapedPages.length,
+        used_search_fallback: searchUsed,
         avg_icp_score: uniqueContacts.length
           ? Math.round(uniqueContacts.reduce((s: number, c: any) => s + (c.icp_score || 50), 0) / uniqueContacts.length)
           : 0,
         results: uniqueContacts.slice(0, 100).map((c: any) => ({
           name: capitalizeName(c.name || c.company || "") || null,
-          phone: formatPhone(c.phone || ""), email: c.email || null,
+          phone: formatPhone(c.phone), email: c.email || null,
           company: c.company || null, city: c.city || null,
           website: c.website || null, segment: c.segment || null,
           icp_score: typeof c.icp_score === "number" ? Math.min(100, Math.max(0, Math.round(c.icp_score))) : 50,
           icp_reason: c.icp_reason || null,
         })),
+        scraper: "serper+jina",
       },
     });
 
-    console.log(`[${jobId}] DONE: ${savedCount} saved, ${contacts.length - newLeads.length} dupes, ${allResults.length} pages searched`);
+    console.log(`[${jobId}] DONE: ${savedCount} saved, places=${allPlaces.length}, pages=${scrapedPages.length}`);
 
     return new Response(JSON.stringify({ status: "completed", count: savedCount }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
