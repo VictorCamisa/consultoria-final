@@ -31,6 +31,9 @@ type GooglePlace = {
 
 type ScrapedPage = { url: string; title?: string; markdown: string };
 
+// Diagnóstico exposto no sentinel para debugging de key/permissão
+let lastPlacesError: string | null = null;
+
 async function googlePlacesSearch(apiKey: string, textQuery: string): Promise<GooglePlace[]> {
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
@@ -59,16 +62,23 @@ async function googlePlacesSearch(apiKey: string, textQuery: string): Promise<Go
       });
       if (resp.ok) {
         const data = await resp.json();
-        return Array.isArray(data?.places) ? data.places : [];
+        const places = Array.isArray(data?.places) ? data.places : [];
+        console.log(`Google Places OK: "${textQuery}" → ${places.length} resultados`);
+        return places;
       }
-      const txt = (await resp.text()).slice(0, 300);
-      console.error(`Google Places ${resp.status} attempt ${attempt}: ${txt}`);
+      const txt = (await resp.text()).slice(0, 400);
+      const errMsg = `Places API HTTP ${resp.status}: ${txt}`;
+      console.error(`[attempt ${attempt}] ${errMsg}`);
+      lastPlacesError = errMsg;
+      // 403 = chave sem permissão para Maps Platform (chave de AI Studio não funciona aqui)
       if ([400, 401, 403].includes(resp.status)) return [];
       if (resp.status === 429 && attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
       if (resp.status >= 500 && attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
       return [];
-    } catch (e) {
-      console.error(`Google Places network error attempt ${attempt}:`, e);
+    } catch (e: any) {
+      const errMsg = `Places API network error: ${e?.message ?? e}`;
+      console.error(`[attempt ${attempt}] ${errMsg}`);
+      lastPlacesError = errMsg;
       if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
     }
   }
@@ -469,10 +479,11 @@ Deno.serve(async (req) => {
           icp_reason: c.icp_reason || null,
         })),
         scraper: "google-places+jina",
+        api_error: lastPlacesError ?? null,
       },
     });
 
-    console.log(`[${jobId}] DONE: ${savedCount} saved, ${allPlaces.length} places searched`);
+    console.log(`[${jobId}] DONE: ${savedCount} saved, ${allPlaces.length} places searched. Erro API: ${lastPlacesError ?? "nenhum"}`);
     return new Response(JSON.stringify({ status: "completed", count: savedCount }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
