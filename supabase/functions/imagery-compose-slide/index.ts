@@ -1,16 +1,34 @@
-// Imagery Engine — Compose (v2 · padrão V4/G4 brutalista aprovado)
+// Imagery Engine — Compose (v3 · padrão V4/G4 brutalista + saída PNG real)
 // 5 templates: HOOK, SPLIT, DATA_SPLIT, LIST, CTA_HOOK
-// Tipografia: Archivo Black (display brutalista) + Barlow Regular (corpo/markers)
-// Logo VS aplicada em TODOS os slides.
+// Tipografia: Archivo Black (display brutalista, sem italic falsa) + Barlow (corpo)
+// Pipeline: Satori (SVG) → resvg-wasm (PNG) → Storage. Instagram exige PNG/JPEG real.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import satori from "https://esm.sh/satori@0.10.13";
+import { Resvg, initWasm } from "https://esm.sh/@resvg/resvg-wasm@2.6.2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { VS_LOGO_DATA_URL } from "./logo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// Carrega Archivo Black (display) + Barlow Regular (corpo) — fontes leves pra evitar CPU timeout
+// Inicialização preguiçosa do WASM do resvg (cold-start cache)
+let resvgWasmReady: Promise<void> | null = null;
+function ensureResvgWasm(): Promise<void> {
+  if (!resvgWasmReady) {
+    resvgWasmReady = (async () => {
+      const wasmResp = await fetch("https://esm.sh/@resvg/resvg-wasm@2.6.2/index_bg.wasm");
+      if (!wasmResp.ok) throw new Error(`resvg-wasm fetch falhou: ${wasmResp.status}`);
+      await initWasm(wasmResp);
+    })().catch((e) => {
+      resvgWasmReady = null;
+      throw e;
+    });
+  }
+  return resvgWasmReady;
+}
+
+// Carrega Archivo Black (display) + Barlow Regular/Bold (corpo)
+// Sem alias de italic falso — Satori faria fontStyle italic via skew (feio).
 type FontEntry = { name: string; data: ArrayBuffer; weight: number; style: "normal" | "italic" };
 let fontsCache: FontEntry[] | null = null;
 async function loadFonts() {
@@ -22,16 +40,16 @@ async function loadFonts() {
     if (ct.includes("html")) throw new Error(`font fetch returned HTML: ${url}`);
     return await r.arrayBuffer();
   }
-  // Archivo Black: ~30KB single weight; Barlow Regular: ~80KB
-  const [archivoBlack, barlowRegular] = await Promise.all([
+  // Archivo Black: 30KB; Barlow Regular: 80KB; Barlow Bold: 80KB
+  const [archivoBlack, barlowRegular, barlowBold] = await Promise.all([
     fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/archivoblack/ArchivoBlack-Regular.ttf"),
     fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/barlow/Barlow-Regular.ttf"),
+    fetchFont("https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/barlow/Barlow-Bold.ttf"),
   ]);
   fontsCache = [
     { name: "Display", data: archivoBlack, weight: 900, style: "normal" },
-    { name: "Display", data: archivoBlack, weight: 900, style: "italic" }, // alias italic → mesmo arquivo
     { name: "Barlow", data: barlowRegular, weight: 400, style: "normal" },
-    { name: "Barlow", data: barlowRegular, weight: 700, style: "normal" },
+    { name: "Barlow", data: barlowBold, weight: 700, style: "normal" },
   ];
   return fontsCache;
 }
@@ -108,9 +126,18 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
     const element = buildElement(slide.template_id, headline, sub, bgUrl);
     const svg = await satori(element, { width: 1080, height: 1080, fonts });
 
-    const path = `${slide.post_id}/${slide.id}_final_${Date.now()}.svg`;
-    const { error: upErr } = await admin.storage.from("imagery").upload(path, new Blob([svg], { type: "image/svg+xml" }), {
-      contentType: "image/svg+xml; charset=utf-8", upsert: true,
+    // Rasteriza SVG → PNG. Instagram Graph API recusa SVG; precisa ser PNG/JPEG real.
+    await ensureResvgWasm();
+    const resvg = new Resvg(svg, {
+      fitTo: { mode: "width", value: 1080 },
+      background: "#050814",
+      font: { loadSystemFonts: false },
+    });
+    const pngBytes = resvg.render().asPng();
+
+    const path = `${slide.post_id}/${slide.id}_final_${Date.now()}.png`;
+    const { error: upErr } = await admin.storage.from("imagery").upload(path, pngBytes, {
+      contentType: "image/png", upsert: true,
     });
     if (upErr) throw upErr;
     const { data: urlData } = admin.storage.from("imagery").getPublicUrl(path);
@@ -122,8 +149,8 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
 
     await admin.from("imagery_logs").insert({
       slide_id, post_id: slide.post_id, step: "compose",
-      provider: "satori", model: "svg-output",
-      response_summary: { final_url: finalUrl, template: slide.template_id },
+      provider: "satori+resvg", model: "png-1080",
+      response_summary: { final_url: finalUrl, template: slide.template_id, bytes: pngBytes.byteLength },
       duracao_ms: Date.now() - t0, success: true,
     });
     await finalizePostIfDone(admin, slide.post_id);
@@ -197,7 +224,7 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
   const display = (text: string, opts: { size?: number; color?: string; lineHeight?: number; letterSpacing?: number; width?: number; align?: "left" | "center" | "right" } = {}) => ({
     type: "div", props: {
       style: {
-        fontFamily: "Display", fontWeight: 900, fontStyle: "italic",
+        fontFamily: "Display", fontWeight: 900,
         fontSize: opts.size ?? 110,
         lineHeight: opts.lineHeight ?? 0.88,
         letterSpacing: opts.letterSpacing ?? -2,
@@ -399,7 +426,7 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
                 key: idx,
                 style: { display: "flex", flexDirection: "row", alignItems: "flex-start", gap: 36, paddingTop: 24, borderTop: "1px solid rgba(255,255,255,0.12)" },
                 children: [
-                  { type: "div", props: { style: { fontFamily: "Display", fontWeight: 900, fontStyle: "italic", fontSize: 92, color: ORANGE, lineHeight: 0.85, display: "flex", minWidth: 140 }, children: it.n } },
+                  { type: "div", props: { style: { fontFamily: "Display", fontWeight: 900, fontSize: 92, color: ORANGE, lineHeight: 0.85, display: "flex", minWidth: 140 }, children: it.n } },
                   { type: "div", props: {
                     style: { display: "flex", flexDirection: "column", gap: 6, flex: 1 },
                     children: [
@@ -448,7 +475,7 @@ function buildElement(template: string, headline: string, sub: string, bgUrl?: s
           { type: "div", props: {
             style: { position: "absolute", bottom: 0, left: 0, width: 1080, height: 100, background: ORANGE, display: "flex", flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: "0 64px" },
             children: [
-              { type: "div", props: { style: { fontFamily: "Display", fontWeight: 900, fontStyle: "italic", fontSize: 32, color: BLACK, textTransform: "uppercase", letterSpacing: -1, display: "flex" }, children: "→ VENDASDESOLUCOES.COM" } },
+              { type: "div", props: { style: { fontFamily: "Display", fontWeight: 900, fontSize: 32, color: BLACK, textTransform: "uppercase", letterSpacing: -1, display: "flex" }, children: "→ VENDASDESOLUCOES.COM" } },
               { type: "img", props: { src: VS_LOGO_DATA_URL, style: { height: 56, width: "auto", filter: "brightness(0)" } } },
             ],
           } },
