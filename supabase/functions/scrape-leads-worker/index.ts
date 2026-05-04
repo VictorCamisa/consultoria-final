@@ -2,103 +2,85 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SCRAPER v2 — Serper (Google Places + Search) + Jina Reader
+// SCRAPER v3 — Google Places API (New) + Jina Reader
 //
-// Por que substituímos o Firecrawl:
-//   • Serper /places usa o índice do Google Maps → retorna negócios brasileiros
-//     com title, phoneNumber, website, address, rating já estruturados.
-//     Sem precisar de IA pra extrair em ~80% dos casos (muito mais barato).
-//   • Serper /search é Google Search puro com gl=br/hl=pt-br. Cobertura
-//     incomparável em conteúdo brasileiro (vs Firecrawl que usa Bing/DDG).
-//   • Jina Reader (r.jina.ai/{url}) converte qualquer página em markdown limpo,
-//     gratuito até 200 req/min. Substitui o scrapeOptions do Firecrawl.
+// Usa GOOGLE_API_KEY (já existente no projeto). Zero novas APIs.
 //
 // Fluxo:
-//   Phase 1: Serper /places → contatos diretos (nome, fone, site, ICP via Claude lite)
-//   Phase 2: Serper /search + Jina (só quando /places não bastou) → IA extrai
+//   Phase 1: Google Places Text Search → contatos diretos estruturados
+//            (nome, fone, site, endereço, rating) sem precisar de IA
+//   Phase 2: Jina Reader (r.jina.ai) nos sites encontrados → Claude extrai
+//            emails e detalhes adicionais quando Places não tem fone
 //   Phase 3: Dedup + persist
-//   Phase 4: Expansion via /places em cidades vizinhas
+//   Phase 4: Expansion regional via Places
+//
+// Pricing Google Places (New):
+//   Text Search: $17/1000 req · crédito grátis $200/mês ≈ 11.700 req livres
 // ─────────────────────────────────────────────────────────────────────────────
 
-type SerperPlace = {
-  title?: string;
-  address?: string;
-  phoneNumber?: string;
-  website?: string;
+type GooglePlace = {
+  displayName?: { text?: string };
+  formattedAddress?: string;
+  nationalPhoneNumber?: string;
+  websiteUri?: string;
   rating?: number;
-  ratingCount?: number;
-  category?: string;
-  cid?: string;
-  latitude?: number;
-  longitude?: number;
+  userRatingCount?: number;
+  types?: string[];
+  businessStatus?: string;
 };
-
-type SerperSearchHit = { title?: string; link?: string; snippet?: string };
 
 type ScrapedPage = { url: string; title?: string; markdown: string };
 
-async function serperPlaces(apiKey: string, query: string, location: string): Promise<SerperPlace[]> {
+async function googlePlacesSearch(apiKey: string, textQuery: string): Promise<GooglePlace[]> {
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const resp = await fetch("https://google.serper.dev/places", {
+      const resp = await fetch("https://places.googleapis.com/v1/places:searchText", {
         method: "POST",
-        headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ q: query, gl: "br", hl: "pt-br", location: location || "Brasil" }),
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask": [
+            "places.displayName",
+            "places.formattedAddress",
+            "places.nationalPhoneNumber",
+            "places.websiteUri",
+            "places.rating",
+            "places.userRatingCount",
+            "places.types",
+            "places.businessStatus",
+          ].join(","),
+        },
+        body: JSON.stringify({
+          textQuery,
+          languageCode: "pt-BR",
+          regionCode: "BR",
+          maxResultCount: 20,
+        }),
       });
       if (resp.ok) {
         const data = await resp.json();
         return Array.isArray(data?.places) ? data.places : [];
       }
-      const txt = (await resp.text()).slice(0, 200);
-      console.error(`Serper /places ${resp.status} attempt ${attempt}: ${txt}`);
-      if ([401, 402, 403].includes(resp.status)) return [];
+      const txt = (await resp.text()).slice(0, 300);
+      console.error(`Google Places ${resp.status} attempt ${attempt}: ${txt}`);
+      if ([400, 401, 403].includes(resp.status)) return [];
       if (resp.status === 429 && attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
       if (resp.status >= 500 && attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
       return [];
     } catch (e) {
-      console.error(`Serper /places network error attempt ${attempt}:`, e);
+      console.error(`Google Places network error attempt ${attempt}:`, e);
       if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
     }
   }
   return [];
 }
 
-async function serperSearch(apiKey: string, query: string, num: number): Promise<SerperSearchHit[]> {
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    try {
-      const resp = await fetch("https://google.serper.dev/search", {
-        method: "POST",
-        headers: { "X-API-KEY": apiKey, "Content-Type": "application/json" },
-        body: JSON.stringify({ q: query, gl: "br", hl: "pt-br", num: Math.min(num, 20) }),
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        return Array.isArray(data?.organic) ? data.organic : [];
-      }
-      const txt = (await resp.text()).slice(0, 200);
-      console.error(`Serper /search ${resp.status} attempt ${attempt}: ${txt}`);
-      if ([401, 402, 403].includes(resp.status)) return [];
-      if (resp.status === 429 && attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
-      if (resp.status >= 500 && attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
-      return [];
-    } catch (e) {
-      console.error(`Serper /search network error attempt ${attempt}:`, e);
-      if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
-    }
-  }
-  return [];
-}
-
-async function jinaRead(url: string, apiKey?: string): Promise<string> {
-  // Jina Reader: GET https://r.jina.ai/{url} → markdown limpo. Sem key = rate baixo mas funciona.
+async function jinaRead(url: string): Promise<string> {
   try {
-    const headers: Record<string, string> = { "X-Return-Format": "markdown" };
-    if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
-    const resp = await fetch(`https://r.jina.ai/${url}`, { headers });
-    if (!resp.ok) {
-      console.warn(`Jina ${resp.status} for ${url.slice(0, 80)}`);
-      return "";
-    }
+    const resp = await fetch(`https://r.jina.ai/${url}`, {
+      headers: { "X-Return-Format": "markdown" },
+    });
+    if (!resp.ok) { console.warn(`Jina ${resp.status} for ${url.slice(0, 80)}`); return ""; }
     return (await resp.text()).slice(0, 4000);
   } catch (e) {
     console.warn(`Jina error for ${url.slice(0, 80)}:`, e);
@@ -115,37 +97,27 @@ Score ICP 80-100=perfeito, 60-79=bom, 40-59=médio, 20-39=fraco, 0-19=ruim.
 function buildPlacesQueries(niche: string, locationStr: string, intent: string): string[] {
   const city = (locationStr || "").split(",")[0]?.trim() || "";
   const nicheLower = niche.toLowerCase();
-  const base: string[] = [];
+  const loc = city ? ` em ${city}` : "";
+  let terms: string[];
 
   if (nicheLower.includes("revenda") || nicheLower.includes("veículo") || nicheLower.includes("seminovo") || nicheLower.includes("carro") || nicheLower.includes("auto")) {
-    base.push("revenda de veículos", "loja de carros usados", "multimarcas seminovos", "concessionária seminovos");
+    terms = ["revenda de veículos", "loja de carros usados", "multimarcas seminovos", "concessionária de seminovos"];
   } else if (nicheLower.includes("estética") || nicheLower.includes("estetic") || nicheLower.includes("depilação") || nicheLower.includes("skincare")) {
-    base.push("clínica de estética", "estética avançada", "centro de estética", "clínica de depilação");
+    terms = ["clínica de estética", "centro de estética", "estética avançada", "clínica de depilação a laser"];
   } else if (nicheLower.includes("odonto") || nicheLower.includes("dentist")) {
-    base.push("clínica odontológica", "dentista", "consultório odontológico", "ortodontia");
+    terms = ["clínica odontológica", "dentista", "consultório odontológico", "clínica de ortodontia"];
   } else if (nicheLower.includes("advoca") || nicheLower.includes("jurídic") || nicheLower.includes("direito")) {
-    base.push("escritório de advocacia", "advogado", "advocacia trabalhista", "advocacia empresarial");
+    terms = ["escritório de advocacia", "advogado", "advocacia empresarial", "advocacia trabalhista"];
   } else {
-    base.push(niche, `${niche} empresa`, `${niche} clínica`, `${niche} escritório`);
+    terms = [niche, `${niche} empresa`, `empresa de ${niche}`, `${niche} profissional`];
   }
 
-  const queries = base.map(q => city ? `${q} em ${city}` : q);
-  if (intent?.trim()) queries.push(`${base[0]} ${intent.trim().slice(0, 60)}${city ? ` ${city}` : ""}`);
+  const queries = terms.map(t => `${t}${loc}`);
+  if (intent?.trim()) queries.push(`${terms[0]}${loc} ${intent.trim().slice(0, 60)}`);
   return Array.from(new Set(queries)).slice(0, 5);
 }
 
-function buildSearchQueries(niche: string, locationStr: string, intent: string): string[] {
-  const city = (locationStr || "").split(",")[0]?.trim() || "";
-  const queries: string[] = [
-    `${niche} ${city} contato site WhatsApp`,
-    `${niche} ${city} telefone empresa`,
-    `"${niche}" "${city}" contato`,
-  ];
-  if (intent?.trim()) queries.push(`${niche} ${city} ${intent.trim().slice(0, 80)}`);
-  return queries.slice(0, 4);
-}
-
-function buildExpansionPlacesQueries(niche: string, locationStr: string): string[] {
+function buildExpansionQueries(niche: string, locationStr: string): string[] {
   const parts = (locationStr || "").split(",");
   const city = parts[0]?.trim() || "";
   const state = parts[parts.length - 1]?.trim() || "";
@@ -155,104 +127,108 @@ function buildExpansionPlacesQueries(niche: string, locationStr: string): string
   else if (nicheLower.includes("estética") || nicheLower.includes("estetic")) core = "clínica de estética";
   else if (nicheLower.includes("odonto") || nicheLower.includes("dentist")) core = "clínica odontológica";
   else if (nicheLower.includes("advoca")) core = "escritório de advocacia";
-  return [
-    state ? `${core} ${state}` : `${core} interior`,
-    `${core} região metropolitana ${city}`,
-    `${core} ${state || "Brasil"} interior`,
-  ].filter(Boolean);
+  const queries: string[] = [];
+  if (state) queries.push(`${core} ${state}`);
+  if (city) queries.push(`${core} região metropolitana de ${city}`);
+  if (state) queries.push(`${core} interior de ${state}`);
+  return queries.filter(Boolean).slice(0, 3);
 }
 
-/** Mapeia um SerperPlace direto pra um "contato" pronto (sem IA). */
-function placeToContact(p: SerperPlace, niche: string, locationStr: string) {
-  const phone = p.phoneNumber || null;
+function placeToContact(p: GooglePlace, niche: string, locationStr: string) {
+  const name = p.displayName?.text || null;
+  const address = p.formattedAddress || "";
+  const cityFromAddress = address.split(",").slice(-3, -2)[0]?.trim() || locationStr.split(",")[0]?.trim() || null;
   return {
-    name: p.title || null,
-    company: p.title || null,
-    phone,
+    name,
+    company: name,
+    phone: p.nationalPhoneNumber || null,
     email: null,
     role: null,
-    city: (p.address || "").split(",").slice(-2, -1)[0]?.trim() || locationStr.split(",")[0]?.trim() || null,
-    website: p.website || null,
-    segment: p.category || niche,
+    city: cityFromAddress,
+    website: p.websiteUri || null,
+    segment: (p.types ?? []).join(", ") || niche,
     company_size: null,
     icp_score: scorePlaceICP(p),
-    icp_reason: p.rating ? `Rating ${p.rating} (${p.ratingCount ?? 0} reviews) · ${p.category ?? niche}` : `${p.category ?? niche}`,
+    icp_reason: buildIcpReason(p, niche),
+    address,
   };
 }
 
-/** Score ICP heurístico baseado em sinais públicos (sem custo de IA). */
-function scorePlaceICP(p: SerperPlace): number {
+function scorePlaceICP(p: GooglePlace): number {
   let score = 50;
-  if (p.website) score += 15;
-  if (p.phoneNumber) score += 10;
+  if (p.websiteUri) score += 15;
+  if (p.nationalPhoneNumber) score += 10;
   if (typeof p.rating === "number") {
     if (p.rating >= 4.5) score += 10;
     else if (p.rating >= 4.0) score += 5;
     else if (p.rating < 3.5) score -= 10;
   }
-  if (typeof p.ratingCount === "number") {
-    if (p.ratingCount >= 50) score += 10;
-    else if (p.ratingCount >= 20) score += 5;
-    else if (p.ratingCount < 5) score -= 5;
+  if (typeof p.userRatingCount === "number") {
+    if (p.userRatingCount >= 50) score += 10;
+    else if (p.userRatingCount >= 20) score += 5;
+    else if (p.userRatingCount < 5) score -= 5;
   }
+  if (p.businessStatus && p.businessStatus !== "OPERATIONAL") score -= 20;
   return Math.max(0, Math.min(100, score));
 }
 
-/** Para páginas sem dado estruturado, usa Claude pra extrair contatos do markdown. */
-async function extractContactsFromPages(
-  pages: ScrapedPage[],
+function buildIcpReason(p: GooglePlace, niche: string): string {
+  const parts: string[] = [];
+  if (p.rating) parts.push(`Rating ${p.rating} (${p.userRatingCount ?? 0} reviews)`);
+  if (p.websiteUri) parts.push("tem site");
+  if (p.nationalPhoneNumber) parts.push("tem fone");
+  if (p.businessStatus && p.businessStatus !== "OPERATIONAL") parts.push(`status: ${p.businessStatus}`);
+  return parts.length ? parts.join(" · ") : niche;
+}
+
+async function enrichContactsViaJina(
+  contacts: any[],
   niche: string,
   locationStr: string,
   prospecting_intent: string,
   jobId: string,
 ): Promise<any[]> {
-  if (pages.length === 0) return [];
+  // Só enriche contatos sem fone que têm website (tenta extrair email/fone do site)
+  const toEnrich = contacts.filter(c => !c.phone && c.website).slice(0, 15);
+  if (toEnrich.length === 0) return contacts;
+
   const { callClaude } = await import("../_shared/ai-client.ts");
-  const BATCH_SIZE = 8;
-  const all: any[] = [];
+  console.log(`[${jobId}] Enriching ${toEnrich.length} contacts via Jina + Claude...`);
 
-  for (let i = 0; i < pages.length; i += BATCH_SIZE) {
-    const batch = pages.slice(i, i + BATCH_SIZE);
-    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+  const pages: ScrapedPage[] = [];
+  await Promise.all(toEnrich.map(async (c) => {
+    const md = await jinaRead(c.website!);
+    if (md) pages.push({ url: c.website!, title: c.company || "", markdown: md });
+  }));
 
-    const pagesContent = batch.map((r, idx) => {
-      const md = (r.markdown || "").substring(0, 2500);
-      return `--- PÁG ${idx + 1}: ${r.title ?? ""} (${r.url}) ---\n${md}`;
-    }).join("\n\n");
+  if (pages.length === 0) return contacts;
 
-    const extractionPrompt = `Extraia TODOS os contatos de empresas "${niche}" ${locationStr ? `em ${locationStr}` : ""} das páginas abaixo.
-${prospecting_intent ? `\nIntenção: "${prospecting_intent}"\n` : ""}
+  const pagesContent = pages.map((p, i) => `--- ${i + 1}: ${p.title} (${p.url}) ---\n${p.markdown}`).join("\n\n");
+  const prompt = `Extraia telefone e email das páginas de negócios "${niche}" ${locationStr ? `em ${locationStr}` : ""} abaixo.
 ${pagesContent}
 
-${CONSULTORIA_VS_CONTEXT}
+Responda APENAS JSON: {"contacts":[{"website":"str","phone":"str|null","email":"str|null"}]}`;
 
-IMPORTANTE: Extraia TODOS os telefones/contatos que encontrar, mesmo que pareçam incompletos. Cada empresa deve ser um contato separado.
-
-Responda APENAS JSON: {"contacts":[{"name":"str|null","phone":"str|null","email":"str|null","company":"str|null","role":"str|null","city":"str|null","website":"str|null","segment":"str|null","company_size":"str|null","icp_score":0,"icp_reason":"str|null"}]}`;
-
-    console.log(`[${jobId}] AI batch ${batchNum}: ${batch.length} pages...`);
-    try {
-      const aiResult = await callClaude({
-        system: `Extraia o MÁXIMO de contatos B2B possível. Cada empresa com telefone ou email deve ser um contato separado. Retorne APENAS JSON válido.`,
-        messages: [{ role: "user", content: extractionPrompt }],
-        max_tokens: 4096,
-      });
-      const aiContent = aiResult.text ?? "";
-      let contacts: any[] = [];
-      try {
-        const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-        if (jsonMatch) contacts = JSON.parse(jsonMatch[0]).contacts || [];
-      } catch {
-        const matches = aiContent.matchAll(/\{\s*"name"\s*:\s*(?:"[^"]*"|null)[\s\S]*?"icp_score"\s*:\s*\d+[\s\S]*?\}/g);
-        for (const m of matches) { try { contacts.push(JSON.parse(m[0])); } catch {} }
-      }
-      console.log(`[${jobId}] AI batch ${batchNum}: extracted ${contacts.length} contacts`);
-      all.push(...contacts);
-    } catch (e) {
-      console.error(`[${jobId}] AI batch ${batchNum} error:`, e);
-    }
+  try {
+    const aiResult = await callClaude({
+      system: "Extraia APENAS phone e email dos sites. Retorne APENAS JSON válido.",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 2048,
+    });
+    const jsonMatch = (aiResult.text ?? "").match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return contacts;
+    const enriched: { website: string; phone?: string; email?: string }[] = JSON.parse(jsonMatch[0]).contacts || [];
+    const byWebsite = new Map(enriched.map(e => [e.website, e]));
+    return contacts.map(c => {
+      if (!c.website || c.phone) return c;
+      const e = byWebsite.get(c.website);
+      if (!e) return c;
+      return { ...c, phone: e.phone || c.phone, email: e.email || c.email };
+    });
+  } catch (e) {
+    console.error(`[${jobId}] Jina enrich error:`, e);
+    return contacts;
   }
-  return all;
 }
 
 const formatPhone = (phone: string | null | undefined): string | null => {
@@ -273,8 +249,7 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const SERPER_API_KEY = Deno.env.get("SERPER_API_KEY") ?? "";
-    const JINA_API_KEY = Deno.env.get("JINA_API_KEY") ?? "";
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? Deno.env.get("GOOGLE_AI_STUDIO") ?? "";
 
     const authHeader = req.headers.get("authorization");
     if (authHeader !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
@@ -284,74 +259,47 @@ Deno.serve(async (req) => {
     const { niche, locationStr, desiredCount, prospecting_intent, jobId } = await req.json();
     const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    console.log(`[${jobId}] Worker v2 (Serper+Jina): "${niche}" in "${locationStr}" (${desiredCount} leads)`);
+    console.log(`[${jobId}] Worker v3 (Google Places + Jina): "${niche}" in "${locationStr}" (${desiredCount} leads)`);
 
-    if (!SERPER_API_KEY) {
+    if (!GOOGLE_API_KEY) {
       await supabaseAdmin.from("leads_raw").insert({
         name: `__job_complete__`, source: "system", status: "job_failed",
         tags: [`job:${jobId}`],
-        enrichment_data: { job_id: jobId, status: "failed", error: "SERPER_API_KEY ausente" },
+        enrichment_data: { job_id: jobId, status: "failed", error: "GOOGLE_API_KEY ausente" },
       });
-      return new Response(JSON.stringify({ error: "SERPER_API_KEY ausente" }), {
+      return new Response(JSON.stringify({ error: "GOOGLE_API_KEY ausente" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ─── PHASE 1: Serper Places → contatos diretos sem IA ────────────────────
+    // ─── PHASE 1: Google Places Text Search → dados estruturados sem IA ──────
     const placesQueries = buildPlacesQueries(niche, locationStr, prospecting_intent);
-    const allPlaces: SerperPlace[] = [];
+    const allPlaces: GooglePlace[] = [];
     const seenPlaceKeys = new Set<string>();
 
     for (const q of placesQueries) {
-      const places = await serperPlaces(SERPER_API_KEY, q, locationStr);
+      const places = await googlePlacesSearch(GOOGLE_API_KEY, q);
       for (const p of places) {
-        const key = (p.cid || `${p.title}|${p.address}`).toLowerCase();
+        // Ignora negócios fechados permanentemente
+        if (p.businessStatus === "CLOSED_PERMANENTLY") continue;
+        const key = `${p.displayName?.text ?? ""}|${p.formattedAddress ?? ""}`.toLowerCase();
         if (!seenPlaceKeys.has(key)) {
           seenPlaceKeys.add(key);
           allPlaces.push(p);
         }
       }
     }
-    console.log(`[${jobId}] Phase 1: ${allPlaces.length} places`);
+    console.log(`[${jobId}] Phase 1: ${allPlaces.length} places from Google`);
 
-    const placeContacts = allPlaces.map(p => placeToContact(p, niche, locationStr));
+    let contacts = allPlaces.map(p => placeToContact(p, niche, locationStr));
 
-    // ─── PHASE 2: complementa com Search + Jina se ainda preciso ─────────────
-    const seenUrls = new Set<string>();
-    const scrapedPages: ScrapedPage[] = [];
-    let searchUsed = false;
+    // ─── PHASE 2: Enriquece (via Jina + Claude) contatos sem fone ────────────
+    contacts = await enrichContactsViaJina(contacts, niche, locationStr, prospecting_intent, jobId);
 
-    if (placeContacts.filter(c => c.phone).length < desiredCount) {
-      searchUsed = true;
-      const searchQueries = buildSearchQueries(niche, locationStr, prospecting_intent);
-      const allHits: SerperSearchHit[] = [];
-      for (const q of searchQueries) {
-        const hits = await serperSearch(SERPER_API_KEY, q, 15);
-        for (const h of hits) {
-          const url = h.link || "";
-          if (url && !seenUrls.has(url)) { seenUrls.add(url); allHits.push(h); }
-        }
-      }
-      console.log(`[${jobId}] Phase 2: ${allHits.length} unique URLs from search`);
-
-      // Limita o nº de páginas que rodam Jina (cada uma é uma req)
-      const toScrape = allHits.slice(0, 20);
-      const scraped = await Promise.all(toScrape.map(async (h) => {
-        const md = await jinaRead(h.link!, JINA_API_KEY);
-        return md ? { url: h.link!, title: h.title, markdown: md } : null;
-      }));
-      for (const s of scraped) if (s) scrapedPages.push(s);
-      console.log(`[${jobId}] Phase 2: ${scrapedPages.length} pages scraped via Jina`);
-    }
-
-    const aiContacts = await extractContactsFromPages(scrapedPages, niche, locationStr, prospecting_intent, jobId);
-
-    // ─── PHASE 3: merge, dedup, persist ──────────────────────────────────────
-    const allContacts = [...placeContacts, ...aiContacts];
-
+    // ─── PHASE 3: Dedup + persist ─────────────────────────────────────────────
     const seenPhones = new Set<string>();
     const seenEmails = new Set<string>();
-    const uniqueContacts = allContacts.filter((c: any) => {
+    const uniqueContacts = contacts.filter((c: any) => {
       const phone = formatPhone(c.phone);
       const email = c.email?.toLowerCase()?.trim();
       if (phone && seenPhones.has(phone)) return false;
@@ -395,7 +343,8 @@ Deno.serve(async (req) => {
           status: "pending" as const,
           tags: [`job:${jobId}`],
           enrichment_data: {
-            company: c.company || null, role: c.role || null, city: c.city || null,
+            company: c.company || null, role: c.role || null,
+            city: c.city || null, address: c.address || null,
             website: c.website || null, segment: c.segment || niche,
             company_size: c.company_size || null,
             scraped_niche: niche, scraped_location: locationStr,
@@ -403,7 +352,7 @@ Deno.serve(async (req) => {
             prospecting_intent: prospecting_intent || null,
             icp_score: icpScore, icp_reason: c.icp_reason || null,
             job_id: jobId,
-            scraper: "serper+jina",
+            scraper: "google-places+jina",
           },
         };
       })
@@ -419,35 +368,36 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ─── PHASE 4: Expansion via Places em cidades vizinhas ───────────────────
+    // ─── PHASE 4: Expansão regional via Google Places ─────────────────────────
     if (savedCount < desiredCount) {
-      const needed = desiredCount - savedCount;
-      console.log(`[${jobId}] Phase 4: need ${needed} more — expanding via Places (regional)...`);
+      console.log(`[${jobId}] Phase 4: need ${desiredCount - savedCount} more — expanding regionally...`);
+      const expandQueries = buildExpansionQueries(niche, locationStr);
+      const expandPlaces: GooglePlace[] = [];
 
-      const expansionQueries = buildExpansionPlacesQueries(niche, locationStr);
-      const expandPlaces: SerperPlace[] = [];
-      for (const q of expansionQueries) {
-        const places = await serperPlaces(SERPER_API_KEY, q, "Brasil");
+      for (const q of expandQueries) {
+        const places = await googlePlacesSearch(GOOGLE_API_KEY, q);
         for (const p of places) {
-          const key = (p.cid || `${p.title}|${p.address}`).toLowerCase();
+          if (p.businessStatus === "CLOSED_PERMANENTLY") continue;
+          const key = `${p.displayName?.text ?? ""}|${p.formattedAddress ?? ""}`.toLowerCase();
           if (!seenPlaceKeys.has(key)) { seenPlaceKeys.add(key); expandPlaces.push(p); }
         }
       }
-      console.log(`[${jobId}] Phase 4: ${expandPlaces.length} new places from expansion`);
+      console.log(`[${jobId}] Phase 4: ${expandPlaces.length} new places (expansion)`);
 
-      const expandContacts = expandPlaces
-        .map(p => placeToContact(p, niche, locationStr))
-        .filter((c: any) => {
-          const phone = formatPhone(c.phone);
-          const email = c.email?.toLowerCase()?.trim();
-          if (phone && seenPhones.has(phone)) return false;
-          if (!phone && email && seenEmails.has(email)) return false;
-          if (phone) seenPhones.add(phone);
-          if (email) seenEmails.add(email);
-          return phone || email || c.website;
-        });
+      let expandContacts = expandPlaces.map(p => placeToContact(p, niche, locationStr));
+      expandContacts = await enrichContactsViaJina(expandContacts, niche, locationStr, prospecting_intent, jobId);
 
-      const expandPhones = expandContacts.map((c: any) => formatPhone(c.phone)).filter(Boolean) as string[];
+      const expandUnique = expandContacts.filter((c: any) => {
+        const phone = formatPhone(c.phone);
+        const email = c.email?.toLowerCase()?.trim();
+        if (phone && seenPhones.has(phone)) return false;
+        if (!phone && email && seenEmails.has(email)) return false;
+        if (phone) seenPhones.add(phone);
+        if (email) seenEmails.add(email);
+        return phone || email || c.website;
+      });
+
+      const expandPhones = expandUnique.map((c: any) => formatPhone(c.phone)).filter(Boolean) as string[];
       if (expandPhones.length > 0) {
         const [{ data: rawExp }, { data: prospectsExp }] = await Promise.all([
           supabaseAdmin.from("leads_raw").select("phone").in("phone", expandPhones),
@@ -457,7 +407,7 @@ Deno.serve(async (req) => {
         (prospectsExp || []).forEach((l: any) => existingPhones.add(l.whatsapp));
       }
 
-      const expandNewLeads = expandContacts
+      const expandNewLeads = expandUnique
         .map((c: any) => {
           const phone = formatPhone(c.phone);
           const icpScore = typeof c.icp_score === "number" ? Math.min(100, Math.max(0, Math.round(c.icp_score))) : 50;
@@ -465,19 +415,19 @@ Deno.serve(async (req) => {
           return {
             name: capitalizeName(c.name || c.company || "") || "Lead sem nome",
             phone,
-            email: null,
+            email: c.email?.toLowerCase()?.trim() || null,
             source: "web" as const,
             status: "pending" as const,
             tags: [`job:${jobId}`, "expansion"],
             enrichment_data: {
-              company: c.company || null, city: c.city || null,
+              company: c.company || null, city: c.city || null, address: c.address || null,
               website: c.website || null, segment: c.segment || niche,
               scraped_niche: niche, scraped_location: locationStr,
               scraped_at: new Date().toISOString(),
               prospecting_intent: prospecting_intent || null,
               icp_score: icpScore, icp_reason: c.icp_reason || null,
               job_id: jobId, expansion: true,
-              scraper: "serper+jina",
+              scraper: "google-places+jina",
             },
           };
         })
@@ -491,11 +441,11 @@ Deno.serve(async (req) => {
           else savedCount += chunk.length;
         }
       }
-      uniqueContacts.push(...expandContacts);
+      uniqueContacts.push(...expandUnique);
       console.log(`[${jobId}] Phase 4 done: +${expandNewLeads.length} leads (total ${savedCount})`);
     }
 
-    // ─── Sentinel ────────────────────────────────────────────────────────────
+    // ─── Sentinel ─────────────────────────────────────────────────────────────
     await supabaseAdmin.from("leads_raw").insert({
       name: `__job_complete__`,
       source: "system",
@@ -506,9 +456,7 @@ Deno.serve(async (req) => {
         count: savedCount, total_found: uniqueContacts.length,
         duplicates_skipped: uniqueContacts.length - newLeads.length,
         places_searched: allPlaces.length,
-        pages_scraped: scrapedPages.length,
-        pages_searched: allPlaces.length + scrapedPages.length,
-        used_search_fallback: searchUsed,
+        pages_searched: allPlaces.length,
         avg_icp_score: uniqueContacts.length
           ? Math.round(uniqueContacts.reduce((s: number, c: any) => s + (c.icp_score || 50), 0) / uniqueContacts.length)
           : 0,
@@ -520,12 +468,11 @@ Deno.serve(async (req) => {
           icp_score: typeof c.icp_score === "number" ? Math.min(100, Math.max(0, Math.round(c.icp_score))) : 50,
           icp_reason: c.icp_reason || null,
         })),
-        scraper: "serper+jina",
+        scraper: "google-places+jina",
       },
     });
 
-    console.log(`[${jobId}] DONE: ${savedCount} saved, places=${allPlaces.length}, pages=${scrapedPages.length}`);
-
+    console.log(`[${jobId}] DONE: ${savedCount} saved, ${allPlaces.length} places searched`);
     return new Response(JSON.stringify({ status: "completed", count: savedCount }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -1,7 +1,9 @@
 import { corsHeaders } from "../_shared/cors.ts";
 
-// Busca grupos de WhatsApp via Serper (Google Search) — substitui Firecrawl.
-// Google indexa chat.whatsapp.com, então site:chat.whatsapp.com retorna grupos diretos.
+// Busca grupos de WhatsApp via Google Custom Search API.
+// Usa GOOGLE_API_KEY (já existente) + GOOGLE_CSE_ID (Programmable Search Engine).
+// Para criar um CSE gratuito: https://programmablesearchengine.google.com/
+// Configure como "Search the entire web" e cole o ID em GOOGLE_CSE_ID.
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -14,38 +16,53 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("SERPER_API_KEY");
-    if (!apiKey) {
-      return new Response(JSON.stringify({ success: false, error: "SERPER_API_KEY não configurado" }), {
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? Deno.env.get("GOOGLE_AI_STUDIO") ?? "";
+    const GOOGLE_CSE_ID = Deno.env.get("GOOGLE_CSE_ID") ?? "";
+
+    if (!GOOGLE_API_KEY) {
+      return new Response(JSON.stringify({ success: false, error: "GOOGLE_API_KEY não configurado" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const regionPart = region ? ` ${region}` : "";
-    const num = Math.min(limit || 20, 30);
+    const num = Math.min(limit || 20, 10); // CSE max 10 por req
 
-    async function serperSearch(q: string, n: number) {
-      const resp = await fetch("https://google.serper.dev/search", {
-        method: "POST",
-        headers: { "X-API-KEY": apiKey!, "Content-Type": "application/json" },
-        body: JSON.stringify({ q, gl: "br", hl: "pt-br", num: Math.min(n, 20) }),
+    async function googleSearch(q: string): Promise<any[]> {
+      if (!GOOGLE_CSE_ID) {
+        // Sem CSE ID, usa Jina Reader em URLs conhecidas de diretórios de grupos
+        return [];
+      }
+      const params = new URLSearchParams({
+        key: GOOGLE_API_KEY,
+        cx: GOOGLE_CSE_ID,
+        q,
+        gl: "br",
+        hl: "pt-br",
+        num: String(num),
       });
-      if (!resp.ok) return { organic: [] };
-      return await resp.json();
+      try {
+        const resp = await fetch(`https://www.googleapis.com/customsearch/v1?${params}`);
+        if (!resp.ok) { console.error(`CSE ${resp.status}`); return []; }
+        const data = await resp.json();
+        return data?.items || [];
+      } catch (e) {
+        console.error("CSE error:", e);
+        return [];
+      }
     }
 
     const directQuery = `site:chat.whatsapp.com "${niche}"${regionPart}`;
     const dirQuery = `"grupo whatsapp" "${niche}"${regionPart} link convite`;
 
-    const [directData, dirData] = await Promise.all([
-      serperSearch(directQuery, num),
-      serperSearch(dirQuery, 10),
+    const [directResults, dirResults] = await Promise.all([
+      googleSearch(directQuery),
+      googleSearch(dirQuery),
     ]);
 
     const whatsappLinkRegex = /https?:\/\/chat\.whatsapp\.com\/[A-Za-z0-9]+/g;
     const groupMap = new Map<string, { name: string; url: string; source: string }>();
 
-    const directResults = directData?.organic || [];
     for (const r of directResults) {
       const url = r.link || "";
       if (url.includes("chat.whatsapp.com")) {
@@ -60,7 +77,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    const dirResults = dirData?.organic || [];
     for (const r of dirResults) {
       const pageUrl = r.link || "";
       if (pageUrl.includes("chat.whatsapp.com")) {
@@ -90,7 +106,15 @@ Deno.serve(async (req) => {
     }
 
     const groups = Array.from(groupMap.values());
-    return new Response(JSON.stringify({ success: true, groups, total: groups.length, query: niche + regionPart }), {
+    const needsCseId = !GOOGLE_CSE_ID;
+
+    return new Response(JSON.stringify({
+      success: true,
+      groups,
+      total: groups.length,
+      query: niche + regionPart,
+      ...(needsCseId ? { warning: "Configure GOOGLE_CSE_ID para habilitar busca de grupos. Crie gratuitamente em programmablesearchengine.google.com" } : {}),
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
