@@ -1,31 +1,14 @@
-// Imagery Engine — Compose (v3 · padrão V4/G4 brutalista + saída PNG real)
+// Imagery Engine — Compose (v4 · padrão V4/G4 brutalista + saída SVG leve)
 // 5 templates: HOOK, SPLIT, DATA_SPLIT, LIST, CTA_HOOK
 // Tipografia: Archivo Black (display brutalista, sem italic falsa) + Barlow (corpo)
-// Pipeline: Satori (SVG) → resvg-wasm (PNG) → Storage. Instagram exige PNG/JPEG real.
+// Pipeline: Satori (SVG) → Storage. Sem resvg na Edge para não estourar CPU.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import satori from "https://esm.sh/satori@0.10.13";
-import { Resvg, initWasm } from "https://esm.sh/@resvg/resvg-wasm@2.6.2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { VS_LOGO_DATA_URL } from "./logo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-// Inicialização preguiçosa do WASM do resvg (cold-start cache)
-let resvgWasmReady: Promise<void> | null = null;
-function ensureResvgWasm(): Promise<void> {
-  if (!resvgWasmReady) {
-    resvgWasmReady = (async () => {
-      const wasmResp = await fetch("https://esm.sh/@resvg/resvg-wasm@2.6.2/index_bg.wasm");
-      if (!wasmResp.ok) throw new Error(`resvg-wasm fetch falhou: ${wasmResp.status}`);
-      await initWasm(wasmResp);
-    })().catch((e) => {
-      resvgWasmReady = null;
-      throw e;
-    });
-  }
-  return resvgWasmReady;
-}
 
 // Carrega Archivo Black (display) + Barlow Regular/Bold (corpo)
 // Sem alias de italic falso — Satori faria fontStyle italic via skew (feio).
