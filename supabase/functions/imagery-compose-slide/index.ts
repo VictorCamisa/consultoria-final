@@ -1,31 +1,14 @@
-// Imagery Engine — Compose (v3 · padrão V4/G4 brutalista + saída PNG real)
+// Imagery Engine — Compose (v4 · padrão V4/G4 brutalista + saída SVG leve)
 // 5 templates: HOOK, SPLIT, DATA_SPLIT, LIST, CTA_HOOK
 // Tipografia: Archivo Black (display brutalista, sem italic falsa) + Barlow (corpo)
-// Pipeline: Satori (SVG) → resvg-wasm (PNG) → Storage. Instagram exige PNG/JPEG real.
+// Pipeline: Satori (SVG) → Storage. Sem resvg na Edge para não estourar CPU.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import satori from "https://esm.sh/satori@0.10.13";
-import { Resvg, initWasm } from "https://esm.sh/@resvg/resvg-wasm@2.6.2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { VS_LOGO_DATA_URL } from "./logo.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-// Inicialização preguiçosa do WASM do resvg (cold-start cache)
-let resvgWasmReady: Promise<void> | null = null;
-function ensureResvgWasm(): Promise<void> {
-  if (!resvgWasmReady) {
-    resvgWasmReady = (async () => {
-      const wasmResp = await fetch("https://esm.sh/@resvg/resvg-wasm@2.6.2/index_bg.wasm");
-      if (!wasmResp.ok) throw new Error(`resvg-wasm fetch falhou: ${wasmResp.status}`);
-      await initWasm(wasmResp);
-    })().catch((e) => {
-      resvgWasmReady = null;
-      throw e;
-    });
-  }
-  return resvgWasmReady;
-}
 
 // Carrega Archivo Black (display) + Barlow Regular/Bold (corpo)
 // Sem alias de italic falso — Satori faria fontStyle italic via skew (feio).
@@ -126,18 +109,9 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
     const element = buildElement(slide.template_id, headline, sub, bgUrl);
     const svg = await satori(element, { width: 1080, height: 1080, fonts });
 
-    // Rasteriza SVG → PNG. Instagram Graph API recusa SVG; precisa ser PNG/JPEG real.
-    await ensureResvgWasm();
-    const resvg = new Resvg(svg, {
-      fitTo: { mode: "width", value: 1080 },
-      background: "#050814",
-      font: { loadSystemFonts: false },
-    });
-    const pngBytes = resvg.render().asPng();
-
-    const path = `${slide.post_id}/${slide.id}_final_${Date.now()}.png`;
-    const { error: upErr } = await admin.storage.from("imagery").upload(path, pngBytes, {
-      contentType: "image/png", upsert: true,
+    const path = `${slide.post_id}/${slide.id}_final_${Date.now()}.svg`;
+    const { error: upErr } = await admin.storage.from("imagery").upload(path, new Blob([svg], { type: "image/svg+xml" }), {
+      contentType: "image/svg+xml; charset=utf-8", upsert: true,
     });
     if (upErr) throw upErr;
     const { data: urlData } = admin.storage.from("imagery").getPublicUrl(path);
@@ -149,8 +123,8 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
 
     await admin.from("imagery_logs").insert({
       slide_id, post_id: slide.post_id, step: "compose",
-      provider: "satori+resvg", model: "png-1080",
-      response_summary: { final_url: finalUrl, template: slide.template_id, bytes: pngBytes.byteLength },
+      provider: "satori", model: "svg-1080",
+      response_summary: { final_url: finalUrl, template: slide.template_id, bytes: svg.length },
       duracao_ms: Date.now() - t0, success: true,
     });
     await finalizePostIfDone(admin, slide.post_id);
