@@ -226,7 +226,7 @@ Gere a estrutura completa.`;
     }).eq("id", post.id);
 
     await admin.from("imagery_logs").insert({
-      post_id: post.id, step: "plan", provider: "lovable", model: "google/gemini-2.5-pro",
+      post_id: post.id, step: "plan", provider: "lovable", model: "google/gemini-2.5-flash",
       prompt_excerpt: userPrompt.slice(0, 500), response_summary: { n_slides: normalizedSlides.length, requested_slides: requestedSlides },
       duracao_ms: Date.now() - t0, success: true,
     });
