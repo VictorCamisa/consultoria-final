@@ -109,18 +109,9 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
     const element = buildElement(slide.template_id, headline, sub, bgUrl);
     const svg = await satori(element, { width: 1080, height: 1080, fonts });
 
-    // Rasteriza SVG → PNG. Instagram Graph API recusa SVG; precisa ser PNG/JPEG real.
-    await ensureResvgWasm();
-    const resvg = new Resvg(svg, {
-      fitTo: { mode: "width", value: 1080 },
-      background: "#050814",
-      font: { loadSystemFonts: false },
-    });
-    const pngBytes = resvg.render().asPng();
-
-    const path = `${slide.post_id}/${slide.id}_final_${Date.now()}.png`;
-    const { error: upErr } = await admin.storage.from("imagery").upload(path, pngBytes, {
-      contentType: "image/png", upsert: true,
+    const path = `${slide.post_id}/${slide.id}_final_${Date.now()}.svg`;
+    const { error: upErr } = await admin.storage.from("imagery").upload(path, new Blob([svg], { type: "image/svg+xml" }), {
+      contentType: "image/svg+xml; charset=utf-8", upsert: true,
     });
     if (upErr) throw upErr;
     const { data: urlData } = admin.storage.from("imagery").getPublicUrl(path);
@@ -132,8 +123,8 @@ async function processSlide(slide_id: string, treated_image_url: string | undefi
 
     await admin.from("imagery_logs").insert({
       slide_id, post_id: slide.post_id, step: "compose",
-      provider: "satori+resvg", model: "png-1080",
-      response_summary: { final_url: finalUrl, template: slide.template_id, bytes: pngBytes.byteLength },
+      provider: "satori", model: "svg-1080",
+      response_summary: { final_url: finalUrl, template: slide.template_id, bytes: svg.length },
       duracao_ms: Date.now() - t0, success: true,
     });
     await finalizePostIfDone(admin, slide.post_id);
