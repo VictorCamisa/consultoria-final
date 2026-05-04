@@ -172,8 +172,24 @@ Gere a estrutura completa.`;
 
     const aiJson = await aiResp.json();
     const toolCall = aiJson.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("AI não retornou tool_call");
-    const plan = JSON.parse(toolCall.function.arguments);
+    let plan: any = null;
+    if (toolCall?.function?.arguments) {
+      try { plan = JSON.parse(toolCall.function.arguments); } catch (e) {
+        console.error("Falha ao parsear tool_call args:", toolCall.function.arguments?.slice(0, 500));
+      }
+    }
+    if (!plan) {
+      // Fallback: tenta extrair JSON do conteúdo textual
+      const rawContent = aiJson.choices?.[0]?.message?.content ?? "";
+      console.error("AI sem tool_call. finish_reason=", aiJson.choices?.[0]?.finish_reason, "content preview:", String(rawContent).slice(0, 500));
+      const match = String(rawContent).match(/\{[\s\S]*\}/);
+      if (match) {
+        try { plan = JSON.parse(match[0]); } catch { /* ignore */ }
+      }
+    }
+    if (!plan || !Array.isArray(plan.slides)) {
+      throw new Error(`AI não retornou tool_call. finish_reason=${aiJson.choices?.[0]?.finish_reason ?? "unknown"}`);
+    }
 
     let normalizedSlides = Array.isArray(plan.slides) ? plan.slides.slice(0, requestedSlides) : [];
     if (normalizedSlides.length === 0) throw new Error("Planner não retornou slides");
