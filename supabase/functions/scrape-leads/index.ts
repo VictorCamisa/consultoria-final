@@ -10,9 +10,14 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? Deno.env.get("GOOGLE_AI_STUDIO") ?? "";
+    const GOOGLE_MAPS_API_KEY =
+      Deno.env.get("GOOGLE_MAPS_API_KEY") ??
+      Deno.env.get("GOOGLE_API_KEY") ??
+      Deno.env.get("GOOGLE_AI_STUDIO") ?? "";
 
-    if (!GOOGLE_API_KEY) return json({ error: "GOOGLE_API_KEY não configurado." }, 400);
+    if (!GOOGLE_MAPS_API_KEY) {
+      return json({ error: "GOOGLE_MAPS_API_KEY não configurado. Adicione no Supabase Secrets." }, 400);
+    }
 
     const authHeader = req.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);

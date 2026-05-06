@@ -4,7 +4,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 // ─────────────────────────────────────────────────────────────────────────────
 // SCRAPER v3 — Google Places API (New) + Jina Reader
 //
-// Usa GOOGLE_API_KEY (já existente no projeto). Zero novas APIs.
+// Usa GOOGLE_MAPS_API_KEY (Maps Platform) separado da chave de AI Studio/Gemini.
 //
 // Fluxo:
 //   Phase 1: Google Places Text Search → contatos diretos estruturados
@@ -259,7 +259,11 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? Deno.env.get("GOOGLE_AI_STUDIO") ?? "";
+    // GOOGLE_MAPS_API_KEY = chave do Maps Platform (distinta da chave de AI Studio/Gemini)
+    const GOOGLE_MAPS_API_KEY =
+      Deno.env.get("GOOGLE_MAPS_API_KEY") ??
+      Deno.env.get("GOOGLE_API_KEY") ??
+      Deno.env.get("GOOGLE_AI_STUDIO") ?? "";
 
     const authHeader = req.headers.get("authorization");
     if (authHeader !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
@@ -271,13 +275,13 @@ Deno.serve(async (req) => {
 
     console.log(`[${jobId}] Worker v3 (Google Places + Jina): "${niche}" in "${locationStr}" (${desiredCount} leads)`);
 
-    if (!GOOGLE_API_KEY) {
+    if (!GOOGLE_MAPS_API_KEY) {
       await supabaseAdmin.from("leads_raw").insert({
         name: `__job_complete__`, source: "system", status: "job_failed",
         tags: [`job:${jobId}`],
-        enrichment_data: { job_id: jobId, status: "failed", error: "GOOGLE_API_KEY ausente" },
+        enrichment_data: { job_id: jobId, status: "failed", error: "GOOGLE_MAPS_API_KEY ausente — adicione no Supabase Secrets" },
       });
-      return new Response(JSON.stringify({ error: "GOOGLE_API_KEY ausente" }), {
+      return new Response(JSON.stringify({ error: "GOOGLE_MAPS_API_KEY ausente — adicione no Supabase Secrets" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -288,7 +292,7 @@ Deno.serve(async (req) => {
     const seenPlaceKeys = new Set<string>();
 
     for (const q of placesQueries) {
-      const places = await googlePlacesSearch(GOOGLE_API_KEY, q);
+      const places = await googlePlacesSearch(GOOGLE_MAPS_API_KEY, q);
       for (const p of places) {
         // Ignora negócios fechados permanentemente
         if (p.businessStatus === "CLOSED_PERMANENTLY") continue;
@@ -385,7 +389,7 @@ Deno.serve(async (req) => {
       const expandPlaces: GooglePlace[] = [];
 
       for (const q of expandQueries) {
-        const places = await googlePlacesSearch(GOOGLE_API_KEY, q);
+        const places = await googlePlacesSearch(GOOGLE_MAPS_API_KEY, q);
         for (const p of places) {
           if (p.businessStatus === "CLOSED_PERMANENTLY") continue;
           const key = `${p.displayName?.text ?? ""}|${p.formattedAddress ?? ""}`.toLowerCase();
