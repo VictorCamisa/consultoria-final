@@ -10,9 +10,11 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? Deno.env.get("GOOGLE_AI_STUDIO") ?? "";
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? "";
 
-    if (!GOOGLE_API_KEY) return json({ error: "GOOGLE_API_KEY não configurado." }, 400);
+    if (!GOOGLE_API_KEY) {
+      return json({ error: "GOOGLE_API_KEY não configurado. Configure a chave Google Maps/Places (não Gemini) nos secrets." }, 400);
+    }
 
     const authHeader = req.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) return json({ error: "Unauthorized" }, 401);
@@ -70,8 +72,23 @@ Deno.serve(async (req) => {
     const jobId = crypto.randomUUID();
     console.log(`[${jobId}] Dispatching to worker: "${niche}" in "${locationStr}" (${desiredCount} leads)`);
 
-    // Fire-and-forget: call worker without await
-    fetch(`${SUPABASE_URL}/functions/v1/scrape-leads-worker`, {
+    // Pre-validate Places API key (fail fast with clear message)
+    const probe = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": GOOGLE_API_KEY,
+        "X-Goog-FieldMask": "places.displayName",
+      },
+      body: JSON.stringify({ textQuery: "teste", languageCode: "pt-BR", regionCode: "BR", maxResultCount: 1 }),
+    }).catch(() => null);
+    if (probe && (probe.status === 401 || probe.status === 403)) {
+      const errTxt = (await probe.text()).slice(0, 200);
+      return json({ error: `GOOGLE_API_KEY inválida ou sem Places API (New) habilitada. Detalhe: ${errTxt}` }, 400);
+    }
+
+    // Background dispatch: EdgeRuntime.waitUntil keeps the request alive after we return
+    const workerCall = fetch(`${SUPABASE_URL}/functions/v1/scrape-leads-worker`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -79,6 +96,11 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({ niche, locationStr, desiredCount, prospecting_intent, jobId }),
     }).catch(e => console.error("Worker dispatch error:", e));
+    // @ts-ignore EdgeRuntime is available at runtime in Supabase Edge Functions
+    if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
+      // @ts-ignore
+      EdgeRuntime.waitUntil(workerCall);
+    }
 
     // Return immediately
     return json({ job_id: jobId, status: "running" });
