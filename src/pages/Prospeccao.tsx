@@ -498,35 +498,79 @@ export default function Prospeccao() {
       }
 
       const remoteJobId = startData?.job_id || localJobId;
+      const jobTag = `job:${remoteJobId}`;
 
-      // 2. Poll for results
-      const maxPolls = 60; // up to ~2 minutes
-      for (let i = 0; i < maxPolls; i++) {
+      // 2. Poll DB directly (robust against edge-function timeouts).
+      // Stop conditions: sentinel row arrives, or no new leads for 45s, or hard cap 8min.
+      const startedAt = Date.now();
+      const HARD_CAP_MS = 8 * 60 * 1000;
+      const IDLE_LIMIT_MS = 45 * 1000;
+      let lastCount = 0;
+      let lastChangeAt = Date.now();
+
+      while (true) {
         await new Promise(r => setTimeout(r, 3000));
-        const { data: pollData } = await supabase.functions.invoke("scrape-leads", {
-          body: { niche: activeNiche, poll_job_id: remoteJobId },
-        });
 
-        if (pollData?.status === "completed") {
+        // Sentinel?
+        const { data: sentinel } = await supabase
+          .from("leads_raw")
+          .select("status,enrichment_data")
+          .eq("name", "__job_complete__")
+          .contains("tags", [jobTag])
+          .limit(1)
+          .maybeSingle();
+
+        // Live leads count
+        const { data: liveLeads } = await supabase
+          .from("leads_raw")
+          .select("id,name,phone,email,enrichment_data")
+          .neq("name", "__job_complete__")
+          .contains("tags", [jobTag]);
+
+        const currentCount = liveLeads?.length || 0;
+        if (currentCount !== lastCount) {
+          lastCount = currentCount;
+          lastChangeAt = Date.now();
+          setScrapeJobs(prev => prev.map(j => j.id === localJobId ? {
+            ...j, results_count: currentCount, total_found: currentCount,
+          } : j));
+        }
+
+        if (sentinel) {
+          const ed = (sentinel.enrichment_data as any) || {};
+          if (sentinel.status === "job_failed" || ed.status === "failed") {
+            throw new Error(ed.error || "Erro no processamento");
+          }
           setScrapeJobs(prev => prev.map(j => j.id === localJobId ? {
             ...j, status: "completed" as const,
-            results_count: pollData.count || 0,
-            total_found: pollData.total_found || 0,
-            duplicates_skipped: pollData.duplicates_skipped || 0,
-            pages_searched: pollData.pages_searched || 0,
-            results: pollData.results || [],
-            avg_icp_score: pollData.avg_icp_score || 0,
+            results_count: ed.count ?? currentCount,
+            total_found: ed.total_found ?? currentCount,
+            duplicates_skipped: ed.duplicates_skipped ?? 0,
+            pages_searched: ed.pages_searched ?? 0,
+            results: ed.results ?? [],
+            avg_icp_score: ed.avg_icp_score ?? 0,
           } : j));
-          toast({ title: "Prospecção concluída! 🎯", description: `${pollData.count || 0} novos leads salvos` });
+          toast({ title: "Prospecção concluída! 🎯", description: `${ed.count ?? currentCount} novos leads salvos` });
           refetchLeads();
           resetWizard();
           return;
         }
-        if (pollData?.status === "failed") {
-          throw new Error(pollData.error || "Erro no processamento");
+
+        // Idle-stop: worker died silently but already wrote leads
+        if (currentCount > 0 && Date.now() - lastChangeAt > IDLE_LIMIT_MS) {
+          setScrapeJobs(prev => prev.map(j => j.id === localJobId ? {
+            ...j, status: "completed" as const, results_count: currentCount, total_found: currentCount,
+          } : j));
+          toast({ title: "Prospecção finalizada", description: `${currentCount} leads encontrados (sem sinal de fim, mas dados salvos)` });
+          refetchLeads();
+          resetWizard();
+          return;
+        }
+
+        if (Date.now() - startedAt > HARD_CAP_MS) {
+          throw new Error("Tempo limite (8min) excedido. Verifique os leads salvos manualmente.");
         }
       }
-      throw new Error("Tempo limite excedido. Tente novamente.");
     } catch (error: any) {
       setScrapeJobs(prev => prev.map(j => j.id === localJobId ? { ...j, status: "failed" as const, error_message: error.message } : j));
       toast({ title: "Erro na prospecção", description: error.message, variant: "destructive" });
