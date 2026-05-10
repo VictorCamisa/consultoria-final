@@ -88,12 +88,6 @@ async function jinaRead(url: string): Promise<string> {
   }
 }
 
-const CONSULTORIA_VS_CONTEXT = `
-EMPRESA: VS OS — Consultoria de Crescimento para negócios locais.
-ICP: Donos de negócios locais, faturamento >R$30k/mês, equipe >=3, investem em marketing.
-Score ICP 80-100=perfeito, 60-79=bom, 40-59=médio, 20-39=fraco, 0-19=ruim.
-`.trim();
-
 function buildPlacesQueries(niche: string, locationStr: string, intent: string): string[] {
   const city = (locationStr || "").split(",")[0]?.trim() || "";
   const nicheLower = niche.toLowerCase();
@@ -249,7 +243,7 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? Deno.env.get("GOOGLE_AI_STUDIO") ?? "";
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? "";
 
     const authHeader = req.headers.get("authorization");
     if (authHeader !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
