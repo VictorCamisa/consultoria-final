@@ -10,6 +10,13 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const GOOGLE_MAPS_API_KEY =
+      Deno.env.get("GOOGLE_MAPS_API_KEY") ??
+      Deno.env.get("GOOGLE_API_KEY") ??
+      Deno.env.get("GOOGLE_AI_STUDIO") ?? "";
+
+    if (!GOOGLE_MAPS_API_KEY) {
+      return json({ error: "GOOGLE_MAPS_API_KEY não configurado. Adicione no Supabase Secrets." }, 400);
     const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? "";
 
     if (!GOOGLE_API_KEY) {

@@ -4,7 +4,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 // ─────────────────────────────────────────────────────────────────────────────
 // SCRAPER v3 — Google Places API (New) + Jina Reader
 //
-// Usa GOOGLE_API_KEY (já existente no projeto). Zero novas APIs.
+// Usa GOOGLE_MAPS_API_KEY (Maps Platform) separado da chave de AI Studio/Gemini.
 //
 // Fluxo:
 //   Phase 1: Google Places Text Search → contatos diretos estruturados
@@ -30,6 +30,9 @@ type GooglePlace = {
 };
 
 type ScrapedPage = { url: string; title?: string; markdown: string };
+
+// Diagnóstico exposto no sentinel para debugging de key/permissão
+let lastPlacesError: string | null = null;
 
 async function googlePlacesSearch(apiKey: string, textQuery: string): Promise<GooglePlace[]> {
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -59,16 +62,23 @@ async function googlePlacesSearch(apiKey: string, textQuery: string): Promise<Go
       });
       if (resp.ok) {
         const data = await resp.json();
-        return Array.isArray(data?.places) ? data.places : [];
+        const places = Array.isArray(data?.places) ? data.places : [];
+        console.log(`Google Places OK: "${textQuery}" → ${places.length} resultados`);
+        return places;
       }
-      const txt = (await resp.text()).slice(0, 300);
-      console.error(`Google Places ${resp.status} attempt ${attempt}: ${txt}`);
+      const txt = (await resp.text()).slice(0, 400);
+      const errMsg = `Places API HTTP ${resp.status}: ${txt}`;
+      console.error(`[attempt ${attempt}] ${errMsg}`);
+      lastPlacesError = errMsg;
+      // 403 = chave sem permissão para Maps Platform (chave de AI Studio não funciona aqui)
       if ([400, 401, 403].includes(resp.status)) return [];
       if (resp.status === 429 && attempt < 2) { await new Promise(r => setTimeout(r, 3000)); continue; }
       if (resp.status >= 500 && attempt < 2) { await new Promise(r => setTimeout(r, 2000)); continue; }
       return [];
-    } catch (e) {
-      console.error(`Google Places network error attempt ${attempt}:`, e);
+    } catch (e: any) {
+      const errMsg = `Places API network error: ${e?.message ?? e}`;
+      console.error(`[attempt ${attempt}] ${errMsg}`);
+      lastPlacesError = errMsg;
       if (attempt < 2) await new Promise(r => setTimeout(r, 2000));
     }
   }
@@ -243,6 +253,11 @@ Deno.serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    // GOOGLE_MAPS_API_KEY = chave do Maps Platform (distinta da chave de AI Studio/Gemini)
+    const GOOGLE_MAPS_API_KEY =
+      Deno.env.get("GOOGLE_MAPS_API_KEY") ??
+      Deno.env.get("GOOGLE_API_KEY") ??
+      Deno.env.get("GOOGLE_AI_STUDIO") ?? "";
     const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? "";
 
     const authHeader = req.headers.get("authorization");
@@ -255,13 +270,13 @@ Deno.serve(async (req) => {
 
     console.log(`[${jobId}] Worker v3 (Google Places + Jina): "${niche}" in "${locationStr}" (${desiredCount} leads)`);
 
-    if (!GOOGLE_API_KEY) {
+    if (!GOOGLE_MAPS_API_KEY) {
       await supabaseAdmin.from("leads_raw").insert({
         name: `__job_complete__`, source: "system", status: "job_failed",
         tags: [`job:${jobId}`],
-        enrichment_data: { job_id: jobId, status: "failed", error: "GOOGLE_API_KEY ausente" },
+        enrichment_data: { job_id: jobId, status: "failed", error: "GOOGLE_MAPS_API_KEY ausente — adicione no Supabase Secrets" },
       });
-      return new Response(JSON.stringify({ error: "GOOGLE_API_KEY ausente" }), {
+      return new Response(JSON.stringify({ error: "GOOGLE_MAPS_API_KEY ausente — adicione no Supabase Secrets" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -272,7 +287,7 @@ Deno.serve(async (req) => {
     const seenPlaceKeys = new Set<string>();
 
     for (const q of placesQueries) {
-      const places = await googlePlacesSearch(GOOGLE_API_KEY, q);
+      const places = await googlePlacesSearch(GOOGLE_MAPS_API_KEY, q);
       for (const p of places) {
         // Ignora negócios fechados permanentemente
         if (p.businessStatus === "CLOSED_PERMANENTLY") continue;
@@ -369,7 +384,7 @@ Deno.serve(async (req) => {
       const expandPlaces: GooglePlace[] = [];
 
       for (const q of expandQueries) {
-        const places = await googlePlacesSearch(GOOGLE_API_KEY, q);
+        const places = await googlePlacesSearch(GOOGLE_MAPS_API_KEY, q);
         for (const p of places) {
           if (p.businessStatus === "CLOSED_PERMANENTLY") continue;
           const key = `${p.displayName?.text ?? ""}|${p.formattedAddress ?? ""}`.toLowerCase();
@@ -463,10 +478,11 @@ Deno.serve(async (req) => {
           icp_reason: c.icp_reason || null,
         })),
         scraper: "google-places+jina",
+        api_error: lastPlacesError ?? null,
       },
     });
 
-    console.log(`[${jobId}] DONE: ${savedCount} saved, ${allPlaces.length} places searched`);
+    console.log(`[${jobId}] DONE: ${savedCount} saved, ${allPlaces.length} places searched. Erro API: ${lastPlacesError ?? "nenhum"}`);
     return new Response(JSON.stringify({ status: "completed", count: savedCount }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
