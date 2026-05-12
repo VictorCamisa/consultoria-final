@@ -1,14 +1,14 @@
 // Imagery Engine — Generator
 // Recebe { slide_id } → lê brief, decide modelo, gera imagem, sobe pro storage, atualiza slide.
 // Decision tree:
-//   - founder/dashboard/vertical (alta fidelidade) → Imagen 4 Ultra (Google direct) com fallback Nano Banana Pro
-//   - abstract/product → Nano Banana 2 (gemini-3.1-flash-image-preview) via Gateway
+//   - usa somente Lovable AI Gateway para evitar falha por GOOGLE_API_KEY vazada/bloqueada
+//   - founder/dashboard/vertical → Nano Banana Pro
+//   - abstract/product → Nano Banana
 //   - UI/textos no frame → gpt-image-1 (não usado nesta etapa, fica para compose)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
-const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? Deno.env.get("GOOGLE_AI_STUDIO") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -46,33 +46,6 @@ async function uploadFromBase64(supa: any, postId: string, slideId: string, b64:
   if (error) throw error;
   const { data } = supa.storage.from("imagery").getPublicUrl(path);
   return data.publicUrl;
-}
-
-// --- Provider: Imagen 4 Ultra (Google direct) ---
-async function genImagen4Ultra(prompt: string): Promise<{ b64: string; model: string; cost: number } | null> {
-  if (!GOOGLE_API_KEY) return null;
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-ultra-generate-preview-06-06:predict?key=${GOOGLE_API_KEY}`;
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        instances: [{ prompt }],
-        parameters: { sampleCount: 1, aspectRatio: "1:1", personGeneration: "allow_adult" },
-      }),
-    });
-    if (!resp.ok) {
-      console.warn("Imagen 4 falhou:", resp.status, (await resp.text()).slice(0, 200));
-      return null;
-    }
-    const j = await resp.json();
-    const b64 = j.predictions?.[0]?.bytesBase64Encoded;
-    if (!b64) return null;
-    return { b64, model: "imagen-4.0-ultra", cost: 0.06 };
-  } catch (e) {
-    console.warn("Imagen 4 erro:", e);
-    return null;
-  }
 }
 
 // --- Provider: Nano Banana via Gateway ---
@@ -130,20 +103,10 @@ Deno.serve(async (req) => {
     const tier = pickProvider(slide.image_type ?? "abstract");
 
     let result: { b64: string; model: string; cost: number } | null = null;
-    let provider = "lovable";
-
     if (tier === "high") {
-      // Tenta Imagen 4 Ultra primeiro
-      result = await genImagen4Ultra(prompt);
-      if (result) {
-        provider = "google_direct";
-      } else {
-        // Fallback: Nano Banana Pro (gemini-3-pro-image-preview)
-        result = await genNanoBanana(prompt, "google/gemini-3-pro-image-preview", 0.04);
-      }
+      result = await genNanoBanana(prompt, "google/gemini-3-pro-image-preview", 0.04);
     } else {
-      // Tier fast: Nano Banana 2
-      result = await genNanoBanana(prompt, "google/gemini-3.1-flash-image-preview", 0.015);
+      result = await genNanoBanana(prompt, "google/gemini-2.5-flash-image", 0.015);
     }
 
     const publicUrl = await uploadFromBase64(admin, slide.post_id, slide.id, result.b64, "raw");
@@ -154,7 +117,7 @@ Deno.serve(async (req) => {
 
     await admin.from("imagery_logs").insert({
       slide_id, post_id: slide.post_id, step: "generate_image",
-      provider, model: result.model, prompt_excerpt: prompt.slice(0, 500),
+      provider: "lovable_gateway", model: result.model, prompt_excerpt: prompt.slice(0, 500),
       response_summary: { url: publicUrl, tier },
       custo_usd: result.cost, duracao_ms: Date.now() - t0, success: true,
     });

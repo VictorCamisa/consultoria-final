@@ -9,7 +9,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 // Fluxo:
 //   Phase 1: Google Places Text Search → contatos diretos estruturados
 //            (nome, fone, site, endereço, rating) sem precisar de IA
-//   Phase 2: Jina Reader (r.jina.ai) nos sites encontrados → Claude extrai
+//   Phase 2: Jina Reader (r.jina.ai) nos sites encontrados → OpenAI extrai
 //            emails e detalhes adicionais quando Places não tem fone
 //   Phase 3: Dedup + persist
 //   Phase 4: Expansion regional via Places
@@ -97,12 +97,6 @@ async function jinaRead(url: string): Promise<string> {
     return "";
   }
 }
-
-const CONSULTORIA_VS_CONTEXT = `
-EMPRESA: VS OS — Consultoria de Crescimento para negócios locais.
-ICP: Donos de negócios locais, faturamento >R$30k/mês, equipe >=3, investem em marketing.
-Score ICP 80-100=perfeito, 60-79=bom, 40-59=médio, 20-39=fraco, 0-19=ruim.
-`.trim();
 
 function buildPlacesQueries(niche: string, locationStr: string, intent: string): string[] {
   const city = (locationStr || "").split(",")[0]?.trim() || "";
@@ -203,7 +197,7 @@ async function enrichContactsViaJina(
   if (toEnrich.length === 0) return contacts;
 
   const { callClaude } = await import("../_shared/ai-client.ts");
-  console.log(`[${jobId}] Enriching ${toEnrich.length} contacts via Jina + Claude...`);
+  console.log(`[${jobId}] Enriching ${toEnrich.length} contacts via Jina + OpenAI...`);
 
   const pages: ScrapedPage[] = [];
   await Promise.all(toEnrich.map(async (c) => {
@@ -264,6 +258,7 @@ Deno.serve(async (req) => {
       Deno.env.get("GOOGLE_MAPS_API_KEY") ??
       Deno.env.get("GOOGLE_API_KEY") ??
       Deno.env.get("GOOGLE_AI_STUDIO") ?? "";
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? "";
 
     const authHeader = req.headers.get("authorization");
     if (authHeader !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
@@ -307,7 +302,7 @@ Deno.serve(async (req) => {
 
     let contacts = allPlaces.map(p => placeToContact(p, niche, locationStr));
 
-    // ─── PHASE 2: Enriquece (via Jina + Claude) contatos sem fone ────────────
+    // ─── PHASE 2: Enriquece (via Jina + OpenAI) contatos sem fone ───────────
     contacts = await enrichContactsViaJina(contacts, niche, locationStr, prospecting_intent, jobId);
 
     // ─── PHASE 3: Dedup + persist ─────────────────────────────────────────────

@@ -1,0 +1,1 @@
+DELETE FROM public.leads_raw WHERE name = '__job_complete__';

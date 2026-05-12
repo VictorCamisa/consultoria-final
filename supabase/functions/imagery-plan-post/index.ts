@@ -118,7 +118,7 @@ Gere a estrutura completa.`;
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
@@ -172,8 +172,24 @@ Gere a estrutura completa.`;
 
     const aiJson = await aiResp.json();
     const toolCall = aiJson.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) throw new Error("AI não retornou tool_call");
-    const plan = JSON.parse(toolCall.function.arguments);
+    let plan: any = null;
+    if (toolCall?.function?.arguments) {
+      try { plan = JSON.parse(toolCall.function.arguments); } catch (e) {
+        console.error("Falha ao parsear tool_call args:", toolCall.function.arguments?.slice(0, 500));
+      }
+    }
+    if (!plan) {
+      // Fallback: tenta extrair JSON do conteúdo textual
+      const rawContent = aiJson.choices?.[0]?.message?.content ?? "";
+      console.error("AI sem tool_call. finish_reason=", aiJson.choices?.[0]?.finish_reason, "content preview:", String(rawContent).slice(0, 500));
+      const match = String(rawContent).match(/\{[\s\S]*\}/);
+      if (match) {
+        try { plan = JSON.parse(match[0]); } catch { /* ignore */ }
+      }
+    }
+    if (!plan || !Array.isArray(plan.slides)) {
+      throw new Error(`AI não retornou tool_call. finish_reason=${aiJson.choices?.[0]?.finish_reason ?? "unknown"}`);
+    }
 
     let normalizedSlides = Array.isArray(plan.slides) ? plan.slides.slice(0, requestedSlides) : [];
     if (normalizedSlides.length === 0) throw new Error("Planner não retornou slides");
@@ -210,7 +226,7 @@ Gere a estrutura completa.`;
     }).eq("id", post.id);
 
     await admin.from("imagery_logs").insert({
-      post_id: post.id, step: "plan", provider: "lovable", model: "google/gemini-2.5-pro",
+      post_id: post.id, step: "plan", provider: "lovable", model: "google/gemini-2.5-flash",
       prompt_excerpt: userPrompt.slice(0, 500), response_summary: { n_slides: normalizedSlides.length, requested_slides: requestedSlides },
       duracao_ms: Date.now() - t0, success: true,
     });

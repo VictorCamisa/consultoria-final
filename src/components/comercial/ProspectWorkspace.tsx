@@ -549,6 +549,30 @@ export function ProspectWorkspace({
             className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-green-300">
             <Phone className="h-3.5 w-3.5" /><span className="hidden sm:inline">WhatsApp</span>
           </a>
+          {/* Panel toggle buttons — reopen when closed */}
+          {!isMobile && (
+            <>
+              <div className="h-4 w-px bg-border" />
+              <Button
+                variant="ghost" size="sm"
+                className={`h-7 px-2 text-[10px] gap-1 hidden md:flex ${centerPanelOpen ? "text-primary" : "text-muted-foreground"}`}
+                onClick={() => setCenterPanelOpen(v => !v)}
+                title="Painel IA Coach"
+              >
+                <BrainCircuit className="h-3.5 w-3.5" />
+                <span className="hidden lg:inline">IA</span>
+              </Button>
+              <Button
+                variant="ghost" size="sm"
+                className={`h-7 px-2 text-[10px] gap-1 hidden md:flex ${rightPanelOpen ? "text-primary" : "text-muted-foreground"}`}
+                onClick={() => setRightPanelOpen(v => !v)}
+                title="Painel de Ações"
+              >
+                <Zap className="h-3.5 w-3.5" />
+                <span className="hidden lg:inline">Ações</span>
+              </Button>
+            </>
+          )}
           <div className="h-4 w-px bg-border" />
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose}><X className="h-4 w-4" /></Button>
         </div>
@@ -568,6 +592,14 @@ export function ProspectWorkspace({
               }`}>
               {t.icon}{t.label}
               {t.key === "ai" && loadingSuggest && <Loader2 className="h-3 w-3 animate-spin" />}
+              {t.key === "chat" && (() => {
+                const unread = conversas?.filter(m => m.direcao === "entrada" && !(m as any).processado_ia).length ?? 0;
+                return unread > 0 ? (
+                  <span className="bg-destructive text-destructive-foreground rounded-full text-[9px] min-w-[16px] h-4 px-1 flex items-center justify-center font-bold">
+                    {unread > 9 ? "9+" : unread}
+                  </span>
+                ) : null;
+              })()}
             </button>
           ))}
         </div>
@@ -581,44 +613,40 @@ export function ProspectWorkspace({
           centerPanelOpen || rightPanelOpen ? "w-full md:w-[400px] lg:w-[440px] shrink-0" : "flex-1"
         }`}>
           {/* WhatsApp chat header */}
-          <div className="flex items-center gap-3 px-4 py-2 bg-[#f0f2f5] border-b border-[#e9edef] shrink-0">
+          <div className="flex items-center gap-3 px-4 py-2 bg-muted/50 border-b border-border shrink-0">
             {profilePhoto ? (
               <img src={profilePhoto} alt={prospect.nome_negocio} className="w-10 h-10 rounded-full object-cover" />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-[#dfe5e7] flex items-center justify-center">
-                <span className="text-sm font-bold text-[#54656f]">{prospect.nome_negocio.charAt(0).toUpperCase()}</span>
+              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                <span className="text-sm font-bold text-foreground">{prospect.nome_negocio.charAt(0).toUpperCase()}</span>
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[#111b21] truncate">{prospect.nome_negocio}</p>
-              <p className="text-[11px] text-[#667781]">
+              <p className="text-sm font-medium text-foreground truncate">{prospect.nome_negocio}</p>
+              <p className="text-[11px] text-muted-foreground">
                 {prospect.whatsapp}
               </p>
             </div>
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] text-[#54656f]" onClick={handleSuggestReply} disabled={loadingSuggest}>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground" onClick={handleSuggestReply} disabled={loadingSuggest}>
               {loadingSuggest ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
               <span className="ml-1 hidden sm:inline">IA</span>
             </Button>
           </div>
 
-          {/* Messages area with WhatsApp background */}
+          {/* Messages area */}
           <div
-            className="flex-1 overflow-y-auto px-[5%] py-2"
+            className="flex-1 overflow-y-auto px-[5%] py-2 bg-muted/20"
             ref={scrollRef}
-            style={{
-              backgroundColor: "#efeae2",
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='300' height='300' viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d1c9b8' fill-opacity='0.15'%3E%3Ccircle cx='50' cy='50' r='2'/%3E%3Ccircle cx='150' cy='80' r='1.5'/%3E%3Ccircle cx='250' cy='30' r='2'/%3E%3Ccircle cx='100' cy='150' r='1'/%3E%3Ccircle cx='200' cy='180' r='2'/%3E%3Ccircle cx='30' cy='220' r='1.5'/%3E%3Ccircle cx='270' cy='250' r='1'/%3E%3Ccircle cx='130' cy='280' r='2'/%3E%3C/g%3E%3C/svg%3E")`,
-            }}
           >
             <div className="max-w-2xl mx-auto space-y-0.5">
               {conversas?.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20">
-                  <div className="bg-[#fcf4cb] rounded-lg px-4 py-2 shadow-sm text-center">
-                    <p className="text-[12.5px] text-[#54656f]">
+                  <div className="bg-warning/10 border border-warning/20 rounded-lg px-4 py-2 shadow-sm text-center">
+                    <p className="text-[12.5px] text-muted-foreground">
                       As mensagens são protegidas com criptografia de ponta a ponta.
                     </p>
                   </div>
-                  <p className="text-xs text-[#8696a0] mt-4">Nenhuma mensagem ainda</p>
+                  <p className="text-xs text-muted-foreground mt-4">Nenhuma mensagem ainda</p>
                 </div>
               )}
               {conversas?.map(msg => (
@@ -711,7 +739,7 @@ export function ProspectWorkspace({
               {coaching?.alerta && (
                 <div className="flex items-start gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3">
                   <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-black leading-relaxed font-medium">{coaching.alerta}</p>
+                  <p className="text-[11px] text-foreground leading-relaxed font-medium">{coaching.alerta}</p>
                 </div>
               )}
 
@@ -777,27 +805,39 @@ export function ProspectWorkspace({
                   <BrainCircuit className="h-10 w-10 mb-3 opacity-30" />
                   <p className="text-sm font-medium">IA Coach</p>
                   <p className="text-xs mt-1 text-center px-4">
-                    O coaching será ativado automaticamente quando o lead responder, ou clique em "Atualizar IA"
+                    O coaching será ativado automaticamente quando o lead responder, ou clique em "Ativar Coaching"
                   </p>
-                  <Button size="sm" variant="outline" className="mt-3 text-xs gap-1.5" onClick={handleSuggestReply}>
-                    <Sparkles className="h-3.5 w-3.5" />Ativar Coaching
+                  <Button size="sm" variant="outline" className="mt-3 text-xs gap-1.5" onClick={handleSuggestReply} disabled={loadingSuggest}>
+                    {loadingSuggest ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                    Ativar Coaching
                   </Button>
                 </div>
               )}
 
-              {/* MEDDIC mini */}
+              {/* MEDDIC mini — with progress bars */}
               {meddic && meddic.length > 0 && (
                 <div className="rounded-xl border border-border p-3.5">
-                  <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">MEDDIC</h4>
-                  <div className="space-y-1.5">
-                    {meddic.map(m => (
-                      <div key={m.id} className="flex items-center justify-between">
-                        <span className="text-[11px] text-foreground uppercase">{m.pilar}</span>
-                        <span className={`text-[11px] font-bold tabular ${m.score >= 7 ? "text-green-400" : m.score >= 4 ? "text-amber-400" : "text-red-400"}`}>
-                          {m.score}/10
-                        </span>
-                      </div>
-                    ))}
+                  <h4 className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">MEDDIC</h4>
+                  <div className="space-y-2">
+                    {meddic.map(m => {
+                      const pct = Math.round((m.score / 10) * 100);
+                      const color = m.score >= 7 ? "bg-green-500" : m.score >= 4 ? "bg-warning" : "bg-destructive";
+                      const textColor = m.score >= 7 ? "text-green-400" : m.score >= 4 ? "text-warning" : "text-destructive";
+                      return (
+                        <div key={m.id}>
+                          <div className="flex items-center justify-between mb-0.5">
+                            <span className="text-[10px] text-foreground uppercase tracking-wide">{m.pilar.replace("_", " ")}</span>
+                            <span className={`text-[10px] font-bold tabular ${textColor}`}>{m.score}/10</span>
+                          </div>
+                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full transition-all duration-300 ${color}`} style={{ width: `${pct}%` }} />
+                          </div>
+                          {m.evidencia_citacao && m.score > 0 && (
+                            <p className="text-[9px] text-muted-foreground mt-0.5 line-clamp-1 italic">"{m.evidencia_citacao}"</p>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
