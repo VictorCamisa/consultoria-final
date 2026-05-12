@@ -6,7 +6,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { normalizePhone, resolveSendInstance } from "../_shared/instance-resolver.ts";
-
+import { callClaude } from "../_shared/ai-client.ts";
 
 async function findConfig(supabase: any, nicho: string) {
   const { data: exactConfig } = await supabase
@@ -157,7 +157,7 @@ serve(async (req) => {
       c: `Oi{{decisor_greeting}}! Tudo certo? Sou consultor da VS OS. Queria entender: qual o maior gargalo do seu negócio hoje quando o assunto é atrair e converter clientes?`,
     };
 
-    let mensagem: string;
+    let baseScript: string;
     let configNicho = "genérico";
 
     if (config) {
@@ -167,24 +167,70 @@ serve(async (req) => {
         b: (config.script_b as string) ?? "",
         c: (config.script_c as string) ?? "",
       };
-      mensagem = scriptMap[script.toLowerCase()] || genericScripts[script.toLowerCase()] || genericScripts.a;
+      baseScript = scriptMap[script.toLowerCase()] || genericScripts[script.toLowerCase()] || genericScripts.a;
     } else {
       console.log(`[abordar] Sem config para nicho "${prospect.nicho}" — usando script genérico`);
-      mensagem = genericScripts[script.toLowerCase()] || genericScripts.a;
+      baseScript = genericScripts[script.toLowerCase()] || genericScripts.a;
     }
 
-    // Sanitiza valores de placeholder
+    // Sanitiza valores de placeholder para fallback
     const decisorNome = (prospect.decisor && prospect.decisor !== prospect.nome_negocio && prospect.decisor !== "Não informado")
       ? prospect.decisor : "";
     const cidadeValida = (prospect.cidade && !["não informada", "não informado", ""].includes(prospect.cidade.toLowerCase().trim()))
       ? prospect.cidade : "";
 
-    mensagem = mensagem
+    const fallbackMessage = baseScript
       .replace(/\{\{decisor_greeting\}\}/gi, decisorNome ? `, ${decisorNome}` : "")
       .replace(/\{\{cidade_ref\}\}/gi, cidadeValida ? ` em ${cidadeValida}` : "")
       .replace(/\{\{nome\}\}/gi, prospect.nome_negocio)
       .replace(/\{\{decisor\}\}/gi, decisorNome || "")
       .replace(/\{\{cidade\}\}/gi, cidadeValida);
+
+    let mensagem: string = fallbackMessage;
+
+    // === GERAÇÃO INTELIGENTE VIA IA ===
+    try {
+      console.log(`[abordar] Gerando mensagem inteligente via IA para ${prospect.nome_negocio}...`);
+      const systemPrompt = `Você é um consultor comercial altamente qualificado da empresa VS OS.
+Seu objetivo é escrever a primeira mensagem de contato (cold outreach) no WhatsApp para um prospect.
+
+REGRAS RÍGIDAS:
+- Tom profissional, natural e direto (parecendo uma pessoa real, não um robô).
+- NUNCA use saudações corporativas exageradas ou seja "animado demais".
+- NO MÁXIMO 1 emoji.
+- NO MÁXIMO 2 parágrafos curtos.
+- Use as informações do prospect para personalizar a mensagem de forma genuína (ex: mencionar a cidade ou o nicho sutilmente, se fizer sentido).
+- Use o script de referência fornecido abaixo APENAS como base estrutural ou inspiração para o tom. REESCREVA para soar 100% humano e adaptado aos dados do prospect.
+- Aja como um especialista no nicho dele, focado em ajudar e gerar curiosidade.
+- RETORNE APENAS A MENSAGEM FINAL. Sem aspas, sem explicações extras.`;
+
+      const prospectData = `
+DADOS DO PROSPECT:
+Nome da Empresa: ${prospect.nome_negocio}
+Nicho/Segmento: ${prospect.nicho || "Não especificado"}
+Decisor (se houver): ${decisorNome || "Não identificado"}
+Cidade: ${cidadeValida || "Não identificada"}
+Motivo de Qualificação ICP (se houver): ${prospect.observacoes || "Nenhum"}
+
+SCRIPT BASE PARA INSPIRAÇÃO:
+${baseScript}`;
+
+      const aiResult = await callClaude({
+        system: systemPrompt,
+        messages: [{ role: "user", content: prospectData }],
+        max_tokens: 300,
+      });
+
+      if (aiResult.text && aiResult.text.trim().length > 10) {
+        mensagem = aiResult.text.trim();
+        console.log(`[abordar] Mensagem inteligente gerada com sucesso.`);
+      } else {
+        throw new Error("Resposta da IA vazia ou muito curta.");
+      }
+    } catch (aiErr) {
+      console.error("[abordar] Falha ao gerar mensagem inteligente, usando fallback:", aiErr);
+      mensagem = fallbackMessage;
+    }
 
     // Checkpoint: validate
     await upsertState(supabase, prospect_id, "validate", ["draft"], "in_progress", { script, mensagem_original: mensagem });
