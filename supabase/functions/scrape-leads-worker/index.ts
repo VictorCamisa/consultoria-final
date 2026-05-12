@@ -9,7 +9,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 // Fluxo:
 //   Phase 1: Google Places Text Search → contatos diretos estruturados
 //            (nome, fone, site, endereço, rating) sem precisar de IA
-//   Phase 2: Jina Reader (r.jina.ai) nos sites encontrados → Claude extrai
+//   Phase 2: Jina Reader (r.jina.ai) nos sites encontrados → OpenAI extrai
 //            emails e detalhes adicionais quando Places não tem fone
 //   Phase 3: Dedup + persist
 //   Phase 4: Expansion regional via Places
@@ -187,7 +187,7 @@ async function enrichContactsViaJina(
   if (toEnrich.length === 0) return contacts;
 
   const { callClaude } = await import("../_shared/ai-client.ts");
-  console.log(`[${jobId}] Enriching ${toEnrich.length} contacts via Jina + Claude...`);
+  console.log(`[${jobId}] Enriching ${toEnrich.length} contacts via Jina + OpenAI...`);
 
   const pages: ScrapedPage[] = [];
   await Promise.all(toEnrich.map(async (c) => {
@@ -287,7 +287,7 @@ Deno.serve(async (req) => {
 
     let contacts = allPlaces.map(p => placeToContact(p, niche, locationStr));
 
-    // ─── PHASE 2: Enriquece (via Jina + Claude) contatos sem fone ────────────
+    // ─── PHASE 2: Enriquece (via Jina + OpenAI) contatos sem fone ───────────
     contacts = await enrichContactsViaJina(contacts, niche, locationStr, prospecting_intent, jobId);
 
     // ─── PHASE 3: Dedup + persist ─────────────────────────────────────────────
