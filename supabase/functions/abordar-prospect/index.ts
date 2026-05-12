@@ -191,28 +191,38 @@ serve(async (req) => {
     // === GERAÇÃO INTELIGENTE VIA IA ===
     try {
       console.log(`[abordar] Gerando mensagem inteligente via IA para ${prospect.nome_negocio}...`);
-      const systemPrompt = `Você é um consultor comercial altamente qualificado da empresa VS OS.
-Seu objetivo é escrever a primeira mensagem de contato (cold outreach) no WhatsApp para um prospect.
+      
+      const baseSystemPrompt = (config?.system_prompt as string)
+        ?? "Você é um especialista em vendas consultivas para o mercado brasileiro. Fale de forma natural, como um consultor real de negócios.";
 
-REGRAS RÍGIDAS:
-- Tom profissional, natural e direto (parecendo uma pessoa real, não um robô).
-- NUNCA use saudações corporativas exageradas ou seja "animado demais".
-- NO MÁXIMO 1 emoji.
+      const persona = `PERSONA: Consultor VS. Conversacional, direto, focado em avançar o pipeline. Gancho Imediato. Direto, sem saudações vazias. Abra com dado relevante. Confiante mas não arrogante.`;
+
+      const systemPrompt = `${baseSystemPrompt}
+
+${persona}
+
+FASE: Abordagem Inicial — Primeiro contato — objetivo: despertar interesse e iniciar conversa
+
+Seu único objetivo é escrever a PRIMEIRA mensagem de contato (cold outreach) no WhatsApp para o prospect.
+
+Regras RÍGIDAS para a mensagem:
+- Português informal e natural, como se fosse um WhatsApp real entre profissionais.
+- PROIBIDO usar frases clichês de vendedor como "ajudar a impulsionar seu negócio", "teria um tempinho", "estou curioso para entender". Vá direto ao ponto.
+- NO MÁXIMO 1 emoji por mensagem (pode ter zero).
 - NO MÁXIMO 2 parágrafos curtos.
-- Use as informações do prospect para personalizar a mensagem de forma genuína (ex: mencionar a cidade ou o nicho sutilmente, se fizer sentido).
-- Use o script de referência fornecido abaixo APENAS como base estrutural ou inspiração para o tom. REESCREVA para soar 100% humano e adaptado aos dados do prospect.
-- Aja como um especialista no nicho dele, focado em ajudar e gerar curiosidade.
+- NÃO use gírias excessivas, NÃO seja "animado demais", NÃO use múltiplas exclamações.
+- Tom profissional e consultivo — você é um parceiro de negócios, não um vendedor chato.
+- Avance no pipeline: sugira uma conversa rápida ou call de forma leve e direta.
 - RETORNE APENAS A MENSAGEM FINAL. Sem aspas, sem explicações extras.`;
 
-      const prospectData = `
-DADOS DO PROSPECT:
+      const prospectData = `DADOS DO PROSPECT:
 Nome da Empresa: ${prospect.nome_negocio}
 Nicho/Segmento: ${prospect.nicho || "Não especificado"}
 Decisor (se houver): ${decisorNome || "Não identificado"}
 Cidade: ${cidadeValida || "Não identificada"}
 Motivo de Qualificação ICP (se houver): ${prospect.observacoes || "Nenhum"}
 
-SCRIPT BASE PARA INSPIRAÇÃO:
+SCRIPT BASE PARA REFERÊNCIA E TOM (adapte livremente):
 ${baseScript}`;
 
       const aiResult = await callClaude({
