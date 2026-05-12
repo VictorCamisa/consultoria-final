@@ -1,20 +1,19 @@
 /**
- * Centralized AI client factory.
- * Use Claude for scoring, classification, coaching.
- * GPT-4o-mini is kept only for the vendedor-chat roleplay simulator.
+ * Centralized AI client — uses OpenAI (gpt-4o-mini) for all tasks.
+ * Exposes callClaude() with the same interface so all callers work unchanged.
  */
 
-/** Remove lone surrogates and other invalid Unicode that breaks JSON serialization */
 function sanitizeText(text: string): string {
   // eslint-disable-next-line no-control-regex
   return text.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "")
              .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "")
-             .replace(/[\uFFFE\uFFFF]/g, "");
+             .replace(/[￾￿]/g, "");
 }
 
 function sanitizeMessages(msgs: AIMessage[]): AIMessage[] {
   return msgs.map(m => ({ ...m, content: sanitizeText(m.content) }));
 }
+
 export interface AIMessage {
   role: "system" | "user" | "assistant";
   content: string;
@@ -27,7 +26,8 @@ export interface AITool {
 }
 
 /**
- * Call Claude (Anthropic) — use for all ICP/scoring/coaching tasks.
+ * Calls OpenAI (gpt-4o-mini) with the same interface previously used for Claude.
+ * All callers (classify-prospect, suggest-reply, bluepaint, scrape-leads-worker) work unchanged.
  */
 export async function callClaude(params: {
   system: string;
@@ -36,27 +36,35 @@ export async function callClaude(params: {
   tool_choice?: { type: "tool"; name: string };
   max_tokens?: number;
 }): Promise<{ content: any[]; text?: string; toolUse?: { name: string; input: any } }> {
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada");
+  const apiKey = Deno.env.get("OPENAI_API_KEY");
+  if (!apiKey) throw new Error("OPENAI_API_KEY não configurada");
 
-  const cleanMessages = sanitizeMessages(params.messages.filter(m => m.role !== "system"));
+  const systemMessage = { role: "system" as const, content: sanitizeText(params.system) };
+  const userMessages = sanitizeMessages(params.messages.filter(m => m.role !== "system"));
+  const messages = [systemMessage, ...userMessages];
+
   const body: Record<string, unknown> = {
-    model: "claude-haiku-4-5-20251001",
+    model: "gpt-4o-mini",
     max_tokens: params.max_tokens ?? 4096,
-    system: sanitizeText(params.system),
-    messages: cleanMessages,
+    messages,
   };
 
   if (params.tools?.length) {
     body.tools = params.tools.map(t => ({
-      name: t.name,
-      description: t.description,
-      input_schema: t.input_schema,
+      type: "function",
+      function: {
+        name: t.name,
+        description: t.description,
+        parameters: t.input_schema,
+      },
     }));
   }
 
   if (params.tool_choice) {
-    body.tool_choice = params.tool_choice;
+    body.tool_choice = {
+      type: "function",
+      function: { name: params.tool_choice.name },
+    };
   }
 
   const maxRetries = 4;
@@ -64,46 +72,58 @@ export async function callClaude(params: {
   let lastError = "";
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
+        "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify(body),
     });
 
     if (res.ok) {
       const data = await res.json();
-      const content = data.content || [];
+      const message = data.choices?.[0]?.message;
 
-      const toolUseBlock = content.find((b: any) => b.type === "tool_use");
-      if (toolUseBlock) {
-        return { content, toolUse: { name: toolUseBlock.name, input: toolUseBlock.input } };
+      if (message?.tool_calls?.length) {
+        const toolCall = message.tool_calls[0];
+        let input: any;
+        try {
+          input = JSON.parse(toolCall.function.arguments);
+        } catch {
+          input = {};
+        }
+        return {
+          content: [{ type: "tool_use", name: toolCall.function.name, input }],
+          toolUse: { name: toolCall.function.name, input },
+        };
       }
 
-      const textBlock = content.find((b: any) => b.type === "text");
-      return { content, text: textBlock?.text ?? "" };
+      const text = message?.content ?? "";
+      return {
+        content: [{ type: "text", text }],
+        text,
+      };
     }
 
     const errText = await res.text();
 
-    if (res.status === 401) throw new Error("AUTH_ERROR: Verifique a ANTHROPIC_API_KEY");
+    if (res.status === 401) throw new Error("AUTH_ERROR: Verifique a OPENAI_API_KEY");
 
-    // Retryable errors: 429 (rate limit), 529 (overloaded), 500/502/503 (server)
-    const retryable = [429, 500, 502, 503, 529].includes(res.status);
+    const retryable = [429, 500, 502, 503].includes(res.status);
     if (retryable && attempt < maxRetries) {
-      console.warn(`[ai-client] Anthropic ${res.status}, retry ${attempt + 1}/${maxRetries} in ${delay}ms`);
+      console.warn(`[ai-client] OpenAI ${res.status}, retry ${attempt + 1}/${maxRetries} in ${delay}ms`);
       await new Promise(r => setTimeout(r, delay));
       delay *= 2;
       continue;
     }
 
     if (res.status === 429) throw new Error("RATE_LIMIT");
-    if (res.status === 529) throw new Error("OVERLOADED");
-    lastError = `Anthropic error (${res.status}): ${errText.substring(0, 300)}`;
+    lastError = `OpenAI error (${res.status}): ${errText.substring(0, 300)}`;
   }
 
-  throw new Error(lastError || "OVERLOADED");
+  throw new Error(lastError || "OpenAI indisponível");
 }
+
+/** Alias — use this name in new code */
+export const callOpenAI = callClaude;

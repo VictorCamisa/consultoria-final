@@ -47,8 +47,6 @@ serve(async (req) => {
     const { prospect_id } = await req.json();
     if (!prospect_id) throw new Error("prospect_id obrigatório");
 
-    // AI client will use ANTHROPIC_API_KEY from env
-
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const { data: prospect, error: pErr } = await supabase
