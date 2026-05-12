@@ -9,9 +9,9 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const GEMINI_KEY = Deno.env.get("GEMINI_KEY") || Deno.env.get("VITE_GEMINI_KEY");
+    const GEMINI_KEY = Deno.env.get("GOOGLE_GENERAL_KEY") || Deno.env.get("GEMINI_KEY") || Deno.env.get("VITE_GEMINI_KEY");
     if (!GEMINI_KEY) {
-      return new Response(JSON.stringify({ error: "GEMINI_KEY secret não configurado no Supabase" }), {
+      return new Response(JSON.stringify({ error: "Chave da IA não configurada (configure GOOGLE_GENERAL_KEY no Supabase)" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

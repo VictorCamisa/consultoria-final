@@ -16,11 +16,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_API_KEY") ?? Deno.env.get("GOOGLE_AI_STUDIO") ?? "";
+    const GOOGLE_API_KEY = Deno.env.get("GOOGLE_GENERAL_KEY") ?? Deno.env.get("GOOGLE_API_KEY") ?? Deno.env.get("GOOGLE_AI_STUDIO") ?? "";
     const GOOGLE_CSE_ID = Deno.env.get("GOOGLE_CSE_ID") ?? "";
 
     if (!GOOGLE_API_KEY) {
-      return new Response(JSON.stringify({ success: false, error: "GOOGLE_API_KEY não configurado" }), {
+      return new Response(JSON.stringify({ success: false, error: "GOOGLE_GENERAL_KEY não configurado" }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
