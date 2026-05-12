@@ -22,7 +22,7 @@ import { UnreadNotifications } from "@/components/comercial/UnreadNotifications"
 export default function Comercial() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { labels: NICHOS, matchesNichoFilter } = useNichos();
+  const { labels: NICHOS_DB, matchesNichoFilter } = useNichos();
   const storageKey = user ? `vs_filterNicho_${user.id}` : "vs_filterNicho";
   const [filterNicho, setFilterNicho] = useState(() => localStorage.getItem(storageKey) || "todos");
   const [filterClassificacao, setFilterClassificacao] = useState("todos");
@@ -49,6 +49,16 @@ export default function Comercial() {
       return data;
     },
   });
+
+  const allNichoOptions = useMemo(() => {
+    const set = new Set<string>([...NICHOS_DB]);
+    prospects?.forEach(p => {
+      if (p.nicho && p.nicho.trim() && p.nicho !== "Não definido") {
+        set.add(p.nicho.trim());
+      }
+    });
+    return Array.from(set).sort();
+  }, [NICHOS_DB, prospects]);
 
   // Track "last seen" per prospect in localStorage
   const getLastSeen = (prospectId: string) => {
@@ -271,7 +281,7 @@ export default function Comercial() {
             <SelectTrigger className="w-full sm:w-32 h-9 text-xs bg-background"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos nichos</SelectItem>
-              {NICHOS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+              {allNichoOptions.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}
               <SelectItem value="sem_config">Sem config.</SelectItem>
             </SelectContent>
           </Select>

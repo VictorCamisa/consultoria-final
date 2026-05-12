@@ -101,13 +101,13 @@ const NICHO_SEARCH_STAGES: Record<string, { label: string; delay: number }[]> = 
   ],
 };
 
-const DEFAULT_PROSPECTING_STAGES = [
-  { label: "Analisando perfil da consultoria e ICP...", delay: 0 },
-  { label: "Montando consultas inteligentes para o nicho...", delay: 3000 },
-  { label: "Buscando leads em sites públicos...", delay: 8000 },
-  { label: "Raspando páginas de contato...", delay: 15000 },
-  { label: "Qualificando cada lead com score ICP...", delay: 25000 },
-  { label: "Salvando leads no banco de dados...", delay: 40000 },
+const getDynamicProspectingStages = (niche: string) => [
+  { label: `Analisando perfil ICP de ${niche}...`, delay: 0 },
+  { label: `Buscando ${niche} no Google Maps...`, delay: 3000 },
+  { label: `Verificando presença digital de cada negócio...`, delay: 8000 },
+  { label: `Raspando contatos e sites...`, delay: 15000 },
+  { label: `Qualificando com score ICP para ${niche}...`, delay: 25000 },
+  { label: `Salvando leads no banco de dados...`, delay: 40000 },
 ];
 
 const STATES = [
@@ -115,8 +115,8 @@ const STATES = [
   "PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO",
 ];
 
-function ProspectingThinkingFeed({ isRunning, nichoKey }: { isRunning: boolean; nichoKey?: string }) {
-  const stages = (nichoKey && NICHO_SEARCH_STAGES[nichoKey]) || DEFAULT_PROSPECTING_STAGES;
+function ProspectingThinkingFeed({ isRunning, nichoKey, activeNiche }: { isRunning: boolean; nichoKey?: string; activeNiche?: string }) {
+  const stages = (nichoKey && NICHO_SEARCH_STAGES[nichoKey]) || getDynamicProspectingStages(activeNiche || "negócios");
   const [currentStep, setCurrentStep] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
   const startRef = useRef(Date.now());
@@ -1092,7 +1092,7 @@ export default function Prospeccao() {
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-semibold truncate">{job.niche}</p>
                             {job.city && <p className="text-[10px] text-muted-foreground">{job.city}</p>}
-                            {job.status === "running" && <ProspectingThinkingFeed isRunning={true} nichoKey={nichoCategory(job.niche)?.key} />}
+                            {job.status === "running" && <ProspectingThinkingFeed isRunning={true} nichoKey={nichoCategory(job.niche)?.key} activeNiche={job.niche} />}
                             {job.status === "completed" && (
                               <p className="text-[10px] text-green-400 mt-0.5">{job.results_count} leads salvos</p>
                             )}
@@ -1348,14 +1348,19 @@ export default function Prospeccao() {
                 </ul>
               </div>
             ) : activeNiche ? (
-              <div className="flex items-start gap-2.5 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
-                <Target className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-green-600">ICP configurado — VS OS</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Qualificação baseada no perfil da consultoria (donos de negócios locais, faturamento acima de R$30k/mês)
+              <div className="p-3 rounded-lg border space-y-1.5 border-primary/30 bg-primary/5">
+                <div className="flex items-center gap-1.5">
+                  <Target className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  <p className="text-xs font-semibold text-primary">
+                    ICP Dinâmico — {activeNiche}
                   </p>
                 </div>
+                <ul className="space-y-0.5 pl-5">
+                  <li className="text-[10px] text-muted-foreground list-disc">Análise de presença online (Site, Redes) (+15pts)</li>
+                  <li className="text-[10px] text-muted-foreground list-disc">Verificação de contato direto via WhatsApp (+10pts)</li>
+                  <li className="text-[10px] text-muted-foreground list-disc">Avaliações positivas no Google Business (+10pts)</li>
+                  <li className="text-[10px] text-muted-foreground list-disc">Score automático para priorizar melhores leads</li>
+                </ul>
               </div>
             ) : null}
 

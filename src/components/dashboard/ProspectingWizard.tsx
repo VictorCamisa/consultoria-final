@@ -92,13 +92,13 @@ const NICHO_SEARCH_STAGES: Record<string, string[]> = {
   ],
 };
 
-const DEFAULT_SEARCH_STAGES = [
-  "Analisando perfil e ICP...",
-  "Montando buscas inteligentes...",
-  "Buscando leads na web...",
-  "Raspando páginas de contato...",
-  "Qualificando com score ICP...",
-  "Finalizando extração...",
+const getDynamicSearchStages = (niche: string) => [
+  `Analisando perfil ICP de ${niche}...`,
+  `Buscando ${niche} no Google Maps...`,
+  `Verificando presença digital de cada negócio...`,
+  `Raspando contatos e sites...`,
+  `Qualificando com score ICP para ${niche}...`,
+  `Finalizando extração de dados...`,
 ];
 
 const STATES = [
@@ -143,7 +143,7 @@ export default function ProspectingWizard({
 
   const activeNiche = customNiche || selectedNiche;
   const activeNichoCategory = nichoCategory(activeNiche);
-  const SEARCH_STAGES = (activeNichoCategory && NICHO_SEARCH_STAGES[activeNichoCategory.key]) || DEFAULT_SEARCH_STAGES;
+  const SEARCH_STAGES = (activeNichoCategory && NICHO_SEARCH_STAGES[activeNichoCategory.key]) || getDynamicSearchStages(activeNiche || "negócios");
   const currentLead = results[currentIndex];
   const reviewDone = currentIndex >= results.length && results.length > 0;
 
@@ -321,6 +321,21 @@ export default function ProspectingWizard({
                     {ICP_CRITERIA[activeNichoCategory.key].items.map((item, i) => (
                       <li key={i} className="text-[10px] text-muted-foreground list-disc">{item}</li>
                     ))}
+                  </ul>
+                </div>
+              ) : activeNiche ? (
+                <div className="p-3 rounded-lg border space-y-1.5 border-primary/30 bg-primary/5">
+                  <div className="flex items-center gap-1.5">
+                    <Target className="h-3.5 w-3.5 shrink-0 text-primary" />
+                    <p className="text-xs font-semibold text-primary">
+                      ICP Dinâmico — {activeNiche}
+                    </p>
+                  </div>
+                  <ul className="space-y-0.5 pl-5">
+                    <li className="text-[10px] text-muted-foreground list-disc">Análise de presença online (Site, Redes) (+15pts)</li>
+                    <li className="text-[10px] text-muted-foreground list-disc">Verificação de contato direto via WhatsApp (+10pts)</li>
+                    <li className="text-[10px] text-muted-foreground list-disc">Avaliações positivas no Google Business (+10pts)</li>
+                    <li className="text-[10px] text-muted-foreground list-disc">Score automático para priorizar melhores leads</li>
                   </ul>
                 </div>
               ) : (

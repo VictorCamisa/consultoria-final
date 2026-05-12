@@ -54,8 +54,10 @@ export function useNichos() {
     if (filterKey === "todos") return true;
     if (filterKey === "sem_config") return !isNichoConfigurado(prospectNicho);
     const cat = list.find(c => c.label === filterKey);
-    if (!cat) return false;
     const lower = prospectNicho.toLowerCase();
+    if (!cat) {
+      return lower === filterKey.toLowerCase() || lower.includes(filterKey.toLowerCase());
+    }
     return cat.keywords.some(k => lower.includes(k));
   };
 

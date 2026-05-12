@@ -140,54 +140,56 @@ const REVENDAS: StageTodos = {
   ],
 };
 
-// ─── GENÉRICO ─────────────────────────────────────────────────────────────────
-const GENERICO: StageTodos = {
-  novo: [
-    { id: "pesq_contato",  label: "Verificar e confirmar dados de contato", placeholder: "WhatsApp confirmado / email" },
-    { id: "pesq_online",   label: "Verificar presença online",              placeholder: "Instagram / site / Google Business" },
-    { id: "pesq_dor",      label: "Mapear dor provável do segmento",        placeholder: "Dor mapeada: " },
-    { id: "pesq_score",    label: "Pontuar ICP e decidir se é viável abordar", placeholder: "Score: X — decisão: " },
-  ],
-  abordado: [
-    { id: "msg_enviada",       label: "Primeiro contato enviado com mensagem personalizada", placeholder: "Dado personalizado usado" },
-    { id: "followup_agendado", label: "Follow-up D+2 agendado",                             placeholder: "Data do follow-up" },
-  ],
-  em_cadencia: [
-    { id: "fu1_enviado", label: "Follow-up 1 (D+2) enviado", placeholder: "Resultado" },
-    { id: "fu2_enviado", label: "Follow-up 2 (D+5) enviado", placeholder: "Resultado" },
-    { id: "fu3_enviado", label: "Follow-up 3 (D+10) enviado — encerrar se sem resposta", placeholder: "Decisão" },
-  ],
-  respondeu: [
-    { id: "objecao_mapeada",  label: "Objeção principal identificada", placeholder: "Objeção: " },
-    { id: "reuniao_proposta", label: "Reunião proposta com data definida", placeholder: "Data / formato" },
-  ],
-  call_agendada: [
-    { id: "demo_preparada",   label: "Demo ou apresentação preparada", placeholder: "Ajustes feitos" },
-    { id: "lembrete_enviado", label: "Lembrete enviado 1 dia antes",   placeholder: "Confirmou?" },
-  ],
-  call_realizada: [
-    { id: "dor_mapeada",       label: "Dor principal mapeada",              placeholder: "Dor: " },
-    { id: "preco_apresentado", label: "Preço e proposta de valor apresentados", placeholder: "Reação ao preço" },
-    { id: "data_resposta",     label: "Data de resposta confirmada",          placeholder: "Resposta prevista para: " },
-  ],
-  proposta_enviada: [
-    { id: "proposta_ok",  label: "Proposta enviada em até 2h",                      placeholder: "Formato enviado" },
-    { id: "followup_24h", label: "Follow-up de 24h enviado se sem resposta",        placeholder: "Resultado" },
-  ],
-  quente: [
-    { id: "urgencia_criada",  label: "Urgência ou condição especial comunicada", placeholder: "Urgência usada" },
-    { id: "contrato_enviado", label: "Contrato enviado para assinatura",          placeholder: "Status" },
-  ],
-  fechado: [
-    { id: "onboarding_agendado", label: "Onboarding agendado",                   placeholder: "Data/hora" },
-    { id: "briefing_enviado",    label: "Briefing ou formulário de início enviado", placeholder: "Enviado via:" },
-    { id: "indicacao_pedida",    label: "Pedido de indicação após 30 dias",       placeholder: "Indicações obtidas" },
-  ],
-  frio: [
-    { id: "reativ_45d",  label: "Reativação 45 dias: novo ângulo ou resultado recente", placeholder: "Ângulo" },
-    { id: "reativ_90d",  label: "Reativação 90 dias: mudança de contexto",              placeholder: "Ângulo" },
-    { id: "reativ_135d", label: "Reativação 135 dias: última tentativa",                placeholder: "Resultado" },
-  ],
+const getGenericPlaybook = (nicho: string): StageTodos => {
+  const n = nicho && nicho !== "Não definido" ? nicho : "segmento";
+  return {
+    novo: [
+      { id: "pesq_contato",  label: `Verificar e confirmar dados de contato (${n})`, placeholder: "WhatsApp confirmado / email" },
+      { id: "pesq_online",   label: `Verificar presença online (Site/Maps) de ${n}`, placeholder: "Instagram / site / Google Business" },
+      { id: "pesq_dor",      label: `Mapear dor provável no segmento de ${n}`,        placeholder: "Dor mapeada: " },
+      { id: "pesq_score",    label: "Pontuar ICP e decidir se é viável abordar", placeholder: "Score: X — decisão: " },
+    ],
+    abordado: [
+      { id: "msg_enviada",       label: `Primeiro contato enviado com mensagem personalizada para ${n}`, placeholder: "Dado personalizado usado" },
+      { id: "followup_agendado", label: "Follow-up D+2 agendado",                             placeholder: "Data do follow-up" },
+    ],
+    em_cadencia: [
+      { id: "fu1_enviado", label: "Follow-up 1 (D+2) enviado", placeholder: "Resultado" },
+      { id: "fu2_enviado", label: "Follow-up 2 (D+5) enviado", placeholder: "Resultado" },
+      { id: "fu3_enviado", label: "Follow-up 3 (D+10) enviado — encerrar se sem resposta", placeholder: "Decisão" },
+    ],
+    respondeu: [
+      { id: "objecao_mapeada",  label: `Objeção principal comum em ${n} identificada`, placeholder: "Objeção: " },
+      { id: "reuniao_proposta", label: "Reunião proposta com data definida", placeholder: "Data / formato" },
+    ],
+    call_agendada: [
+      { id: "demo_preparada",   label: `Apresentação preparada com contexto de ${n}`, placeholder: "Ajustes feitos" },
+      { id: "lembrete_enviado", label: "Lembrete enviado 1 dia antes",   placeholder: "Confirmou?" },
+    ],
+    call_realizada: [
+      { id: "dor_mapeada",       label: `Dor principal mapeada no contexto de ${n}`, placeholder: "Dor: " },
+      { id: "preco_apresentado", label: "Preço e proposta de valor apresentados", placeholder: "Reação ao preço" },
+      { id: "data_resposta",     label: "Data de resposta confirmada",          placeholder: "Resposta prevista para: " },
+    ],
+    proposta_enviada: [
+      { id: "proposta_ok",  label: "Proposta enviada em até 2h",                      placeholder: "Formato enviado" },
+      { id: "followup_24h", label: "Follow-up de 24h enviado se sem resposta",        placeholder: "Resultado" },
+    ],
+    quente: [
+      { id: "urgencia_criada",  label: "Urgência ou condição especial comunicada", placeholder: "Urgência usada" },
+      { id: "contrato_enviado", label: "Contrato enviado para assinatura",          placeholder: "Status" },
+    ],
+    fechado: [
+      { id: "onboarding_agendado", label: "Onboarding agendado",                   placeholder: "Data/hora" },
+      { id: "briefing_enviado",    label: `Briefing específico para ${n} enviado`, placeholder: "Enviado via:" },
+      { id: "indicacao_pedida",    label: `Pedido de indicação (parceiros em ${n}) após 30 dias`, placeholder: "Indicações obtidas" },
+    ],
+    frio: [
+      { id: "reativ_45d",  label: `Reativação 45 dias: case de ${n} ou resultado recente`, placeholder: "Ângulo" },
+      { id: "reativ_90d",  label: "Reativação 90 dias: mudança de contexto",              placeholder: "Ângulo" },
+      { id: "reativ_135d", label: "Reativação 135 dias: última tentativa",                placeholder: "Resultado" },
+    ],
+  };
 };
 
 const PLAYBOOKS: Record<string, StageTodos> = { estetica: ESTETICA, revendas: REVENDAS };
@@ -218,7 +220,7 @@ export function ChecklistEtapa({ prospect, onUpdate, onClassifyICP, loadingClass
   const [notaTemp, setNotaTemp] = useState<Record<string, string>>({});
 
   const cat = nichoCategory(prospect.nicho ?? "");
-  const playbook: StageTodos = cat && PLAYBOOKS[cat.key] ? PLAYBOOKS[cat.key] : GENERICO;
+  const playbook: StageTodos = cat && PLAYBOOKS[cat.key] ? PLAYBOOKS[cat.key] : getGenericPlaybook(prospect.nicho ?? "");
   const stageKey = prospect.status;
   const stageTodos = playbook[stageKey] ?? DEFAULT_STAGE_TODOS;
 
@@ -288,7 +290,7 @@ export function ChecklistEtapa({ prospect, onUpdate, onClassifyICP, loadingClass
     }
   };
 
-  const nichoLabel = cat ? cat.label : "Geral";
+  const nichoLabel = cat ? cat.label : (prospect.nicho && prospect.nicho !== "Não definido" ? prospect.nicho : "Geral");
 
   return (
     <div className="space-y-3">
