@@ -58,9 +58,9 @@ export const classificacaoConfig = (c: string | null) => {
 
 export const scoreColor = (score: number | null) => {
   if (!score) return "text-muted-foreground";
-  if (score >= 70) return "text-destructive";
+  if (score >= 70) return "text-green-400";
   if (score >= 40) return "text-warning";
-  return "text-primary";
+  return "text-destructive";
 };
 
 export function timeAgo(date: string | null): string {

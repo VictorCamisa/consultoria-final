@@ -209,12 +209,20 @@ export default function Prospeccao() {
   // Leads salvos
   const [leadsFilter, setLeadsFilter] = useState<"all" | "high" | "medium" | "low">("all");
   const [leadsSourceFilter, setLeadsSourceFilter] = useState<string>("all");
+  const [leadsSearch, setLeadsSearch] = useState("");
   const [promotingIds, setPromotingIds] = useState<Set<string>>(new Set());
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
-  
+  const [deletingLeadIds, setDeletingLeadIds] = useState<Set<string>>(new Set());
+
   // Promote dialog
   const [promoteDialogOpen, setPromoteDialogOpen] = useState(false);
   const [promoteTargetIds, setPromoteTargetIds] = useState<string[]>([]);
+
+  // Manual add dialog
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
+
+  // File import dialog
+  const [fileDialogOpen, setFileDialogOpen] = useState(false);
 
   // Secondary sections
   const [showOtherSegments, setShowOtherSegments] = useState(false);
@@ -448,6 +456,22 @@ export default function Prospeccao() {
     setPromoteDialogOpen(true);
   };
 
+  const handleDeleteLeads = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    setDeletingLeadIds(prev => { const n = new Set(prev); ids.forEach(id => n.add(id)); return n; });
+    try {
+      const { error } = await supabase.from("leads_raw" as any).delete().in("id", ids);
+      if (error) throw error;
+      toast({ title: `${ids.length} lead(s) excluído(s)` });
+      setSelectedLeadIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["leads_raw"] });
+    } catch (err: any) {
+      toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
+    } finally {
+      setDeletingLeadIds(prev => { const n = new Set(prev); ids.forEach(id => n.delete(id)); return n; });
+    }
+  };
+
   const filteredLeads = savedLeads.filter(l => {
     const enrichment = (l.enrichment_data as any) || {};
     const score = enrichment.icp_score ?? 50;
@@ -455,6 +479,13 @@ export default function Prospeccao() {
     if (leadsFilter === "medium" && (score < 40 || score >= 60)) return false;
     if (leadsFilter === "low" && score >= 40) return false;
     if (leadsSourceFilter !== "all" && l.source !== leadsSourceFilter) return false;
+    if (leadsSearch.trim()) {
+      const q = leadsSearch.toLowerCase();
+      const name = (l.name || "").toLowerCase();
+      const phone = (l.phone || "").toLowerCase();
+      const city = ((enrichment.city || enrichment.scraped_location) || "").toLowerCase();
+      if (!name.includes(q) && !phone.includes(q) && !city.includes(q)) return false;
+    }
     return true;
   });
 
@@ -702,25 +733,18 @@ export default function Prospeccao() {
           <p className="text-sm text-muted-foreground">Funil de captação e qualificação de leads</p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value="actions" onValueChange={(v) => {
-            if (v === "manual") {
-              setManualName(""); setManualPhone(""); setManualEmail("");
-              // Open manual dialog — we'll use a simple approach
-            }
-          }}>
-            <SelectTrigger className="w-[140px] h-8 text-xs">
-              <SelectValue placeholder="Importar" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="actions" disabled>Importar...</SelectItem>
-              <SelectItem value="manual">
-                <span className="flex items-center gap-1.5"><Plus className="h-3 w-3" />Manual</span>
-              </SelectItem>
-              <SelectItem value="file">
-                <span className="flex items-center gap-1.5"><Upload className="h-3 w-3" />Arquivo CSV</span>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <Button
+            variant="outline" size="sm" className="gap-1.5 text-xs h-8"
+            onClick={() => { setManualName(""); setManualPhone(""); setManualEmail(""); setManualDialogOpen(true); }}
+          >
+            <Plus className="h-3.5 w-3.5" /> Manual
+          </Button>
+          <Button
+            variant="outline" size="sm" className="gap-1.5 text-xs h-8"
+            onClick={() => { setFileParsedLeads([]); setFileError(""); setFileDialogOpen(true); }}
+          >
+            <Upload className="h-3.5 w-3.5" /> CSV
+          </Button>
           <Button size="sm" className="gap-1.5 text-xs" onClick={() => { resetWizard(); setWizardOpen(true); }}>
             <Sparkles className="h-3.5 w-3.5" /> Nova Pesquisa
           </Button>
@@ -779,15 +803,15 @@ export default function Prospeccao() {
               <Flame className="h-4 w-4 text-primary" />
               <h3 className="text-sm font-semibold">Fila Inteligente</h3>
               <Badge className="bg-primary/10 text-primary border-primary/30 text-[10px]" variant="outline">
-                {smartQueue.length} leads quentes
+                {smartQueue.length} leads ICP ≥ 60
               </Badge>
             </div>
             <Button
               size="sm"
               className="gap-1.5 text-xs w-full sm:w-auto"
-              onClick={() => openPromoteDialog(smartQueue.slice(0, 10).map(l => l.id))}
+              onClick={() => openPromoteDialog(smartQueue.slice(0, 6).map(l => l.id))}
             >
-              <Send className="h-3.5 w-3.5" /> Enviar Top {Math.min(10, smartQueue.length)} ao Pipeline
+              <Send className="h-3.5 w-3.5" /> Enviar Top {Math.min(6, smartQueue.length)} ao Pipeline
             </Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -830,15 +854,38 @@ export default function Prospeccao() {
             </div>
             <div className="flex items-center gap-2">
               {selectedLeadIds.size > 0 && (
-                <Button size="sm" className="gap-1.5 text-xs" onClick={() => openPromoteDialog(Array.from(selectedLeadIds))} disabled={promotingIds.size > 0}>
-                  <Send className="h-3.5 w-3.5" />
-                  Enviar {selectedLeadIds.size} ao Pipeline
-                </Button>
+                <>
+                  <Button size="sm" className="gap-1.5 text-xs" onClick={() => openPromoteDialog(Array.from(selectedLeadIds))} disabled={promotingIds.size > 0}>
+                    <Send className="h-3.5 w-3.5" />
+                    Enviar {selectedLeadIds.size} ao Pipeline
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-1.5 text-xs text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
+                    onClick={() => handleDeleteLeads(Array.from(selectedLeadIds))} disabled={deletingLeadIds.size > 0}>
+                    {deletingLeadIds.size > 0 ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    Excluir {selectedLeadIds.size}
+                  </Button>
+                </>
               )}
               <Button variant="outline" size="sm" className="gap-1.5 text-xs" onClick={() => refetchLeads()} disabled={leadsLoading}>
                 <RefreshCw className={`h-3.5 w-3.5 ${leadsLoading ? "animate-spin" : ""}`} />
               </Button>
             </div>
+          </div>
+
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, telefone ou cidade..."
+              value={leadsSearch}
+              onChange={e => setLeadsSearch(e.target.value)}
+              className="pl-8 h-8 text-xs"
+            />
+            {leadsSearch && (
+              <button className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onClick={() => setLeadsSearch("")}>
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
 
           {/* Filters */}
@@ -899,7 +946,7 @@ export default function Prospeccao() {
               </Button>
             </div>
           ) : (
-            <ScrollArea className="h-[calc(100vh-480px)] min-h-[300px] border rounded-lg">
+            <ScrollArea className="h-[min(60vh,600px)] min-h-[300px] border rounded-lg">
               <div className="divide-y">
                 {filteredLeads.map(lead => {
                   const enrichment = (lead.enrichment_data as any) || {};
@@ -976,14 +1023,6 @@ export default function Prospeccao() {
 
           {captureTab === "web" && (
             <div className="space-y-3">
-              {/* Quick launch */}
-              <div className="border rounded-lg p-4 space-y-3">
-                <p className="text-xs font-medium">Pesquisa rápida por nicho</p>
-                <Button size="sm" className="gap-1.5 text-xs w-full" onClick={() => { resetWizard(); setWizardOpen(true); }}>
-                  <Sparkles className="h-3.5 w-3.5" /> Nova Pesquisa
-                </Button>
-              </div>
-
               {/* Recent jobs */}
               {scrapeJobs.length > 0 && (
                 <div className="border rounded-lg p-4 space-y-2">
@@ -1181,51 +1220,7 @@ export default function Prospeccao() {
             <DialogDescription className="text-xs">A IA busca e qualifica leads automaticamente</DialogDescription>
           </DialogHeader>
           <div className="space-y-5">
-            {/* ICP Banner — nicho-aware */}
-            {activeNichoCategory && ICP_CRITERIA[activeNichoCategory.key] ? (
-              <div className={`p-3 rounded-lg border space-y-1.5 ${ICP_CRITERIA[activeNichoCategory.key].colorBorder}`}>
-                <div className="flex items-center gap-1.5">
-                  <Target className={`h-3.5 w-3.5 shrink-0 ${ICP_CRITERIA[activeNichoCategory.key].colorText}`} />
-                  <p className={`text-xs font-semibold ${ICP_CRITERIA[activeNichoCategory.key].colorText}`}>
-                    {ICP_CRITERIA[activeNichoCategory.key].label} — critérios de qualificação
-                  </p>
-                </div>
-                <ul className="space-y-0.5 pl-5">
-                  {ICP_CRITERIA[activeNichoCategory.key].items.map((item, i) => (
-                    <li key={i} className="text-[10px] text-muted-foreground list-disc">{item}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <div className="flex items-start gap-2.5 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
-                <Target className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-green-600">ICP configurado — VS OS</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Qualificação baseada no perfil da consultoria (donos de negócios locais, faturamento acima de R$30k/mês)
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Prospecting Intent */}
-            <div className="space-y-1.5">
-              <Label className="text-sm font-medium flex items-center gap-1.5">
-                <Target className="h-3.5 w-3.5 text-primary" />
-                Intenção
-                <span className="text-[10px] text-muted-foreground font-normal ml-1">(opcional)</span>
-              </Label>
-              <Textarea
-                value={prospectingIntent}
-                onChange={e => setProspectingIntent(e.target.value)}
-                placeholder="Ex: 'Donos de restaurante sem delivery' ou 'Clínicas que investem em tráfego pago'"
-                className="text-sm min-h-[70px] resize-none"
-                maxLength={300}
-              />
-              <p className="text-[10px] text-muted-foreground">{prospectingIntent.length}/300</p>
-            </div>
-
-            {/* Segment — Primary nichos highlighted */}
+            {/* 1. Segment — Primary nichos highlighted (first, drives intent auto-fill) */}
             <div>
               <Label className="text-sm font-medium">Segmento *</Label>
               <div className="mt-2 space-y-3">
@@ -1277,6 +1272,52 @@ export default function Prospeccao() {
                   placeholder="Ou segmento personalizado..." className="text-sm" />
               </div>
             </div>
+
+            {/* ICP Banner — shown after segment selected */}
+            {activeNichoCategory && ICP_CRITERIA[activeNichoCategory.key] ? (
+              <div className={`p-3 rounded-lg border space-y-1.5 ${ICP_CRITERIA[activeNichoCategory.key].colorBorder}`}>
+                <div className="flex items-center gap-1.5">
+                  <Target className={`h-3.5 w-3.5 shrink-0 ${ICP_CRITERIA[activeNichoCategory.key].colorText}`} />
+                  <p className={`text-xs font-semibold ${ICP_CRITERIA[activeNichoCategory.key].colorText}`}>
+                    {ICP_CRITERIA[activeNichoCategory.key].label} — critérios de qualificação
+                  </p>
+                </div>
+                <ul className="space-y-0.5 pl-5">
+                  {ICP_CRITERIA[activeNichoCategory.key].items.map((item, i) => (
+                    <li key={i} className="text-[10px] text-muted-foreground list-disc">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : activeNiche ? (
+              <div className="flex items-start gap-2.5 p-3 rounded-lg border border-green-500/30 bg-green-500/5">
+                <Target className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-green-600">ICP configurado — VS OS</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                    Qualificação baseada no perfil da consultoria (donos de negócios locais, faturamento acima de R$30k/mês)
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Prospecting Intent — after segment so auto-fill makes sense */}
+            {activeNiche && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium flex items-center gap-1.5">
+                  <Target className="h-3.5 w-3.5 text-primary" />
+                  Intenção
+                  <span className="text-[10px] text-muted-foreground font-normal ml-1">(opcional)</span>
+                </Label>
+                <Textarea
+                  value={prospectingIntent}
+                  onChange={e => setProspectingIntent(e.target.value)}
+                  placeholder="Ex: 'Donos de restaurante sem delivery' ou 'Clínicas que investem em tráfego pago'"
+                  className="text-sm min-h-[70px] resize-none"
+                  maxLength={300}
+                />
+                <p className="text-[10px] text-muted-foreground">{prospectingIntent.length}/300</p>
+              </div>
+            )}
 
             {/* Location */}
             <div className="border-t pt-4 space-y-3">
@@ -1441,6 +1482,95 @@ export default function Prospeccao() {
               <p className="text-sm text-muted-foreground">QR Code não disponível</p>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* MANUAL ADD DIALOG */}
+      <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Plus className="h-4 w-4 text-primary" /> Adicionar Lead Manual
+            </DialogTitle>
+            <DialogDescription className="text-xs">Insira os dados do lead para salvá-lo na fila.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={async (e) => { e.preventDefault(); await handleManualAdd(e); setManualDialogOpen(false); }} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Nome *</Label>
+              <Input value={manualName} onChange={e => setManualName(e.target.value)} placeholder="Ex: João Silva" className="text-sm" required />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">Telefone / WhatsApp *</Label>
+              <Input value={manualPhone} onChange={e => setManualPhone(e.target.value)} placeholder="Ex: (11) 99999-9999" className="text-sm" required />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium">E-mail</Label>
+              <Input type="email" value={manualEmail} onChange={e => setManualEmail(e.target.value)} placeholder="Ex: joao@empresa.com" className="text-sm" />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" size="sm" type="button" className="text-xs" onClick={() => setManualDialogOpen(false)}>Cancelar</Button>
+              <Button size="sm" type="submit" className="gap-1.5 text-xs" disabled={manualLoading || !manualName.trim() || !manualPhone.trim()}>
+                {manualLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                Salvar Lead
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* FILE IMPORT DIALOG */}
+      <Dialog open={fileDialogOpen} onOpenChange={setFileDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <FileSpreadsheet className="h-4 w-4 text-primary" /> Importar CSV / TXT
+            </DialogTitle>
+            <DialogDescription className="text-xs">
+              Arquivo com colunas: <code className="bg-muted px-1 rounded text-[10px]">nome</code>, <code className="bg-muted px-1 rounded text-[10px]">telefone</code>, <code className="bg-muted px-1 rounded text-[10px]">email</code>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <label className="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-border rounded-lg p-6 cursor-pointer hover:border-primary/40 hover:bg-primary/[0.02] transition-colors">
+              <Upload className="h-6 w-6 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Clique para selecionar ou arraste o arquivo aqui</span>
+              <span className="text-[10px] text-muted-foreground">.csv ou .txt</span>
+              <input type="file" accept=".csv,.txt" className="hidden" onChange={handleFileUpload} />
+            </label>
+            {fileError && (
+              <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 rounded-md p-2">
+                <AlertCircle className="h-3.5 w-3.5 shrink-0" /> {fileError}
+              </div>
+            )}
+            {fileParsedLeads.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-green-600">{fileParsedLeads.length} leads detectados</p>
+                  <Badge variant="secondary" className="text-[10px]">{fileParsedLeads.filter(l => l.phone).length} com telefone</Badge>
+                </div>
+                <ScrollArea className="h-[140px] border rounded-md">
+                  <div className="divide-y">
+                    {fileParsedLeads.slice(0, 30).map((l, i) => (
+                      <div key={i} className="flex items-center gap-2 px-3 py-1.5">
+                        <p className="text-xs font-medium flex-1 truncate">{l.name || "—"}</p>
+                        <p className="text-[10px] text-muted-foreground shrink-0">{l.phone || "Sem tel"}</p>
+                      </div>
+                    ))}
+                    {fileParsedLeads.length > 30 && (
+                      <p className="text-[10px] text-muted-foreground text-center py-2">+ {fileParsedLeads.length - 30} mais</p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" className="text-xs" onClick={() => setFileDialogOpen(false)}>Cancelar</Button>
+            <Button size="sm" className="gap-1.5 text-xs" disabled={fileUploading || fileParsedLeads.length === 0}
+              onClick={async () => { await handleFileImport(); if (!fileUploading) setFileDialogOpen(false); }}>
+              {fileUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+              Importar {fileParsedLeads.length > 0 ? fileParsedLeads.length : ""} Leads
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
