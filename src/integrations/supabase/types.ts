@@ -266,6 +266,74 @@ export type Database = {
           },
         ]
       }
+      consultoria_cobrancas: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          criado_por: string | null
+          descricao: string | null
+          expira_em: string | null
+          id: string
+          metodos_pagamento: string[]
+          mp_init_point: string | null
+          mp_payment_id: string | null
+          mp_preference_id: string | null
+          pago_em: string | null
+          razao: string
+          status: string
+          updated_at: string
+          valor: number
+          whatsapp_enviado: boolean
+          whatsapp_enviado_em: string | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          expira_em?: string | null
+          id?: string
+          metodos_pagamento?: string[]
+          mp_init_point?: string | null
+          mp_payment_id?: string | null
+          mp_preference_id?: string | null
+          pago_em?: string | null
+          razao: string
+          status?: string
+          updated_at?: string
+          valor: number
+          whatsapp_enviado?: boolean
+          whatsapp_enviado_em?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          criado_por?: string | null
+          descricao?: string | null
+          expira_em?: string | null
+          id?: string
+          metodos_pagamento?: string[]
+          mp_init_point?: string | null
+          mp_payment_id?: string | null
+          mp_preference_id?: string | null
+          pago_em?: string | null
+          razao?: string
+          status?: string
+          updated_at?: string
+          valor?: number
+          whatsapp_enviado?: boolean
+          whatsapp_enviado_em?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultoria_cobrancas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "consultoria_clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consultoria_config: {
         Row: {
           criterios_qualificacao: Json

@@ -70,10 +70,14 @@ Deno.serve(async (req) => {
       if (!group_ids || !Array.isArray(group_ids) || group_ids.length === 0)
         return json({ error: "group_ids (array) is required" }, 400);
 
-      const groupsResponse = await fetch(`${baseUrl}/group/fetchAllGroups/${instance}`, {
+      const groupsResponse = await fetch(`${baseUrl}/group/fetchAllGroups/${instance}?getParticipants=true`, {
         method: "GET", headers: { apikey: apiKey },
       });
-      if (!groupsResponse.ok) return json({ error: `Erro ao buscar grupos: ${groupsResponse.status}` }, 502);
+      if (!groupsResponse.ok) {
+        const errText = await groupsResponse.text().catch(() => "");
+        console.error("fetchAllGroups failed:", groupsResponse.status, errText);
+        return json({ error: `Erro ao buscar grupos (${groupsResponse.status}): ${errText.slice(0, 200)}` }, 502);
+      }
       const allGroups = await groupsResponse.json();
       const groupsArr = Array.isArray(allGroups) ? allGroups : [];
 
@@ -85,13 +89,20 @@ Deno.serve(async (req) => {
         const groupName = targetGroup?.subject || groupId;
         groupNames.push(groupName);
 
-        const participantsResponse = await fetch(`${baseUrl}/group/participants/${instance}?groupJid=${groupId}`, {
-          method: "GET", headers: { apikey: apiKey },
-        });
-        if (!participantsResponse.ok) continue;
-
-        const participantsData = await participantsResponse.json();
-        const participants = participantsData?.participants || participantsData || [];
+        // Prefer participants already returned by fetchAllGroups (avoids 400 on /group/participants)
+        let participants: any[] = targetGroup?.participants || [];
+        if (!participants.length) {
+          const participantsResponse = await fetch(`${baseUrl}/group/participants/${instance}?groupJid=${groupId}`, {
+            method: "GET", headers: { apikey: apiKey },
+          });
+          if (!participantsResponse.ok) {
+            const errText = await participantsResponse.text().catch(() => "");
+            console.error(`participants failed for ${groupId}:`, participantsResponse.status, errText);
+            continue;
+          }
+          const participantsData = await participantsResponse.json();
+          participants = participantsData?.participants || participantsData || [];
+        }
         if (!Array.isArray(participants)) continue;
 
         const phones = participants.map((p: any) => formatPhone(p.id || "")).filter(Boolean);
