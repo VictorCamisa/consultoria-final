@@ -6,8 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DollarSign, TrendingUp, Users, AlertTriangle, Eye, CalendarCheck } from "lucide-react";
+import { DollarSign, TrendingUp, Users, AlertTriangle, Eye, CalendarCheck, Receipt, BarChart3 } from "lucide-react";
 import { TableSkeleton } from "@/components/PageSkeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CobrancasTab from "@/components/CobrancasTab";
 
 const ATIVOS = ["imersao_realizada", "diagnostico_em_andamento", "devolutiva_agendada", "devolutiva_realizada", "convertido_recorrente"];
 
@@ -93,6 +95,17 @@ export default function Financeiro() {
         <p className="text-sm text-muted-foreground mt-0.5">Visão financeira da base de clientes</p>
       </div>
 
+      <Tabs defaultValue="visao" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="visao" className="gap-1.5">
+            <BarChart3 className="h-3.5 w-3.5" /> Visão geral
+          </TabsTrigger>
+          <TabsTrigger value="cobrancas" className="gap-1.5">
+            <Receipt className="h-3.5 w-3.5" /> Cobranças (Mercado Pago)
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="visao" className="space-y-5">
       {isLoading ? (
         <TableSkeleton rows={4} cols={4} />
       ) : stats ? (
@@ -258,6 +271,12 @@ export default function Financeiro() {
           )}
         </>
       ) : null}
+        </TabsContent>
+
+        <TabsContent value="cobrancas">
+          <CobrancasTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

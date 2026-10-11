@@ -63,3 +63,6 @@ verify_jwt = false
 
 [functions.imagery-compose-slide]
 verify_jwt = false
+
+[functions.mercado-pago-webhook]
+verify_jwt = false
